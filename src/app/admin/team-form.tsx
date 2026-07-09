@@ -126,7 +126,7 @@ export default function TeamForm() {
           <Pressable
             key={c}
             onPress={() => setColor(c)}
-            style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: c, borderWidth: color === c ? 2 : 0, borderColor: C.gold }}
+            style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: c, borderWidth: color === c ? 2 : 0, borderColor: C.accent }}
           />
         ))}
       </Row>

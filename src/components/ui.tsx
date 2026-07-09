@@ -17,6 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { C, R, S } from '@/lib/theme';
 
+const logoCard = require('../../assets/images/logo-card.png');
+const logoMark = require('../../assets/images/logo-mark.png');
+
 export function Screen({
   children,
   scroll = true,
@@ -36,7 +39,7 @@ export function Screen({
       showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
-          <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={C.gold} colors={[C.gold]} />
+          <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={C.accent} colors={[C.accent]} />
         ) : undefined
       }>
       {children}
@@ -71,34 +74,30 @@ export function Header({
   );
 }
 
+// Logo officiel FGBB (image fournie par la fédération).
+// Petites tailles : marque carrée (éléphant + ballon) sur pastille blanche.
+// Grandes tailles (>= 64) : carte blanche complète FGBB / éléphant / Guinée.
 export function Logo({ size = 36 }: { size?: number }) {
   const big = size >= 64;
-  const dot = { width: size * 0.09, height: size * 0.09, borderRadius: 99 };
+  if (big) {
+    return (
+      <Image
+        source={logoCard}
+        style={{ width: Math.round(size * 0.65), height: size, borderRadius: R.sm }}
+        contentFit="cover"
+      />
+    );
+  }
   return (
     <View
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2,
-        borderWidth: big ? 2 : 1.5,
-        borderColor: C.gold,
-        backgroundColor: '#12161E',
-        alignItems: 'center',
-        justifyContent: 'center',
+        borderRadius: size * 0.24,
+        backgroundColor: '#FFFFFF',
+        overflow: 'hidden',
       }}>
-      {big ? (
-        <>
-          <Ionicons name="basketball-outline" size={size * 0.28} color={C.gold} />
-          <Text style={{ color: C.gold, fontSize: size * 0.2, fontWeight: '600', letterSpacing: 1 }}>FGBB</Text>
-          <View style={{ flexDirection: 'row', gap: 3, marginTop: 2 }}>
-            <View style={[dot, { backgroundColor: C.flagRed }]} />
-            <View style={[dot, { backgroundColor: C.flagYellow }]} />
-            <View style={[dot, { backgroundColor: C.flagGreen }]} />
-          </View>
-        </>
-      ) : (
-        <Ionicons name="basketball-outline" size={size * 0.55} color={C.gold} />
-      )}
+      <Image source={logoMark} style={{ width: size, height: size }} contentFit="cover" />
     </View>
   );
 }
@@ -116,15 +115,15 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
   );
 }
 
-type Tone = 'gold' | 'red' | 'green' | 'neutral';
+type Tone = 'accent' | 'red' | 'green' | 'neutral';
 const toneBg: Record<Tone, string> = {
-  gold: C.goldSoft,
+  accent: C.accentSoft,
   red: C.redSoft,
   green: C.greenSoft,
   neutral: 'rgba(255,255,255,0.07)',
 };
 const toneFg: Record<Tone, string> = {
-  gold: C.gold,
+  accent: C.accent,
   red: C.red,
   green: C.green,
   neutral: C.muted,
@@ -187,14 +186,14 @@ export function Field({
 export function Button({
   title,
   onPress,
-  tone = 'gold',
+  tone = 'accent',
   loading,
   disabled,
   icon,
 }: {
   title: string;
   onPress?: () => void;
-  tone?: 'gold' | 'alt';
+  tone?: 'accent' | 'alt';
   loading?: boolean;
   disabled?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
@@ -206,16 +205,16 @@ export function Button({
       disabled={disabled || loading}
       style={({ pressed }) => [
         st.btn,
-        alt ? st.btnAlt : st.btnGold,
+        alt ? st.btnAlt : st.btnAccent,
         (disabled || loading) && { opacity: 0.6 },
         pressed && { opacity: 0.85 },
       ]}>
       {loading ? (
-        <ActivityIndicator color={alt ? C.gold : C.goldText} />
+        <ActivityIndicator color={alt ? C.accent : C.accentText} />
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {icon && <Ionicons name={icon} size={18} color={alt ? C.gold : C.goldText} />}
-          <Text style={[st.btnText, { color: alt ? C.gold : C.goldText }]}>{title}</Text>
+          {icon && <Ionicons name={icon} size={18} color={alt ? C.accent : C.accentText} />}
+          <Text style={[st.btnText, { color: alt ? C.accent : C.accentText }]}>{title}</Text>
         </View>
       )}
     </Pressable>
@@ -286,7 +285,7 @@ export const st = StyleSheet.create({
   pillText: { fontSize: 11, fontWeight: '600' },
   label: { color: C.muted, fontSize: 12, marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: '#11151C',
+    backgroundColor: '#09271F',
     borderWidth: 1,
     borderColor: C.borderStrong,
     borderRadius: R.sm,
@@ -297,8 +296,8 @@ export const st = StyleSheet.create({
     fontSize: 14,
   },
   btn: { borderRadius: R.md, paddingVertical: 14, alignItems: 'center', marginTop: S.lg },
-  btnGold: { backgroundColor: C.gold },
-  btnAlt: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(232,178,58,0.4)' },
+  btnAccent: { backgroundColor: C.accent },
+  btnAlt: { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(59,214,27,0.4)' },
   btnText: { fontSize: 15, fontWeight: '600' },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
   emptyTitle: { color: C.text, fontSize: 15, fontWeight: '600' },

@@ -160,7 +160,7 @@ export default function LiveController() {
               </Text>
             </View>
           </Row>
-          <Text style={{ color: C.gold, fontSize: 13, textAlign: 'center', marginTop: 10, fontWeight: '500' }}>{qLabel}</Text>
+          <Text style={{ color: C.accent, fontSize: 13, textAlign: 'center', marginTop: 10, fontWeight: '500' }}>{qLabel}</Text>
           <Text style={{ color: savedAt ? C.green : C.dim, fontSize: 11, textAlign: 'center', marginTop: 4 }}>
             {err ? `Erreur : ${err}` : savedAt ? 'Enregistré ✓' : 'Les changements sont enregistrés automatiquement'}
           </Text>
@@ -193,10 +193,10 @@ function TeamPad({ label, onAdd, onSub }: { label: string; onAdd: (n: number) =>
       <Pressable
         onPress={() => onAdd(2)}
         style={({ pressed }) => [
-          { backgroundColor: C.gold, borderRadius: R.md, paddingVertical: 22, alignItems: 'center' },
+          { backgroundColor: C.accent, borderRadius: R.md, paddingVertical: 22, alignItems: 'center' },
           pressed && { opacity: 0.85 },
         ]}>
-        <Text style={{ color: C.goldText, fontSize: 24, fontWeight: '600' }}>+2</Text>
+        <Text style={{ color: C.accentText, fontSize: 24, fontWeight: '600' }}>+2</Text>
       </Pressable>
       <Row style={{ gap: 8, marginTop: 8 }}>
         <PadBtn label="+1" onPress={() => onAdd(1)} />

@@ -1,18 +1,27 @@
-// Thème sombre « premium » FGBB — accents dorés, couleurs de la Guinée.
+// Thème sombre « vert canard » FGBB — inspiré de l'affiche D1 :
+// fond teal profond, accent vert vif, touches du drapeau guinéen.
 export const C = {
-  bg: '#0B0E13',
-  surface: '#141922',
-  surface2: '#1C2230',
-  border: 'rgba(255,255,255,0.07)',
-  borderStrong: 'rgba(255,255,255,0.14)',
+  bg: '#06201C',
+  surface: '#0B2E29',
+  surface2: '#12403A',
+  border: 'rgba(255,255,255,0.08)',
+  borderStrong: 'rgba(255,255,255,0.16)',
 
-  text: '#F4F6F9',
-  muted: '#8A95A4',
-  dim: '#7E8A99',
+  text: '#F2F7F5',
+  muted: '#92ACA5',
+  dim: '#7C968F',
 
-  gold: '#E8B23A',
-  goldSoft: 'rgba(232,178,58,0.16)',
-  goldText: '#1A1206',
+  // vert vif de l'affiche D1 (boutons, éléments actifs)
+  accent: '#3BD61B',
+  accentSoft: 'rgba(59,214,27,0.15)',
+  accentText: '#06230A',
+
+  // vert canard moyen (grands blocs, carte « à la une »)
+  teal: '#0E5F58',
+  tealDeep: '#0A4A44',
+
+  inputBg: '#09271F',
+  tabBar: '#08221E',
 
   red: '#E23B3B', // live
   redSoft: 'rgba(226,59,59,0.16)',

@@ -55,7 +55,7 @@ export default function TeamDetail() {
         }
         right={
           <Pressable onPress={toggleFav}>
-            <Ionicons name={isFav ? 'star' : 'star-outline'} size={22} color={isFav ? C.gold : C.muted} />
+            <Ionicons name={isFav ? 'star' : 'star-outline'} size={22} color={isFav ? C.accent : C.muted} />
           </Pressable>
         }
       />
@@ -72,7 +72,7 @@ export default function TeamDetail() {
                 <Stat label="Joués" value={st?.played ?? 0} />
                 <Stat label="Victoires" value={st?.wins ?? 0} color={C.green} />
                 <Stat label="Défaites" value={st?.losses ?? 0} />
-                <Stat label="Points" value={st?.points ?? 0} color={C.gold} />
+                <Stat label="Points" value={st?.points ?? 0} color={C.accent} />
               </Row>
             </Card>
           </View>
@@ -145,7 +145,7 @@ function Tab({ label, active, onPress }: { label: string; active: boolean; onPre
         borderRadius: 9,
         backgroundColor: active ? C.surface2 : C.surface,
         borderWidth: 1,
-        borderColor: active ? 'rgba(232,178,58,0.5)' : 'transparent',
+        borderColor: active ? 'rgba(59,214,27,0.5)' : 'transparent',
       }}>
       <Text style={{ color: active ? '#fff' : C.muted, fontSize: 12.5 }}>{label}</Text>
     </Pressable>

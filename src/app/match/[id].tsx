@@ -98,7 +98,7 @@ export default function MatchDetail() {
                 </View>
               </Row>
               {m.scheduled_at ? (
-                <Text style={{ color: C.gold, fontSize: 12, textAlign: 'center', marginTop: 12 }}>
+                <Text style={{ color: C.accent, fontSize: 12, textAlign: 'center', marginTop: 12 }}>
                   {fullDate(m.scheduled_at)}
                 </Text>
               ) : null}
@@ -175,7 +175,7 @@ function SubTab({ label, active, onPress }: { label: string; active: boolean; on
         borderRadius: 9,
         backgroundColor: active ? C.surface2 : C.surface,
         borderWidth: 1,
-        borderColor: active ? 'rgba(232,178,58,0.5)' : 'transparent',
+        borderColor: active ? 'rgba(59,214,27,0.5)' : 'transparent',
       }}>
       <Text style={{ color: active ? '#fff' : C.muted, fontSize: 12.5 }}>{label}</Text>
     </Pressable>

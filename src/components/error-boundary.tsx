@@ -25,8 +25,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
           </ScrollView>
           <Pressable
             onPress={this.reset}
-            style={{ marginTop: 20, backgroundColor: C.gold, borderRadius: R.md, paddingVertical: 12, paddingHorizontal: 24 }}>
-            <Text style={{ color: C.goldText, fontSize: 15, fontWeight: '600' }}>Réessayer</Text>
+            style={{ marginTop: 20, backgroundColor: C.accent, borderRadius: R.md, paddingVertical: 12, paddingHorizontal: 24 }}>
+            <Text style={{ color: C.accentText, fontSize: 15, fontWeight: '600' }}>Réessayer</Text>
           </Pressable>
         </View>
       );

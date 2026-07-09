@@ -58,7 +58,7 @@ export default function LoginScreen() {
                   borderRadius: R.md,
                   backgroundColor: on ? C.surface2 : C.surface,
                   borderWidth: 1,
-                  borderColor: on ? 'rgba(232,178,58,0.5)' : 'transparent',
+                  borderColor: on ? 'rgba(59,214,27,0.5)' : 'transparent',
                 }}>
                 <Text style={{ color: on ? C.text : C.muted, fontSize: 13, fontWeight: '500' }}>
                   {m === 'in' ? 'Connexion' : 'Inscription'}

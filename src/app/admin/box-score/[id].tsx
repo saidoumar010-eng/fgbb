@@ -244,7 +244,7 @@ function TeamSection({
   if (players.length === 0) return null;
   return (
     <View style={{ marginTop: 14 }}>
-      <Text style={{ color: C.gold, fontSize: 13, fontWeight: '600', marginBottom: 8 }}>{title}</Text>
+      <Text style={{ color: C.accent, fontSize: 13, fontWeight: '600', marginBottom: 8 }}>{title}</Text>
       <View style={{ gap: 10 }}>
         {players.map((p) => (
           <Card key={p.id}>
@@ -263,7 +263,7 @@ function TeamSection({
                     placeholder="0"
                     placeholderTextColor={C.dim}
                     style={{
-                      backgroundColor: '#11151C',
+                      backgroundColor: '#09271F',
                       borderWidth: 1,
                       borderColor: C.borderStrong,
                       borderRadius: 8,

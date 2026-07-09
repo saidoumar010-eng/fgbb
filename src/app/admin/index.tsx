@@ -6,8 +6,8 @@ import { Card, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { C, S } from '@/lib/theme';
 
 const QUICK: { icon: keyof typeof Ionicons.glyphMap; label: string; href: string; color: string }[] = [
-  { icon: 'create-outline', label: 'Saisir un score', href: '/admin/matches', color: C.gold },
-  { icon: 'calendar-outline', label: 'Programmer', href: '/admin/match-form', color: C.gold },
+  { icon: 'create-outline', label: 'Saisir un score', href: '/admin/matches', color: C.accent },
+  { icon: 'calendar-outline', label: 'Programmer', href: '/admin/match-form', color: C.accent },
   { icon: 'newspaper-outline', label: 'Actualité', href: '/admin/news-form', color: C.green },
 ];
 
@@ -29,7 +29,7 @@ export default function AdminDashboard() {
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }
-        right={<Pill label="Admin" tone="gold" />}
+        right={<Pill label="Admin" tone="accent" />}
       />
 
       <View style={{ flexDirection: 'row', gap: 9, padding: S.lg }}>
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
                   borderBottomWidth: i < MANAGE.length - 1 ? 1 : 0,
                   borderBottomColor: C.border,
                 }}>
-                <Ionicons name={m.icon} size={20} color={C.gold} />
+                <Ionicons name={m.icon} size={20} color={C.accent} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontSize: 14 }}>{m.title}</Text>
                   <Text style={{ color: C.dim, fontSize: 12 }}>{m.sub}</Text>

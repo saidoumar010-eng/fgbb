@@ -92,11 +92,11 @@ export default function HomeScreen() {
                     <View
                       style={{
                         height: 110,
-                        backgroundColor: '#1A2433',
+                        backgroundColor: '#12403A',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}>
-                      <Ionicons name="image-outline" size={28} color="#3B5168" />
+                      <Ionicons name="image-outline" size={28} color="#3E6B62" />
                     </View>
                   )}
                   <View style={{ padding: 12, gap: 7 }}>

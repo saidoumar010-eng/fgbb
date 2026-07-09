@@ -30,7 +30,7 @@ export default function ClassementScreen() {
         title="Classement"
         right={
           <Pressable onPress={() => router.push('/leaders')}>
-            <Text style={{ color: C.gold, fontSize: 13, fontWeight: '500' }}>Leaders</Text>
+            <Text style={{ color: C.accent, fontSize: 13, fontWeight: '500' }}>Leaders</Text>
           </Pressable>
         }
       />
@@ -48,12 +48,12 @@ export default function ClassementScreen() {
                   key={c.id}
                   onPress={() => setCompId(c.id)}
                   style={{
-                    backgroundColor: on ? C.gold : '#181D26',
+                    backgroundColor: on ? C.accent : '#181D26',
                     borderRadius: R.pill,
                     paddingHorizontal: 14,
                     paddingVertical: 7,
                   }}>
-                  <Text style={{ color: on ? C.goldText : C.muted, fontSize: 12, fontWeight: '600' }}>
+                  <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>
                     {c.name}
                   </Text>
                 </Pressable>
@@ -112,7 +112,7 @@ export default function ClassementScreen() {
                     <Card>
                       <Row style={{ justifyContent: 'space-between' }}>
                         <Text style={{ color: C.text, fontSize: 14, fontWeight: '500' }}>{p.full_name}</Text>
-                        <Text style={{ color: C.gold, fontSize: 14, fontWeight: '600' }}>{p.ppg} pts</Text>
+                        <Text style={{ color: C.accent, fontSize: 14, fontWeight: '600' }}>{p.ppg} pts</Text>
                       </Row>
                     </Card>
                   </Pressable>

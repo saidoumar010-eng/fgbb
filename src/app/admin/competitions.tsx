@@ -34,7 +34,7 @@ export default function AdminCompetitions() {
               <Pressable key={c.id} onPress={() => router.push(`/admin/competition-form?id=${c.id}`)}>
                 <Row
                   style={{ paddingVertical: 12, gap: 12, borderBottomWidth: i < comps.length - 1 ? 1 : 0, borderBottomColor: C.border }}>
-                  <Ionicons name="trophy-outline" size={20} color={C.gold} />
+                  <Ionicons name="trophy-outline" size={20} color={C.accent} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: C.text, fontSize: 14 }}>{c.name}</Text>
                     <Text style={{ color: C.dim, fontSize: 12 }}>

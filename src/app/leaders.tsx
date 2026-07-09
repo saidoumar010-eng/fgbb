@@ -42,8 +42,8 @@ export default function LeadersScreen() {
               <Pressable
                 key={c.key}
                 onPress={() => setCat(c.key)}
-                style={{ backgroundColor: on ? C.gold : '#181D26', borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 7 }}>
-                <Text style={{ color: on ? C.goldText : C.muted, fontSize: 12, fontWeight: '600' }}>{c.label}</Text>
+                style={{ backgroundColor: on ? C.accent : '#181D26', borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 7 }}>
+                <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>{c.label}</Text>
               </Pressable>
             );
           })}
@@ -62,12 +62,12 @@ export default function LeadersScreen() {
             {rows.map((p: PlayerSeasonStat, i) => (
               <Pressable key={p.player_id} onPress={() => router.push(`/player/${p.player_id}`)}>
                 <Row style={{ paddingVertical: 11, gap: 12, borderBottomWidth: i < rows.length - 1 ? 1 : 0, borderBottomColor: C.border }}>
-                  <Text style={{ color: i < 3 ? C.gold : C.dim, fontSize: 14, fontWeight: '600', width: 22 }}>{i + 1}</Text>
+                  <Text style={{ color: i < 3 ? C.accent : C.dim, fontSize: 14, fontWeight: '600', width: 22 }}>{i + 1}</Text>
                   <Crest label={p.full_name.slice(0, 2).toUpperCase()} color={C.surface2} size={30} round />
                   <Text style={{ color: C.text, fontSize: 14, flex: 1 }} numberOfLines={1}>
                     {p.full_name}
                   </Text>
-                  <Text style={{ color: C.gold, fontSize: 15, fontWeight: '600' }}>
+                  <Text style={{ color: C.accent, fontSize: 15, fontWeight: '600' }}>
                     {p[cat]} <Text style={{ color: C.dim, fontSize: 11 }}>{unit}</Text>
                   </Text>
                 </Row>

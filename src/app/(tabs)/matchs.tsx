@@ -49,12 +49,12 @@ export default function MatchsScreen() {
                 key={f.key}
                 onPress={() => setFilter(f.key)}
                 style={{
-                  backgroundColor: on ? C.gold : '#181D26',
+                  backgroundColor: on ? C.accent : '#181D26',
                   borderRadius: R.pill,
                   paddingHorizontal: 14,
                   paddingVertical: 7,
                 }}>
-                <Text style={{ color: on ? C.goldText : C.muted, fontSize: 12, fontWeight: '600' }}>
+                <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>
                   {f.label}
                 </Text>
               </Pressable>
@@ -66,7 +66,7 @@ export default function MatchsScreen() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: S.lg, gap: 9, paddingBottom: S.xl * 2 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.gold} colors={[C.gold]} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} colors={[C.accent]} />}>
         {shown.length > 0 ? (
           shown.map((m) => (
             <MatchRow key={m.id} match={m} onPress={() => router.push(`/match/${m.id}`)} />

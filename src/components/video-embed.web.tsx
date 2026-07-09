@@ -7,7 +7,7 @@ export function VideoEmbed({ url }: { url?: string | null }) {
 
   if (e.type === 'link') {
     return (
-      <a href={e.url} target="_blank" rel="noreferrer" style={{ color: C.gold, fontSize: 14 }}>
+      <a href={e.url} target="_blank" rel="noreferrer" style={{ color: C.accent, fontSize: 14 }}>
         Ouvrir le résumé vidéo
       </a>
     );

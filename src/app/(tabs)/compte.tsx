@@ -110,7 +110,7 @@ export default function CompteScreen() {
           {isAdmin ? (
             <Pressable onPress={() => router.push('/admin')}>
               <Row style={{ paddingVertical: 13, gap: 13 }}>
-                <Ionicons name="shield-checkmark-outline" size={20} color={C.gold} />
+                <Ionicons name="shield-checkmark-outline" size={20} color={C.accent} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontSize: 14 }}>Espace fédération</Text>
                   <Text style={{ color: C.dim, fontSize: 12 }}>Gérer joueurs, équipes, matchs, stats</Text>

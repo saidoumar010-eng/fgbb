@@ -49,7 +49,7 @@ export default function AdminMatches() {
                   </View>
                   {m.status === 'live' && <Pill label="LIVE" tone="red" dot />}
                   {m.status === 'finished' && <Pill label="Terminé" tone="neutral" />}
-                  {m.status === 'scheduled' && <Pill label="À venir" tone="gold" />}
+                  {m.status === 'scheduled' && <Pill label="À venir" tone="accent" />}
                   <Ionicons name="chevron-forward" size={18} color={C.dim} />
                 </Row>
               </Card>

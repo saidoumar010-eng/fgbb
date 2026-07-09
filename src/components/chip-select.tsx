@@ -26,8 +26,8 @@ export function ChipSelect({
         key={o.id}
         onPress={() => onChange(o.id)}
         style={{
-          backgroundColor: on ? C.gold : '#181D26',
-          borderColor: on ? C.gold : C.border,
+          backgroundColor: on ? C.accent : '#181D26',
+          borderColor: on ? C.accent : C.border,
           borderWidth: 1,
           borderRadius: R.pill,
           paddingHorizontal: 14,
@@ -35,7 +35,7 @@ export function ChipSelect({
           marginRight: 8,
           marginBottom: wrap ? 8 : 0,
         }}>
-        <Text style={{ color: on ? C.goldText : C.muted, fontSize: 13, fontWeight: '500' }}>
+        <Text style={{ color: on ? C.accentText : C.muted, fontSize: 13, fontWeight: '500' }}>
           {o.label}
         </Text>
       </Pressable>

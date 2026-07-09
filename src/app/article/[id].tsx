@@ -47,11 +47,11 @@ export default function ArticleDetail() {
                 height: 180,
                 marginHorizontal: S.lg,
                 borderRadius: R.lg,
-                backgroundColor: '#1A2433',
+                backgroundColor: '#12403A',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <Ionicons name="image-outline" size={32} color="#3B5168" />
+              <Ionicons name="image-outline" size={32} color="#3E6B62" />
             </View>
           )}
           <View style={{ padding: S.lg }}>
