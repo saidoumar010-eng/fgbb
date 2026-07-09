@@ -1,0 +1,153 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+
+import { MatchRow } from '@/components/match-row';
+import { Card, Crest, Empty, Header, Row, Screen } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
+import {
+  addFavorite,
+  getTeam,
+  getTeamMatches,
+  getTeamPlayers,
+  getTeamStanding,
+  listFavoriteTeams,
+  removeFavorite,
+} from '@/lib/db';
+import { teamShort } from '@/lib/format';
+import { C, S } from '@/lib/theme';
+import { useFetch } from '@/lib/useFetch';
+
+export default function TeamDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const team = useFetch(() => getTeam(id), [id]);
+  const standing = useFetch(() => getTeamStanding(id), [id]);
+  const players = useFetch(() => getTeamPlayers(id), [id]);
+  const matches = useFetch(() => getTeamMatches(id), [id]);
+  const [tab, setTab] = useState<'roster' | 'cal'>('roster');
+
+  const { session } = useAuth();
+  const favs = useFetch(() => listFavoriteTeams(), []);
+  const isFav = (favs.data ?? []).some((f) => f.id === id);
+  async function toggleFav() {
+    if (!session) {
+      router.push('/login');
+      return;
+    }
+    if (isFav) await removeFavorite(session.user.id, id);
+    else await addFavorite(session.user.id, id);
+    favs.reload();
+  }
+
+  const t = team.data;
+  const st = standing.data;
+  const sub = t ? [t.city, t.division, t.founded_year ? `Fondé en ${t.founded_year}` : null].filter(Boolean).join(' · ') : '';
+
+  return (
+    <Screen>
+      <Header
+        title="Club"
+        left={
+          <Pressable onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={24} color={C.muted} />
+          </Pressable>
+        }
+        right={
+          <Pressable onPress={toggleFav}>
+            <Ionicons name={isFav ? 'star' : 'star-outline'} size={22} color={isFav ? C.gold : C.muted} />
+          </Pressable>
+        }
+      />
+      {!t ? (
+        <Empty icon="shield-outline" title={team.loading ? 'Chargement…' : 'Club introuvable'} />
+      ) : (
+        <View>
+          <View style={{ padding: S.lg }}>
+            <Card style={{ alignItems: 'center' }}>
+              <Crest label={teamShort(t)} color={t.color ?? C.surface2} size={64} image={t.logo_url} />
+              <Text style={{ color: C.text, fontSize: 19, fontWeight: '600', marginTop: 12 }}>{t.name}</Text>
+              <Text style={{ color: C.dim, fontSize: 12, marginTop: 4, textAlign: 'center' }}>{sub}</Text>
+              <Row style={{ marginTop: 14, gap: 22 }}>
+                <Stat label="Joués" value={st?.played ?? 0} />
+                <Stat label="Victoires" value={st?.wins ?? 0} color={C.green} />
+                <Stat label="Défaites" value={st?.losses ?? 0} />
+                <Stat label="Points" value={st?.points ?? 0} color={C.gold} />
+              </Row>
+            </Card>
+          </View>
+
+          <Row style={{ marginHorizontal: S.lg, gap: 6 }}>
+            <Tab label="Effectif" active={tab === 'roster'} onPress={() => setTab('roster')} />
+            <Tab label="Calendrier" active={tab === 'cal'} onPress={() => setTab('cal')} />
+          </Row>
+
+          {tab === 'roster' ? (
+            <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
+              {(players.data ?? []).length === 0 ? (
+                <Card>
+                  <Text style={{ color: C.dim, fontSize: 13 }}>Aucun joueur dans l'effectif.</Text>
+                </Card>
+              ) : (
+                <Card style={{ paddingVertical: 4, paddingHorizontal: 13 }}>
+                  {(players.data ?? []).map((pl, i, arr) => (
+                    <Pressable key={pl.id} onPress={() => router.push(`/player/${pl.id}`)}>
+                      <Row
+                        style={{ paddingVertical: 11, gap: 12, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: C.border }}>
+                        <Crest label={pl.number ? `${pl.number}` : teamShort(t)} color={t.color ?? C.surface2} size={30} round />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: C.text, fontSize: 14 }}>{pl.full_name}</Text>
+                          <Text style={{ color: C.dim, fontSize: 12 }}>{pl.position ?? ''}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={C.dim} />
+                      </Row>
+                    </Pressable>
+                  ))}
+                </Card>
+              )}
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: S.lg, paddingTop: 12, gap: 9 }}>
+              {(matches.data ?? []).length === 0 ? (
+                <Card>
+                  <Text style={{ color: C.dim, fontSize: 13 }}>Aucun match programmé.</Text>
+                </Card>
+              ) : (
+                (matches.data ?? []).map((m) => (
+                  <MatchRow key={m.id} match={m} onPress={() => router.push(`/match/${m.id}`)} />
+                ))
+              )}
+            </View>
+          )}
+        </View>
+      )}
+    </Screen>
+  );
+}
+
+function Stat({ label, value, color = '#fff' }: { label: string; value: number | string; color?: string }) {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <Text style={{ color, fontSize: 18, fontWeight: '600' }}>{value}</Text>
+      <Text style={{ color: C.dim, fontSize: 11 }}>{label}</Text>
+    </View>
+  );
+}
+
+function Tab({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 8,
+        borderRadius: 9,
+        backgroundColor: active ? C.surface2 : C.surface,
+        borderWidth: 1,
+        borderColor: active ? 'rgba(232,178,58,0.5)' : 'transparent',
+      }}>
+      <Text style={{ color: active ? '#fff' : C.muted, fontSize: 12.5 }}>{label}</Text>
+    </Pressable>
+  );
+}
