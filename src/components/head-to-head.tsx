@@ -14,6 +14,16 @@ export function HeadToHead({ match }: { match: Match }) {
   const h2h = useFetch(() => getHeadToHead(match.home_team_id, match.away_team_id), [match.id]);
   const past = (h2h.data ?? []).filter((m) => m.id !== match.id);
 
+  if (h2h.loading || h2h.error) {
+    return (
+      <Card>
+        <Text style={{ color: C.dim, fontSize: 12.5 }}>
+          {h2h.error ? 'Historique indisponible pour le moment.' : 'Chargement du face-à-face…'}
+        </Text>
+      </Card>
+    );
+  }
+
   if (past.length === 0) {
     return (
       <Card>
@@ -27,6 +37,8 @@ export function HeadToHead({ match }: { match: Match }) {
   let winsHome = 0;
   let winsAway = 0;
   for (const m of past) {
+    // Un match nul ne compte de victoire pour personne (cohérent avec le classement).
+    if (m.home_score === m.away_score) continue;
     const winner = m.home_score > m.away_score ? m.home_team_id : m.away_team_id;
     if (winner === match.home_team_id) winsHome += 1;
     else if (winner === match.away_team_id) winsAway += 1;

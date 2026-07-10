@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Card, Crest, Row } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { listPredictions, votePrediction } from '@/lib/db';
+import { getMyPrediction, listPredictionResults, votePrediction } from '@/lib/db';
 import { teamShort } from '@/lib/format';
 import { C, R } from '@/lib/theme';
 import type { Match } from '@/lib/types';
@@ -14,15 +14,17 @@ import { useFetch } from '@/lib/useFetch';
 // Après le coup d'envoi, les pourcentages restent visibles en lecture seule.
 export function PredictionCard({ match }: { match: Match }) {
   const { session } = useAuth();
-  const preds = useFetch(() => listPredictions(match.id), [match.id]);
+  const uid = session?.user.id;
+  const results = useFetch(() => listPredictionResults(match.id), [match.id]);
+  const myVote = useFetch(() => (uid ? getMyPrediction(match.id, uid) : Promise.resolve(null)), [match.id, uid]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const votes = preds.data ?? [];
-  const home = votes.filter((v) => v.team_id === match.home_team_id).length;
-  const away = votes.filter((v) => v.team_id === match.away_team_id).length;
+  const counts = results.data ?? [];
+  const home = counts.find((r) => r.team_id === match.home_team_id)?.votes ?? 0;
+  const away = counts.find((r) => r.team_id === match.away_team_id)?.votes ?? 0;
   const total = home + away;
-  const mine = votes.find((v) => v.user_id === session?.user.id)?.team_id ?? null;
+  const mine = myVote.data ?? null;
   const open = match.status === 'scheduled';
 
   // Rien à montrer : match commencé sans aucun pronostic enregistré.
@@ -38,7 +40,7 @@ export function PredictionCard({ match }: { match: Match }) {
     setErr(null);
     try {
       await votePrediction(match.id, session.user.id, teamId);
-      await preds.reload();
+      await Promise.all([results.reload(), myVote.reload()]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
     } finally {

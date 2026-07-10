@@ -55,8 +55,14 @@ export default function LiveController() {
         if (q.q >= 1 && q.q <= base.length) base[q.q - 1] = { home: q.home, away: q.away };
         else if (q.q > base.length) base.push({ home: q.home, away: q.away });
       });
+      // Le quart courant doit couvrir au moins tous les quarts déjà saisis
+      // (sinon un appui tronquerait les quarts suivants). On garde aussi
+      // current_quarter s'il est plus avancé, et on complète le tableau pour
+      // que `quarters[current - 1]` existe toujours (pas de crash en prolongation).
+      const seededCurrent = Math.max(m.current_quarter ?? 0, base.length, 1);
+      while (base.length < seededCurrent) base.push({ home: 0, away: 0 });
       setQuarters(base);
-      setCurrent(m.current_quarter && m.current_quarter > 0 ? m.current_quarter : 1);
+      setCurrent(seededCurrent);
       setStatus(m.status === 'finished' ? 'finished' : 'live');
       seeded.current = true;
     }
@@ -69,8 +75,12 @@ export default function LiveController() {
 
   async function persist(nextQuarters: QScore[], nextCurrent: number, nextStatus: MatchStatus) {
     const t = nextQuarters.reduce((a, q) => ({ home: a.home + q.home, away: a.away + q.away }), { home: 0, away: 0 });
+    // On conserve tous les quarts jusqu'au quart courant ET jusqu'au dernier
+    // quart contenant des points : jamais tronquer un quart déjà rempli.
+    const lastWithData = nextQuarters.reduce((acc, q, i) => (q.home > 0 || q.away > 0 ? i + 1 : acc), 0);
+    const keep = Math.max(nextCurrent, lastWithData, 1);
     const qs: QuarterScore[] = nextQuarters
-      .slice(0, Math.max(nextCurrent, 1))
+      .slice(0, keep)
       .map((q, i) => ({ q: i + 1, home: q.home, away: q.away }));
     const { error } = await supabase
       .from('matches')

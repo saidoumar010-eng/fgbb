@@ -5,7 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Card, Row } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { getTeamPlayers, listMvpVotes, voteMvp } from '@/lib/db';
+import { getMyMvpVote, getTeamPlayers, listMvpResults, voteMvp } from '@/lib/db';
 import { teamShort } from '@/lib/format';
 import { C, R } from '@/lib/theme';
 import type { Match, Player } from '@/lib/types';
@@ -14,7 +14,9 @@ import { useFetch } from '@/lib/useFetch';
 // Vote MVP des supporters : ouvert pendant et après le match.
 export function MvpCard({ match }: { match: Match }) {
   const { session } = useAuth();
-  const votes = useFetch(() => listMvpVotes(match.id), [match.id]);
+  const uid = session?.user.id;
+  const results = useFetch(() => listMvpResults(match.id), [match.id]);
+  const myVoteFetch = useFetch(() => (uid ? getMyMvpVote(match.id, uid) : Promise.resolve(null)), [match.id, uid]);
   const homePlayers = useFetch(() => getTeamPlayers(match.home_team_id), [match.home_team_id]);
   const awayPlayers = useFetch(() => getTeamPlayers(match.away_team_id), [match.away_team_id]);
   const [expanded, setExpanded] = useState(false);
@@ -23,14 +25,13 @@ export function MvpCard({ match }: { match: Match }) {
 
   if (match.status === 'scheduled') return null;
 
-  const all = votes.data ?? [];
+  const counts = results.data ?? [];
+  const totalVotes = counts.reduce((a, r) => a + r.votes, 0);
   const players = [...(homePlayers.data ?? []), ...(awayPlayers.data ?? [])];
   const byId = new Map(players.map((p) => [p.id, p]));
 
-  const counts = new Map<string, number>();
-  for (const v of all) counts.set(v.player_id, (counts.get(v.player_id) ?? 0) + 1);
-  const ranking = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const myVote = all.find((v) => v.user_id === session?.user.id)?.player_id ?? null;
+  const ranking = [...counts].sort((a, b) => b.votes - a.votes).slice(0, 5);
+  const myVote = myVoteFetch.data ?? null;
 
   async function vote(playerId: string) {
     if (busy) return;
@@ -42,7 +43,7 @@ export function MvpCard({ match }: { match: Match }) {
     setErr(null);
     try {
       await voteMvp(match.id, session.user.id, playerId);
-      await votes.reload();
+      await Promise.all([results.reload(), myVoteFetch.reload()]);
       setExpanded(false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
@@ -62,15 +63,15 @@ export function MvpCard({ match }: { match: Match }) {
           <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>MVP du match — vote des supporters</Text>
         </Row>
         <Text style={{ color: C.dim, fontSize: 11 }}>
-          {all.length > 0 ? `${all.length} vote${all.length > 1 ? 's' : ''}` : ''}
+          {totalVotes > 0 ? `${totalVotes} vote${totalVotes > 1 ? 's' : ''}` : ''}
         </Text>
       </Row>
 
       {ranking.length > 0 ? (
         <View style={{ gap: 7, marginBottom: 4 }}>
-          {ranking.map(([playerId, n], i) => {
+          {ranking.map(({ player_id: playerId, votes: n }, i) => {
             const p = byId.get(playerId);
-            const pct = Math.round((100 * n) / all.length);
+            const pct = totalVotes > 0 ? Math.round((100 * n) / totalVotes) : 0;
             return (
               <Pressable key={playerId} onPress={() => p && router.push(`/player/${p.id}`)}>
                 <Row style={{ gap: 8 }}>

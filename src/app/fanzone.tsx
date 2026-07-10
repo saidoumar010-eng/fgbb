@@ -5,7 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Card, Empty, Header, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { listPolls, listPollVotes, votePoll } from '@/lib/db';
+import { getMyPollVote, listPollResults, listPolls, votePoll } from '@/lib/db';
 import { C, R, S } from '@/lib/theme';
 import type { Poll } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -76,14 +76,16 @@ function ShortcutCard({
 
 function PollCard({ poll }: { poll: Poll }) {
   const { session } = useAuth();
-  const votes = useFetch(() => listPollVotes(poll.id), [poll.id]);
+  const uid = session?.user.id;
+  const results = useFetch(() => listPollResults(poll.id), [poll.id]);
+  const myVoteFetch = useFetch(() => (uid ? getMyPollVote(poll.id, uid) : Promise.resolve(null)), [poll.id, uid]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const all = votes.data ?? [];
-  const mine = all.find((v) => v.user_id === session?.user.id)?.option_index ?? null;
-  const counts = poll.options.map((_, i) => all.filter((v) => v.option_index === i).length);
-  const total = all.length;
+  const resultRows = results.data ?? [];
+  const mine = myVoteFetch.data ?? null;
+  const counts = poll.options.map((_, i) => resultRows.find((r) => r.option_index === i)?.votes ?? 0);
+  const total = counts.reduce((a, b) => a + b, 0);
 
   async function vote(index: number) {
     if (busy) return;
@@ -95,7 +97,7 @@ function PollCard({ poll }: { poll: Poll }) {
     setErr(null);
     try {
       await votePoll(poll.id, session.user.id, index);
-      await votes.reload();
+      await Promise.all([results.reload(), myVoteFetch.reload()]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
     } finally {

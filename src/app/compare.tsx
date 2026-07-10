@@ -136,7 +136,15 @@ export default function CompareScreen() {
         )}
 
         {pA && pB ? (
-          <CompareTable a={seasonA.data ?? null} b={seasonB.data ?? null} />
+          seasonA.loading || seasonB.loading ? (
+            <Card>
+              <Text style={{ color: C.dim, fontSize: 12.5, textAlign: 'center', paddingVertical: 8 }}>
+                Chargement des statistiques…
+              </Text>
+            </Card>
+          ) : (
+            <CompareTable a={seasonA.data ?? null} b={seasonB.data ?? null} />
+          )
         ) : (
           <Empty
             icon="git-compare-outline"

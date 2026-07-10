@@ -256,11 +256,27 @@ export async function getHeadToHead(teamA: string, teamB: string) {
 
 // ---------------------------------------------------------------------------
 // Fan zone : vote MVP, pronostics, sondages.
+//
+// Les pourcentages sont lus depuis des vues d'agrégats (mvp_results,
+// prediction_results, poll_results) : pas de plafond à 1000 lignes et aucune
+// donnée personnelle exposée. Le vote de l'utilisateur est récupéré à part
+// (les lignes brutes ne sont lisibles que par leur auteur, cf. RLS).
 
-export async function listMvpVotes(matchId: string) {
-  const { data, error } = await supabase.from('mvp_votes').select('*').eq('match_id', matchId);
+export async function listMvpResults(matchId: string) {
+  const { data, error } = await supabase.rpc('mvp_results', { p_match_id: matchId });
   if (error) throw error;
-  return (data ?? []) as MvpVote[];
+  return (data ?? []) as { player_id: string; votes: number }[];
+}
+
+export async function getMyMvpVote(matchId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('mvp_votes')
+    .select('player_id')
+    .eq('match_id', matchId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Pick<MvpVote, 'player_id'> | null)?.player_id ?? null;
 }
 
 export async function voteMvp(matchId: string, userId: string, playerId: string) {
@@ -270,10 +286,21 @@ export async function voteMvp(matchId: string, userId: string, playerId: string)
   if (error) throw error;
 }
 
-export async function listPredictions(matchId: string) {
-  const { data, error } = await supabase.from('predictions').select('*').eq('match_id', matchId);
+export async function listPredictionResults(matchId: string) {
+  const { data, error } = await supabase.rpc('prediction_results', { p_match_id: matchId });
   if (error) throw error;
-  return (data ?? []) as Prediction[];
+  return (data ?? []) as { team_id: string; votes: number }[];
+}
+
+export async function getMyPrediction(matchId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('predictions')
+    .select('team_id')
+    .eq('match_id', matchId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Pick<Prediction, 'team_id'> | null)?.team_id ?? null;
 }
 
 export async function votePrediction(matchId: string, userId: string, teamId: string) {
@@ -292,10 +319,21 @@ export async function listPolls() {
   return (data ?? []) as Poll[];
 }
 
-export async function listPollVotes(pollId: string) {
-  const { data, error } = await supabase.from('poll_votes').select('*').eq('poll_id', pollId);
+export async function listPollResults(pollId: string) {
+  const { data, error } = await supabase.rpc('poll_results', { p_poll_id: pollId });
   if (error) throw error;
-  return (data ?? []) as PollVote[];
+  return (data ?? []) as { option_index: number; votes: number }[];
+}
+
+export async function getMyPollVote(pollId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('poll_votes')
+    .select('option_index')
+    .eq('poll_id', pollId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Pick<PollVote, 'option_index'> | null)?.option_index ?? null;
 }
 
 export async function votePoll(pollId: string, userId: string, optionIndex: number) {
