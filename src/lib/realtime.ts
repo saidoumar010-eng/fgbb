@@ -27,6 +27,27 @@ export function useMatchRealtime(matchId: string | undefined, onUpdate: (row: Re
   }, [matchId]);
 }
 
+// Abonne au fil d'événements d'un match (play-by-play en direct).
+export function useMatchEventsRealtime(matchId: string | undefined, onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+  useEffect(() => {
+    if (!matchId) return;
+    const name = `events-${matchId}-${++channelSeq}`;
+    const channel = supabase
+      .channel(name)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${matchId}` },
+        () => cb.current(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [matchId]);
+}
+
 // Abonne à tout changement sur les matchs (pour rafraîchir les listes live).
 export function useMatchesRealtime(onChange: () => void) {
   const cb = useRef(onChange);

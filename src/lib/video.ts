@@ -26,3 +26,12 @@ export function toEmbed(url?: string | null): EmbedResult | null {
   // Lien non reconnu : on l'ouvrira dans le navigateur
   return { type: 'link', url: u };
 }
+
+// Vignette YouTube (null pour les autres plateformes).
+export function videoThumbnail(url?: string | null): string | null {
+  if (!url) return null;
+  const yt = url
+    .trim()
+    .match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/);
+  return yt ? `https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg` : null;
+}

@@ -17,6 +17,7 @@ const MANAGE: { icon: keyof typeof Ionicons.glyphMap; title: string; sub: string
   { icon: 'trophy-outline', title: 'Compétitions', sub: 'Championnats, coupes, saisons', href: '/admin/competitions' },
   { icon: 'clipboard-outline', title: 'Matchs & statistiques', sub: 'Scores, box score, vidéos', href: '/admin/matches' },
   { icon: 'newspaper-outline', title: 'Actualités', sub: 'Publier, modifier, supprimer', href: '/admin/news' },
+  { icon: 'megaphone-outline', title: 'Sondages', sub: 'Fan zone : créer, clore, supprimer', href: '/admin/polls' },
 ];
 
 export default function AdminDashboard() {

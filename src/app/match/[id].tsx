@@ -3,6 +3,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Share, Text, View } from 'react-native';
 
+import { HeadToHead } from '@/components/head-to-head';
+import { MatchFeed } from '@/components/match-feed';
+import { MvpCard } from '@/components/mvp-card';
+import { PredictionCard } from '@/components/prediction-card';
 import { VideoEmbed } from '@/components/video-embed';
 import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { getMatch, getMatchStats } from '@/lib/db';
@@ -16,7 +20,7 @@ export default function MatchDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const match = useFetch(() => getMatch(id), [id]);
   const stats = useFetch(() => getMatchStats(id), [id]);
-  const [tab, setTab] = useState<'box' | 'team'>('box');
+  const [tab, setTab] = useState<'fil' | 'box' | 'team' | null>(null);
 
   const m = match.data;
   const [overlay, setOverlay] = useState<{
@@ -53,6 +57,11 @@ export default function MatchDetail() {
   const allStats = stats.data ?? [];
   const homeStats = allStats.filter((s) => s.team_id === m?.home_team_id);
   const awayStats = allStats.filter((s) => s.team_id === m?.away_team_id);
+
+  // Match avec le statut « live » superposé (temps réel) pour les sous-composants.
+  const mm = m ? { ...m, status: dispStatus } : undefined;
+  // Onglet par défaut selon le contexte : fil en direct, box score après, équipes avant.
+  const activeTab = tab ?? (dispStatus === 'live' ? 'fil' : dispStatus === 'finished' ? 'box' : 'team');
 
   return (
     <Screen>
@@ -128,6 +137,10 @@ export default function MatchDetail() {
             </Card>
           </View>
 
+          <View style={{ paddingHorizontal: S.lg, marginTop: 2 }}>
+            <PredictionCard match={mm!} />
+          </View>
+
           {m.video_url ? (
             <>
               <SectionTitle title="Résumé vidéo" />
@@ -138,24 +151,38 @@ export default function MatchDetail() {
           ) : null}
 
           <Row style={{ marginHorizontal: S.lg, marginTop: S.lg, gap: 6 }}>
-            <SubTab label="Box score" active={tab === 'box'} onPress={() => setTab('box')} />
-            <SubTab label="Stats équipe" active={tab === 'team'} onPress={() => setTab('team')} />
+            <SubTab label="Fil" active={activeTab === 'fil'} onPress={() => setTab('fil')} />
+            <SubTab label="Box score" active={activeTab === 'box'} onPress={() => setTab('box')} />
+            <SubTab label="Équipes" active={activeTab === 'team'} onPress={() => setTab('team')} />
           </Row>
 
-          {allStats.length === 0 ? (
-            <Empty
-              icon="stats-chart-outline"
-              title="Pas encore de statistiques"
-              subtitle="Les stats joueur par joueur seront saisies par la fédération."
-            />
-          ) : tab === 'box' ? (
-            <View style={{ paddingHorizontal: S.lg, paddingTop: 12, gap: 16 }}>
-              <BoxScore title={m.home_team?.name ?? ''} rows={homeStats} />
-              <BoxScore title={m.away_team?.name ?? ''} rows={awayStats} />
-            </View>
+          {activeTab === 'fil' ? (
+            <MatchFeed match={mm!} />
+          ) : activeTab === 'box' ? (
+            allStats.length === 0 ? (
+              <Empty
+                icon="stats-chart-outline"
+                title="Pas encore de statistiques"
+                subtitle="Les stats joueur par joueur seront saisies par la fédération."
+              />
+            ) : (
+              <View style={{ paddingHorizontal: S.lg, paddingTop: 12, gap: 16 }}>
+                <BoxScore title={m.home_team?.name ?? ''} rows={homeStats} />
+                <BoxScore title={m.away_team?.name ?? ''} rows={awayStats} />
+              </View>
+            )
           ) : (
-            <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
-              <TeamCompare home={homeStats} away={awayStats} homeName={teamShort(m.home_team)} awayName={teamShort(m.away_team)} />
+            <View style={{ paddingHorizontal: S.lg, paddingTop: 12, gap: 12 }}>
+              {allStats.length > 0 && (
+                <TeamCompare home={homeStats} away={awayStats} homeName={teamShort(m.home_team)} awayName={teamShort(m.away_team)} />
+              )}
+              <HeadToHead match={mm!} />
+            </View>
+          )}
+
+          {dispStatus !== 'scheduled' && (
+            <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
+              <MvpCard match={mm!} />
             </View>
           )}
         </View>

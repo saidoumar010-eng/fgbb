@@ -50,6 +50,14 @@ export default function PlayerDetail() {
             <Ionicons name="chevron-back" size={24} color={C.muted} onPress={() => router.back()} />
           </View>
         }
+        right={
+          <Ionicons
+            name="git-compare-outline"
+            size={22}
+            color={C.muted}
+            onPress={() => router.push(`/compare?a=${id}`)}
+          />
+        }
       />
       {!p ? (
         <Empty icon="person-outline" title={player.loading ? 'Chargement…' : 'Joueur introuvable'} />

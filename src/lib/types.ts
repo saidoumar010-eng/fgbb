@@ -119,6 +119,52 @@ export interface Standing {
   points: number;
 }
 
+export type MatchEventKind = 'points' | 'correction' | 'quarter' | 'info';
+
+export interface MatchEvent {
+  id: string;
+  match_id: string;
+  team_id: string | null;
+  player_id: string | null;
+  kind: MatchEventKind;
+  points: number;
+  quarter: number | null;
+  label: string | null;
+  created_at: string;
+  // jointures éventuelles
+  player?: Player | null;
+  team?: Team | null;
+}
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PollVote {
+  poll_id: string;
+  user_id: string;
+  option_index: number;
+  created_at: string;
+}
+
+export interface MvpVote {
+  match_id: string;
+  user_id: string;
+  player_id: string;
+  created_at: string;
+}
+
+export interface Prediction {
+  match_id: string;
+  user_id: string;
+  team_id: string;
+  created_at: string;
+}
+
 export interface PlayerSeasonStat {
   player_id: string;
   full_name: string;

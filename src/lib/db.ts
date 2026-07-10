@@ -2,11 +2,17 @@ import { supabase } from '@/lib/supabase';
 import type {
   Competition,
   Match,
+  MatchEvent,
+  MatchEventKind,
   MatchStatus,
+  MvpVote,
   NewsItem,
   Player,
   PlayerMatchStat,
   PlayerSeasonStat,
+  Poll,
+  PollVote,
+  Prediction,
   Standing,
   Team,
 } from '@/lib/types';
@@ -186,5 +192,130 @@ export async function addFavorite(userId: string, teamId: string) {
 
 export async function removeFavorite(userId: string, teamId: string) {
   const { error } = await supabase.from('favorites').delete().eq('user_id', userId).eq('team_id', teamId);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Fil de match (play-by-play)
+
+export const EVENT_SELECT =
+  '*, player:players(id, full_name, number), team:teams(id, name, short_name, color)';
+
+export async function listMatchEvents(matchId: string) {
+  const { data, error } = await supabase
+    .from('match_events')
+    .select(EVENT_SELECT)
+    .eq('match_id', matchId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as MatchEvent[];
+}
+
+export async function addMatchEvent(ev: {
+  match_id: string;
+  team_id?: string | null;
+  player_id?: string | null;
+  kind?: MatchEventKind;
+  points?: number;
+  quarter?: number | null;
+  label?: string | null;
+}) {
+  const { error } = await supabase.from('match_events').insert(ev);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Galerie vidéos : tous les matchs disposant d'un résumé vidéo.
+
+export async function listVideos() {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(MATCH_SELECT)
+    .not('video_url', 'is', null)
+    .neq('video_url', '')
+    .order('scheduled_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as Match[];
+}
+
+// ---------------------------------------------------------------------------
+// Face-à-face : historique des confrontations entre deux équipes.
+
+export async function getHeadToHead(teamA: string, teamB: string) {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(MATCH_SELECT)
+    .eq('status', 'finished')
+    .or(
+      `and(home_team_id.eq.${teamA},away_team_id.eq.${teamB}),and(home_team_id.eq.${teamB},away_team_id.eq.${teamA})`,
+    )
+    .order('scheduled_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as Match[];
+}
+
+// ---------------------------------------------------------------------------
+// Fan zone : vote MVP, pronostics, sondages.
+
+export async function listMvpVotes(matchId: string) {
+  const { data, error } = await supabase.from('mvp_votes').select('*').eq('match_id', matchId);
+  if (error) throw error;
+  return (data ?? []) as MvpVote[];
+}
+
+export async function voteMvp(matchId: string, userId: string, playerId: string) {
+  const { error } = await supabase
+    .from('mvp_votes')
+    .upsert({ match_id: matchId, user_id: userId, player_id: playerId }, { onConflict: 'match_id,user_id' });
+  if (error) throw error;
+}
+
+export async function listPredictions(matchId: string) {
+  const { data, error } = await supabase.from('predictions').select('*').eq('match_id', matchId);
+  if (error) throw error;
+  return (data ?? []) as Prediction[];
+}
+
+export async function votePrediction(matchId: string, userId: string, teamId: string) {
+  const { error } = await supabase
+    .from('predictions')
+    .upsert({ match_id: matchId, user_id: userId, team_id: teamId }, { onConflict: 'match_id,user_id' });
+  if (error) throw error;
+}
+
+export async function listPolls() {
+  const { data, error } = await supabase
+    .from('polls')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Poll[];
+}
+
+export async function listPollVotes(pollId: string) {
+  const { data, error } = await supabase.from('poll_votes').select('*').eq('poll_id', pollId);
+  if (error) throw error;
+  return (data ?? []) as PollVote[];
+}
+
+export async function votePoll(pollId: string, userId: string, optionIndex: number) {
+  const { error } = await supabase
+    .from('poll_votes')
+    .upsert({ poll_id: pollId, user_id: userId, option_index: optionIndex }, { onConflict: 'poll_id,user_id' });
+  if (error) throw error;
+}
+
+export async function createPoll(question: string, options: string[]) {
+  const { error } = await supabase.from('polls').insert({ question, options });
+  if (error) throw error;
+}
+
+export async function setPollActive(id: string, isActive: boolean) {
+  const { error } = await supabase.from('polls').update({ is_active: isActive }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deletePoll(id: string) {
+  const { error } = await supabase.from('polls').delete().eq('id', id);
   if (error) throw error;
 }

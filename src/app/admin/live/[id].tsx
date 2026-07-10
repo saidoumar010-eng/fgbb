@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { Crest, Empty, Header, Pill, Row, Screen } from '@/components/ui';
-import { getMatch } from '@/lib/db';
+import { addMatchEvent, getMatch, getTeamPlayers } from '@/lib/db';
 import { teamShort } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import { C, R, S } from '@/lib/theme';
-import type { MatchStatus, QuarterScore } from '@/lib/types';
+import type { MatchStatus, Player, QuarterScore } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
 type QScore = { home: number; away: number };
@@ -16,6 +16,20 @@ type QScore = { home: number; away: number };
 export default function LiveController() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: m, loading } = useFetch(() => getMatch(id), [id]);
+
+  // Effectifs pour attribuer chaque panier à un marqueur (optionnel).
+  const homeRoster = useFetch(
+    () => (m?.home_team_id ? getTeamPlayers(m.home_team_id) : Promise.resolve([] as Player[])),
+    [m?.home_team_id],
+  );
+  const awayRoster = useFetch(
+    () => (m?.away_team_id ? getTeamPlayers(m.away_team_id) : Promise.resolve([] as Player[])),
+    [m?.away_team_id],
+  );
+  const [scorer, setScorer] = useState<{ home: string | null; away: string | null }>({
+    home: null,
+    away: null,
+  });
 
   const [quarters, setQuarters] = useState<QScore[]>([
     { home: 0, away: 0 },
@@ -75,6 +89,25 @@ export default function LiveController() {
     }
   }
 
+  // Publie l'action dans le fil du match (play-by-play). Non bloquant :
+  // le score officiel reste porté par la table matches.
+  function logEvent(side: 'home' | 'away', n: number) {
+    if (!m) return;
+    const teamId = side === 'home' ? m.home_team_id : m.away_team_id;
+    addMatchEvent(
+      n > 0
+        ? {
+            match_id: id,
+            team_id: teamId,
+            player_id: scorer[side],
+            kind: 'points',
+            points: n,
+            quarter: current,
+          }
+        : { match_id: id, team_id: teamId, kind: 'correction', points: n, quarter: current },
+    ).catch((e) => setErr(e instanceof Error ? e.message : 'Erreur fil du match'));
+  }
+
   function addPoints(side: 'home' | 'away', n: number) {
     setQuarters((prev) => {
       const next = prev.map((q) => ({ ...q }));
@@ -83,6 +116,7 @@ export default function LiveController() {
       persist(next, current, 'live');
       return next;
     });
+    logEvent(side, n);
   }
 
   function nextQuarter() {
@@ -92,6 +126,7 @@ export default function LiveController() {
       if (nc > next.length) next.push({ home: 0, away: 0 });
       setCurrent(nc);
       persist(next, nc, 'live');
+      addMatchEvent({ match_id: id, kind: 'quarter', quarter: nc }).catch(() => {});
       return next;
     });
   }
@@ -105,6 +140,7 @@ export default function LiveController() {
         onPress: async () => {
           setStatus('finished');
           await persist(quarters, current, 'finished');
+          addMatchEvent({ match_id: id, kind: 'info', label: 'Fin du match' }).catch(() => {});
           router.back();
         },
       },
@@ -167,8 +203,22 @@ export default function LiveController() {
         </View>
 
         <Row style={{ gap: 12, marginTop: S.lg, alignItems: 'flex-start' }}>
-          <TeamPad label={teamShort(m.home_team)} onAdd={(n) => addPoints('home', n)} onSub={() => addPoints('home', -1)} />
-          <TeamPad label={teamShort(m.away_team)} onAdd={(n) => addPoints('away', n)} onSub={() => addPoints('away', -1)} />
+          <View style={{ flex: 1 }}>
+            <TeamPad label={teamShort(m.home_team)} onAdd={(n) => addPoints('home', n)} onSub={() => addPoints('home', -1)} />
+            <ScorerPicker
+              roster={homeRoster.data ?? []}
+              value={scorer.home}
+              onChange={(v) => setScorer((s) => ({ ...s, home: v }))}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <TeamPad label={teamShort(m.away_team)} onAdd={(n) => addPoints('away', n)} onSub={() => addPoints('away', -1)} />
+            <ScorerPicker
+              roster={awayRoster.data ?? []}
+              value={scorer.away}
+              onChange={(v) => setScorer((s) => ({ ...s, away: v }))}
+            />
+          </View>
         </Row>
 
         <Pressable
@@ -183,6 +233,51 @@ export default function LiveController() {
         </Pressable>
       </View>
     </Screen>
+  );
+}
+
+// Sélecteur de marqueur : le prochain panier sera attribué au joueur choisi.
+function ScorerPicker({
+  roster,
+  value,
+  onChange,
+}: {
+  roster: Player[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  if (roster.length === 0) return null;
+  return (
+    <View style={{ marginTop: 10 }}>
+      <Text style={{ color: C.dim, fontSize: 11, marginBottom: 6, textAlign: 'center' }}>
+        Marqueur (optionnel)
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' }}>
+        {roster.map((p) => {
+          const on = value === p.id;
+          return (
+            <Pressable
+              key={p.id}
+              onPress={() => onChange(on ? null : p.id)}
+              style={({ pressed }) => [
+                {
+                  paddingHorizontal: 8,
+                  paddingVertical: 5,
+                  borderRadius: R.pill,
+                  borderWidth: 1,
+                  borderColor: on ? C.accent : C.border,
+                  backgroundColor: on ? C.accentSoft : C.surface,
+                },
+                pressed && { opacity: 0.8 },
+              ]}>
+              <Text style={{ color: on ? C.accent : C.muted, fontSize: 11.5 }} numberOfLines={1}>
+                {p.number != null ? `#${p.number}` : p.full_name.split(' ')[0]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
