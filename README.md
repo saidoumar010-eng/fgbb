@@ -100,8 +100,58 @@ vérifie et corrige, puis enregistre. Réservé aux administrateurs.
 
 Sans cette clé, le bouton affiche un message « ANTHROPIC_API_KEY non configurée ».
 
+## Construire l'application Android (APK)
+
+Tout est configuré (`eas.json`, identifiant de paquet `gn.fgbb.app`, icônes, permissions).
+Il ne reste qu'à lancer le build, qui se fait sur les serveurs d'Expo :
+
+```bash
+cd C:\Users\HP\Desktop\FGBB
+npx eas-cli login                                      # ton compte Expo (gratuit)
+npx eas-cli init                                       # ajoute extra.eas.projectId dans app.json — à committer
+npx eas-cli build --platform android --profile preview
+```
+
+À la première exécution, EAS propose de **générer un keystore** : réponds oui, il le
+conserve et le réutilisera. Ce keystore signe l'application ; s'il est perdu, il devient
+impossible de publier une mise à jour de la même app sur le Play Store.
+
+Le build dure ~10 à 20 min selon la file d'attente. À la fin, EAS donne une URL de
+téléchargement : ouvre-la depuis le téléphone Android et installe l'APK (il faudra
+autoriser « installer des applications de sources inconnues »).
+
+Profils disponibles (`eas.json`) :
+
+| Profil | Résultat | Usage |
+|---|---|---|
+| `preview` | APK | Installation directe pour tester |
+| `development` | APK + client de dev | Développement avec rechargement à chaud |
+| `production` | AAB | Dépôt sur le Google Play Store |
+
+### Ce que le build natif permet enfin de vérifier
+
+Ces fonctions ne s'exercent pas en version web et n'ont donc **jamais été testées** :
+lecteur vidéo intégré (`react-native-webview`), envoi de photos depuis la galerie,
+notifications push, export PDF de la feuille de match et partage de fichier.
+
+### Permissions demandées
+
+Uniquement `INTERNET`, `VIBRATE` et l'accès aux photos (limité à Android 12 et
+antérieurs). `RECORD_AUDIO` et `SYSTEM_ALERT_WINDOW`, ajoutées d'office par le gabarit
+natif, sont explicitement bloquées : l'application n'en a pas l'usage, et ce sont des
+permissions sensibles lors de la validation Google Play.
+
+### Note sur `.env`
+
+Le fichier est versionné volontairement : EAS n'envoie au serveur de build que les
+fichiers suivis par git, et sans lui l'application serait construite sans configuration
+Supabase. La clé `anon` qu'il contient est **publique par conception** (elle est
+embarquée dans toute application cliente) ; ce sont les politiques RLS qui protègent
+les données.
+
 ## Reste à faire (prochaines itérations)
 
+- Lancer le premier build Android et vérifier sur un vrai téléphone (ci-dessus).
 - Ajouter le secret `ANTHROPIC_API_KEY` pour activer la lecture IA de la feuille de match (ci-dessus).
-- Créer le projet EAS + development build pour activer la réception des push (voir ci-dessus).
 - Activer « Leaked password protection » dans Supabase → Auth (tableau de bord).
+- Saisir les données réelles de la saison : sans clubs ni matchs, l'application est vide.
