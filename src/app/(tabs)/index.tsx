@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { MatchRow } from '@/components/match-row';
+import { SponsorBand } from '@/components/sponsor-band';
 import { Card, Crest, Empty, Header, Logo, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { listMatches, listNews } from '@/lib/db';
 import { fullDate, matchWhen, teamShort } from '@/lib/format';
@@ -76,6 +77,12 @@ export default function HomeScreen() {
             <QuickLink icon="podium-outline" label="Leaders" href="/leaders" />
             <QuickLink icon="heart-outline" label="Fan zone" href="/fanzone" />
             <QuickLink icon="git-compare-outline" label="Comparer" href="/compare" />
+          </Row>
+          <Row style={{ paddingHorizontal: S.lg, gap: 9, marginTop: 9 }}>
+            <QuickLink icon="images-outline" label="Photos" href="/galerie" />
+            <QuickLink icon="calendar-outline" label="Agenda" href="/agenda" />
+            <QuickLink icon="mic-outline" label="Médias" href="/medias" />
+            <QuickLink icon="information-circle-outline" label="À propos" href="/apropos" />
           </Row>
 
           {otherLive.length > 0 && (
@@ -165,6 +172,8 @@ export default function HomeScreen() {
               </View>
             </>
           )}
+
+          <SponsorBand placement="accueil" />
         </View>
       )}
     </Screen>

@@ -7,7 +7,7 @@ import { Button, Card, Crest, Header, Logo, Row, Screen, SectionTitle } from '@/
 import { useAuth } from '@/lib/auth';
 import { listFavoriteTeams } from '@/lib/db';
 import { teamShort } from '@/lib/format';
-import { useT } from '@/lib/i18n';
+import { useT, type Lang } from '@/lib/i18n';
 import { registerForPush, unregisterPush } from '@/lib/notifications';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
@@ -49,6 +49,24 @@ export default function CompteScreen() {
           <View style={{ alignSelf: 'stretch' }}>
             <Button title="Connexion / inscription" icon="log-in-outline" onPress={() => router.push('/login')} />
           </View>
+        </View>
+
+        {/* Le choix de la langue doit rester accessible sans compte :
+            un visiteur anglophone doit pouvoir basculer avant de s'inscrire. */}
+        <SectionTitle title="Langue de l’application" />
+        <View style={{ paddingHorizontal: S.lg }}>
+          <Card>
+            <LangSwitch lang={lang} setLang={setLang} />
+          </Card>
+        </View>
+
+        <View style={{ padding: S.lg }}>
+          <Button
+            title="À propos de la fédération"
+            tone="alt"
+            icon="information-circle-outline"
+            onPress={() => router.push('/apropos' as never)}
+          />
         </View>
       </Screen>
     );
@@ -129,29 +147,19 @@ export default function CompteScreen() {
       <SectionTitle title="Langue de l’application" />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card>
-          <Row style={{ gap: 9 }}>
-            {(['fr', 'en'] as const).map((l) => {
-              const on = lang === l;
-              return (
-                <Pressable
-                  key={l}
-                  onPress={() => setLang(l)}
-                  style={{
-                    flex: 1,
-                    alignItems: 'center',
-                    paddingVertical: 11,
-                    borderRadius: 10,
-                    backgroundColor: on ? C.accentSoft : 'transparent',
-                    borderWidth: 1,
-                    borderColor: on ? C.accent : C.border,
-                  }}>
-                  <Text style={{ color: on ? C.accent : C.muted, fontSize: 13.5, fontWeight: '600' }}>
-                    {l === 'fr' ? 'Français' : 'English'}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </Row>
+          <LangSwitch lang={lang} setLang={setLang} />
+        </Card>
+      </View>
+
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
+        <Card style={{ paddingVertical: 4 }}>
+          <LinkRow
+            icon="information-circle-outline"
+            title="À propos de la fédération"
+            sub="Présentation, contacts, partenaires"
+            href="/apropos"
+            last
+          />
         </Card>
       </View>
 
@@ -184,6 +192,34 @@ export default function CompteScreen() {
         <Button title="Se déconnecter" tone="alt" icon="log-out-outline" onPress={signOut} />
       </View>
     </Screen>
+  );
+}
+
+function LangSwitch({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
+  return (
+    <Row style={{ gap: 9 }}>
+      {(['fr', 'en'] as const).map((l) => {
+        const on = lang === l;
+        return (
+          <Pressable
+            key={l}
+            onPress={() => setLang(l)}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 11,
+              borderRadius: 10,
+              backgroundColor: on ? C.accentSoft : 'transparent',
+              borderWidth: 1,
+              borderColor: on ? C.accent : C.border,
+            }}>
+            <Text style={{ color: on ? C.accent : C.muted, fontSize: 13.5, fontWeight: '600' }}>
+              {l === 'fr' ? 'Français' : 'English'}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </Row>
   );
 }
 

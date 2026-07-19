@@ -9,7 +9,10 @@ import { LiveChat } from '@/components/live-chat';
 import { MatchFeed } from '@/components/match-feed';
 import { MatchOfficials } from '@/components/match-officials';
 import { MvpCard } from '@/components/mvp-card';
+import { PhotoGallery } from '@/components/photo-gallery';
 import { PredictionCard } from '@/components/prediction-card';
+import { ShotChart } from '@/components/shot-chart';
+import { SponsorBand } from '@/components/sponsor-band';
 import { VideoEmbed } from '@/components/video-embed';
 import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { getMatch, getMatchStats } from '@/lib/db';
@@ -234,10 +237,25 @@ export default function MatchDetail() {
           )}
 
           {dispStatus !== 'scheduled' && (
+            <>
+              <SectionTitle title="Carte des tirs" />
+              <View style={{ paddingHorizontal: S.lg }}>
+                <ShotChart matchId={id} />
+              </View>
+            </>
+          )}
+
+          <PhotoGallery matchId={id} />
+
+          {dispStatus !== 'scheduled' && (
             <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
               <MvpCard match={mm!} />
             </View>
           )}
+
+          <View style={{ paddingTop: S.lg }}>
+            <SponsorBand placement="match" />
+          </View>
         </View>
       )}
     </Screen>

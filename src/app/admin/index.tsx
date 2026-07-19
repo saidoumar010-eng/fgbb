@@ -35,17 +35,30 @@ const ADMINISTRATIF: Entry[] = [
   { icon: 'warning-outline', title: 'Discipline', sub: 'Avertissements, suspensions, amendes', href: '/admin/sanctions' },
 ];
 
-const COMMUNAUTE: Entry[] = [
+const CONTENUS: Entry[] = [
   { icon: 'newspaper-outline', title: 'Actualités', sub: 'Publier, modifier, supprimer', href: '/admin/news' },
+  { icon: 'images-outline', title: 'Photos', sub: 'Galeries par match ou par album', href: '/admin/photos' },
+  { icon: 'calendar-outline', title: 'Agenda', sub: 'Assemblées, stages, cérémonies', href: '/admin/events' },
+  { icon: 'mic-outline', title: 'Médiathèque', sub: 'Interviews, podcasts, reportages', href: '/admin/media' },
+];
+
+const COMMUNAUTE: Entry[] = [
   { icon: 'megaphone-outline', title: 'Sondages', sub: 'Fan zone : créer, clore, supprimer', href: '/admin/polls' },
   { icon: 'help-circle-outline', title: 'Quiz', sub: 'Questions, bonnes réponses, activation', href: '/admin/quizzes' },
   { icon: 'shield-checkmark-outline', title: 'Modération', sub: 'Signalements, bannissements, mots interdits', href: '/admin/moderation' },
 ];
 
+const INSTITUTION: Entry[] = [
+  { icon: 'ribbon-outline', title: 'Partenaires', sub: 'Sponsors affichés dans l’application', href: '/admin/sponsors' },
+  { icon: 'information-circle-outline', title: 'Infos fédération', sub: 'À propos, contacts, réseaux sociaux', href: '/admin/federation-settings' },
+];
+
 const SECTIONS: { title: string; items: Entry[] }[] = [
   { title: 'Compétition', items: SPORT },
   { title: 'Administratif', items: ADMINISTRATIF },
+  { title: 'Contenus', items: CONTENUS },
   { title: 'Communauté', items: COMMUNAUTE },
+  { title: 'Institution', items: INSTITUTION },
 ];
 
 export default function AdminDashboard() {

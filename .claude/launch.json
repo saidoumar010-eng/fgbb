@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "fgbb-web",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--port", "8081"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npx expo start --web --port 8081"],
       "port": 8081
     }
   ]

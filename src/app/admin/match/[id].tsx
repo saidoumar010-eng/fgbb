@@ -145,6 +145,18 @@ export default function AdminMatchEdit() {
         icon="stats-chart-outline"
         onPress={() => router.push(`/admin/box-score/${id}`)}
       />
+      <Button
+        title="Saisir la carte des tirs"
+        tone="alt"
+        icon="basketball-outline"
+        onPress={() => router.push(`/admin/shots/${id}` as never)}
+      />
+      <Button
+        title="Désigner les arbitres"
+        tone="alt"
+        icon="people-circle-outline"
+        onPress={() => router.push(`/admin/officials/${id}` as never)}
+      />
       <Button title="Supprimer le match" tone="alt" icon="trash-outline" onPress={confirmDelete} />
     </AdminForm>
   );
