@@ -8,9 +8,17 @@
     "scheme": "fgbb",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "gn.fgbb.app",
+      "supportsTablet": true
     },
     "android": {
+      "package": "gn.fgbb.app",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#06201C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -28,7 +36,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "L'application accède à vos photos pour illustrer les joueurs, équipes et actualités."
+          "photosPermission": "L'application accède à vos photos pour illustrer les joueurs, équipes et actualités.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [
@@ -41,7 +51,14 @@
           }
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#3BD61B"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,
