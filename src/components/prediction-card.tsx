@@ -6,6 +6,7 @@ import { Card, Crest, Row } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { getMyPrediction, listPredictionResults, votePrediction } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, R } from '@/lib/theme';
 import type { Match } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -13,6 +14,7 @@ import { useFetch } from '@/lib/useFetch';
 // Pronostic des supporters : avant le match, chacun prédit le vainqueur.
 // Après le coup d'envoi, les pourcentages restent visibles en lecture seule.
 export function PredictionCard({ match }: { match: Match }) {
+  const { t } = useT();
   const { session } = useAuth();
   const uid = session?.user.id;
   const results = useFetch(() => listPredictionResults(match.id), [match.id]);
@@ -42,7 +44,7 @@ export function PredictionCard({ match }: { match: Match }) {
       await votePrediction(match.id, session.user.id, teamId);
       await Promise.all([results.reload(), myVote.reload()]);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Erreur');
+      setErr(e instanceof Error ? e.message : t('Erreur'));
     } finally {
       setBusy(false);
     }
@@ -82,7 +84,7 @@ export function PredictionCard({ match }: { match: Match }) {
   return (
     <Card>
       <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600', marginBottom: 10 }}>
-        {open ? 'Pronostic des supporters — qui va gagner ?' : 'Pronostic des supporters'}
+        {open ? t('Pronostic des supporters — qui va gagner ?') : t('Pronostic des supporters')}
       </Text>
       <Row style={{ gap: 10 }}>
         {teamBtn(match.home_team, match.home_team_id, pctHome)}
@@ -105,14 +107,16 @@ export function PredictionCard({ match }: { match: Match }) {
       )}
       <Text style={{ color: C.dim, fontSize: 11, marginTop: 8, textAlign: 'center' }}>
         {err
-          ? `Erreur : ${err}`
+          ? t('Erreur : {msg}', { msg: err })
           : total === 0
             ? open
               ? session
-                ? 'Sois le premier à pronostiquer !'
-                : 'Connecte-toi pour pronostiquer.'
+                ? t('Sois le premier à pronostiquer !')
+                : t('Connecte-toi pour pronostiquer.')
               : ''
-            : `${total} pronostic${total > 1 ? 's' : ''}${mine ? ' · ton choix est enregistré' : ''}`}
+            : `${total > 1 ? t('{n} pronostics', { n: total }) : t('{n} pronostic', { n: total })}${
+                mine ? ` · ${t('ton choix est enregistré')}` : ''
+              }`}
       </Text>
     </Card>
   );

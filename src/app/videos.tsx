@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Card, Empty, Header, Row, Screen } from '@/components/ui';
 import { listCompetitions, listVideos } from '@/lib/db';
 import { fullDate, teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 import type { Match } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -14,6 +15,7 @@ import { videoThumbnail } from '@/lib/video';
 
 // Galerie des résumés vidéo, filtrable par compétition.
 export default function VideosScreen() {
+  const { t } = useT();
   const videos = useFetch(() => listVideos());
   const competitions = useFetch(() => listCompetitions());
   const [compId, setCompId] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function VideosScreen() {
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       <Header
-        title="Vidéos"
+        title={t('Vidéos')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -51,7 +53,7 @@ export default function VideosScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: 7 }}>
-          <FilterChip label="Toutes" active={compId === null} onPress={() => setCompId(null)} />
+          <FilterChip label={t('Toutes')} active={compId === null} onPress={() => setCompId(null)} />
           {compsWithVideos.map((c) => (
             <FilterChip key={c.id} label={c.name} active={compId === c.id} onPress={() => setCompId(c.id)} />
           ))}
@@ -61,8 +63,8 @@ export default function VideosScreen() {
       {list.length === 0 ? (
         <Empty
           icon="videocam-outline"
-          title={videos.loading ? 'Chargement…' : 'Pas encore de vidéo'}
-          subtitle="Les résumés vidéo publiés par la fédération apparaîtront ici."
+          title={videos.loading ? t('Chargement…') : t('Pas encore de vidéo')}
+          subtitle={t('Les résumés vidéo publiés par la fédération apparaîtront ici.')}
         />
       ) : (
         <View style={{ padding: S.lg, gap: 12 }}>

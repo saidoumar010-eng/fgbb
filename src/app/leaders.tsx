@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Card, Crest, Empty, Header, Row, Screen } from '@/components/ui';
 import { listLeadersBy } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 import type { PlayerSeasonStat } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -19,6 +20,7 @@ const CATS: { key: Cat; label: string; unit: string }[] = [
 ];
 
 export default function LeadersScreen() {
+  const { t } = useT();
   const [cat, setCat] = useState<Cat>('ppg');
   const { data, loading } = useFetch(() => listLeadersBy(cat), [cat]);
   const rows = data ?? [];
@@ -27,7 +29,7 @@ export default function LeadersScreen() {
   return (
     <Screen scroll={false}>
       <Header
-        title="Leaders"
+        title={t('Leaders')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -43,7 +45,7 @@ export default function LeadersScreen() {
                 key={c.key}
                 onPress={() => setCat(c.key)}
                 style={{ backgroundColor: on ? C.accent : '#181D26', borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 7 }}>
-                <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>{c.label}</Text>
+                <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>{t(c.label)}</Text>
               </Pressable>
             );
           })}
@@ -53,8 +55,10 @@ export default function LeadersScreen() {
       {rows.length === 0 ? (
         <Empty
           icon="podium-outline"
-          title={loading ? 'Chargement…' : 'Aucune statistique'}
-          subtitle={loading ? undefined : 'Les leaders apparaîtront dès que des box scores auront été saisis.'}
+          title={loading ? t('Chargement…') : t('Aucune statistique')}
+          subtitle={
+            loading ? undefined : t('Les leaders apparaîtront dès que des box scores auront été saisis.')
+          }
         />
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: S.xl * 2 }} showsVerticalScrollIndicator={false}>
@@ -68,7 +72,7 @@ export default function LeadersScreen() {
                     {p.full_name}
                   </Text>
                   <Text style={{ color: C.accent, fontSize: 15, fontWeight: '600' }}>
-                    {p[cat]} <Text style={{ color: C.dim, fontSize: 11 }}>{unit}</Text>
+                    {p[cat]} <Text style={{ color: C.dim, fontSize: 11 }}>{t(unit)}</Text>
                   </Text>
                 </Row>
               </Pressable>

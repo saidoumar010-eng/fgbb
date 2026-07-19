@@ -5,12 +5,14 @@ import { Alert, Pressable, Text, View } from 'react-native';
 
 import { Button, Card, Empty, Field, Header, Pill, Row, Screen } from '@/components/ui';
 import { createPoll, deletePoll, listPolls, setPollActive } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 // Gestion des sondages de la fan zone (espace fédération).
 export default function AdminPolls() {
   const polls = useFetch(() => listPolls());
+  const { t } = useT();
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [busy, setBusy] = useState(false);
@@ -19,7 +21,7 @@ export default function AdminPolls() {
   async function submit() {
     const cleaned = options.map((o) => o.trim()).filter(Boolean);
     if (!question.trim() || cleaned.length < 2) {
-      setErr('Renseigne une question et au moins deux options.');
+      setErr(t('Renseigne une question et au moins deux options.'));
       return;
     }
     setBusy(true);
@@ -30,17 +32,17 @@ export default function AdminPolls() {
       setOptions(['', '']);
       await polls.reload();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Erreur');
+      setErr(e instanceof Error ? e.message : t('Erreur'));
     } finally {
       setBusy(false);
     }
   }
 
   function confirmDelete(id: string) {
-    Alert.alert('Supprimer le sondage', 'Les votes associés seront également supprimés.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Supprimer le sondage'), t('Les votes associés seront également supprimés.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('Supprimer'),
         style: 'destructive',
         onPress: async () => {
           await deletePoll(id).catch(() => {});
@@ -53,7 +55,7 @@ export default function AdminPolls() {
   return (
     <Screen>
       <Header
-        title="Sondages"
+        title={t('Sondages')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -63,18 +65,18 @@ export default function AdminPolls() {
 
       <View style={{ padding: S.lg, gap: 12 }}>
         <Card>
-          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>Nouveau sondage</Text>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>{t('Nouveau sondage')}</Text>
           <Field
-            label="Question"
-            placeholder="Ex. Quelle équipe remportera la D1 ?"
+            label={t('Question')}
+            placeholder={t('Ex. Quelle équipe remportera la D1 ?')}
             value={question}
             onChangeText={setQuestion}
           />
           {options.map((opt, i) => (
             <Row key={i} style={{ gap: 8, alignItems: 'flex-end' }}>
               <Field
-                label={`Option ${i + 1}`}
-                placeholder={`Réponse ${i + 1}`}
+                label={t('Option {n}', { n: i + 1 })}
+                placeholder={t('Réponse {n}', { n: i + 1 })}
                 value={opt}
                 onChangeText={(v) => setOptions((prev) => prev.map((o, j) => (j === i ? v : o)))}
               />
@@ -91,22 +93,22 @@ export default function AdminPolls() {
             <Pressable onPress={() => setOptions((prev) => [...prev, ''])} style={{ marginTop: 10 }}>
               <Row style={{ gap: 6 }}>
                 <Ionicons name="add-circle-outline" size={18} color={C.accent} />
-                <Text style={{ color: C.accent, fontSize: 13 }}>Ajouter une option</Text>
+                <Text style={{ color: C.accent, fontSize: 13 }}>{t('Ajouter une option')}</Text>
               </Row>
             </Pressable>
           )}
           {err ? <Text style={{ color: C.red, fontSize: 12, marginTop: 8 }}>{err}</Text> : null}
-          <Button title="Publier le sondage" onPress={submit} loading={busy} icon="megaphone-outline" />
+          <Button title={t('Publier le sondage')} onPress={submit} loading={busy} icon="megaphone-outline" />
         </Card>
 
         {(polls.data ?? []).length === 0 ? (
-          <Empty icon="megaphone-outline" title={polls.loading ? 'Chargement…' : 'Aucun sondage'} />
+          <Empty icon="megaphone-outline" title={polls.loading ? t('Chargement…') : t('Aucun sondage')} />
         ) : (
           (polls.data ?? []).map((p) => (
             <Card key={p.id}>
               <Row style={{ justifyContent: 'space-between', gap: 8 }}>
                 <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600', flex: 1 }}>{p.question}</Text>
-                <Pill label={p.is_active ? 'Actif' : 'Clos'} tone={p.is_active ? 'green' : 'neutral'} />
+                <Pill label={p.is_active ? t('Actif') : t('Clos')} tone={p.is_active ? 'green' : 'neutral'} />
               </Row>
               <Text style={{ color: C.dim, fontSize: 12, marginTop: 6 }}>{p.options.join(' · ')}</Text>
               <Row style={{ gap: 16, marginTop: 10 }}>
@@ -116,11 +118,11 @@ export default function AdminPolls() {
                     polls.reload();
                   }}>
                   <Text style={{ color: C.accent, fontSize: 12.5 }}>
-                    {p.is_active ? 'Clore le sondage' : 'Réactiver'}
+                    {p.is_active ? t('Clore le sondage') : t('Réactiver')}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => confirmDelete(p.id)}>
-                  <Text style={{ color: C.red, fontSize: 12.5 }}>Supprimer</Text>
+                  <Text style={{ color: C.red, fontSize: 12.5 }}>{t('Supprimer')}</Text>
                 </Pressable>
               </Row>
             </Card>

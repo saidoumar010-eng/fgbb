@@ -18,6 +18,7 @@ import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/c
 import { getMatch, getMatchStats } from '@/lib/db';
 import { exportMatchSheetPdf } from '@/lib/export';
 import { fullDate, teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useMatchRealtime } from '@/lib/realtime';
 import { C, S } from '@/lib/theme';
 import type { MatchStatus, PlayerMatchStat, QuarterScore } from '@/lib/types';
@@ -27,6 +28,7 @@ type Tab = 'fil' | 'box' | 'team' | 'chat' | 'reactions';
 
 export default function MatchDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useT();
   const match = useFetch(() => getMatch(id), [id]);
   const stats = useFetch(() => getMatchStats(id), [id]);
   const [tab, setTab] = useState<Tab | null>(null);
@@ -62,7 +64,9 @@ export default function MatchDetail() {
         ? `${m.home_team?.name} vs ${m.away_team?.name}`
         : `${m.home_team?.name} ${homeScore} – ${awayScore} ${m.away_team?.name}`;
     const comp = m.competition?.name ? ` · ${m.competition.name}` : '';
-    await Share.share({ message: `🏀 ${line}${comp}\nSuivez le basket guinéen sur l'application FGBB.` });
+    await Share.share({
+      message: `🏀 ${line}${comp}\n${t("Suivez le basket guinéen sur l'application FGBB.")}`,
+    });
   }
 
   const allStats = stats.data ?? [];
@@ -80,7 +84,7 @@ export default function MatchDetail() {
     try {
       await exportMatchSheetPdf(id);
     } catch (e) {
-      setExportError(e instanceof Error ? e.message : "Export impossible pour l'instant.");
+      setExportError(e instanceof Error ? e.message : t("Export impossible pour l'instant."));
     } finally {
       setExporting(false);
     }
@@ -89,7 +93,7 @@ export default function MatchDetail() {
   return (
     <Screen>
       <Header
-        title="Match"
+        title={t('Match')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -97,7 +101,7 @@ export default function MatchDetail() {
         }
         right={
           <Row style={{ gap: 14, alignItems: 'center' }}>
-            {dispStatus === 'live' ? <Pill label="DIRECT" tone="red" dot /> : null}
+            {dispStatus === 'live' ? <Pill label={t('DIRECT')} tone="red" dot /> : null}
             {dispStatus === 'finished' ? (
               <Ionicons
                 name="document-text-outline"
@@ -112,13 +116,13 @@ export default function MatchDetail() {
       />
 
       {!m ? (
-        <Empty icon="basketball-outline" title={match.loading ? 'Chargement…' : 'Match introuvable'} />
+        <Empty icon="basketball-outline" title={match.loading ? t('Chargement…') : t('Match introuvable')} />
       ) : (
         <View>
           <View style={{ padding: S.lg }}>
             <Card>
               <Text style={{ color: C.dim, fontSize: 11, textAlign: 'center', marginBottom: 12 }}>
-                {m.competition?.name ?? 'Match'} {m.venue ? `· ${m.venue}` : ''}
+                {m.competition?.name ?? t('Match')} {m.venue ? `· ${m.venue}` : ''}
               </Text>
               <Row style={{ justifyContent: 'space-around' }}>
                 <View style={{ flex: 1, alignItems: 'center' }}>
@@ -184,7 +188,7 @@ export default function MatchDetail() {
 
           {m.video_url ? (
             <>
-              <SectionTitle title="Résumé vidéo" />
+              <SectionTitle title={t('Résumé vidéo')} />
               <View style={{ paddingHorizontal: S.lg }}>
                 <VideoEmbed url={m.video_url} />
               </View>
@@ -195,13 +199,13 @@ export default function MatchDetail() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: S.lg, gap: 6, marginTop: S.lg }}>
-            <SubTab label="Fil" active={activeTab === 'fil'} onPress={() => setTab('fil')} />
-            <SubTab label="Box score" active={activeTab === 'box'} onPress={() => setTab('box')} />
-            <SubTab label="Équipes" active={activeTab === 'team'} onPress={() => setTab('team')} />
+            <SubTab label={t('Fil')} active={activeTab === 'fil'} onPress={() => setTab('fil')} />
+            <SubTab label={t('Box score')} active={activeTab === 'box'} onPress={() => setTab('box')} />
+            <SubTab label={t('Équipes')} active={activeTab === 'team'} onPress={() => setTab('team')} />
             {dispStatus !== 'scheduled' ? (
-              <SubTab label="Chat" active={activeTab === 'chat'} onPress={() => setTab('chat')} />
+              <SubTab label={t('Chat')} active={activeTab === 'chat'} onPress={() => setTab('chat')} />
             ) : null}
-            <SubTab label="Réactions" active={activeTab === 'reactions'} onPress={() => setTab('reactions')} />
+            <SubTab label={t('Réactions')} active={activeTab === 'reactions'} onPress={() => setTab('reactions')} />
           </ScrollView>
 
           {activeTab === 'chat' ? (
@@ -218,8 +222,8 @@ export default function MatchDetail() {
             allStats.length === 0 ? (
               <Empty
                 icon="stats-chart-outline"
-                title="Pas encore de statistiques"
-                subtitle="Les stats joueur par joueur seront saisies par la fédération."
+                title={t('Pas encore de statistiques')}
+                subtitle={t('Les stats joueur par joueur seront saisies par la fédération.')}
               />
             ) : (
               <View style={{ paddingHorizontal: S.lg, paddingTop: 12, gap: 16 }}>
@@ -238,7 +242,7 @@ export default function MatchDetail() {
 
           {dispStatus !== 'scheduled' && (
             <>
-              <SectionTitle title="Carte des tirs" />
+              <SectionTitle title={t('Carte des tirs')} />
               <View style={{ paddingHorizontal: S.lg }}>
                 <ShotChart matchId={id} />
               </View>
@@ -281,16 +285,17 @@ function SubTab({ label, active, onPress }: { label: string; active: boolean; on
 }
 
 function BoxScore({ title, rows }: { title: string; rows: PlayerMatchStat[] }) {
+  const { t } = useT();
   return (
     <View>
       <Text style={{ color: C.dim, fontSize: 11, marginBottom: 6 }}>{title}</Text>
       <Card style={{ paddingVertical: 6, paddingHorizontal: 11 }}>
         <Row style={{ paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border }}>
-          <Text style={[bh, { flex: 1, textAlign: 'left' }]}>Joueur</Text>
-          <Text style={bh}>PTS</Text>
-          <Text style={bh}>REB</Text>
-          <Text style={bh}>PD</Text>
-          <Text style={bh}>INT</Text>
+          <Text style={[bh, { flex: 1, textAlign: 'left' }]}>{t('Joueur')}</Text>
+          <Text style={bh}>{t('PTS')}</Text>
+          <Text style={bh}>{t('REB')}</Text>
+          <Text style={bh}>{t('PD')}</Text>
+          <Text style={bh}>{t('INT')}</Text>
         </Row>
         {rows.map((s, i) => (
           <Pressable key={s.id} onPress={() => s.player && router.push(`/player/${s.player.id}`)}>
@@ -325,6 +330,7 @@ function TeamCompare({
   homeName: string;
   awayName: string;
 }) {
+  const { t } = useT();
   const line = (label: string, h: string | number, a: string | number) => (
     <Row style={{ paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: C.border }}>
       <Text style={{ flex: 1, color: C.text, fontSize: 12.5 }}>{label}</Text>
@@ -340,15 +346,15 @@ function TeamCompare({
   return (
     <Card style={{ paddingVertical: 6, paddingHorizontal: 13 }}>
       <Row style={{ paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border }}>
-        <Text style={{ flex: 1, color: C.dim, fontSize: 11 }}>Stat</Text>
+        <Text style={{ flex: 1, color: C.dim, fontSize: 11 }}>{t('Stat')}</Text>
         <Text style={{ width: 60, textAlign: 'center', color: C.dim, fontSize: 11 }}>{homeName}</Text>
         <Text style={{ width: 60, textAlign: 'center', color: C.dim, fontSize: 11 }}>{awayName}</Text>
       </Row>
-      {line('Rebonds', sum(home, 'rebounds'), sum(away, 'rebounds'))}
-      {line('Passes décisives', sum(home, 'assists'), sum(away, 'assists'))}
-      {line('Interceptions', sum(home, 'steals'), sum(away, 'steals'))}
-      {line('Contres', sum(home, 'blocks'), sum(away, 'blocks'))}
-      {line('% aux tirs', pct(home), pct(away))}
+      {line(t('Rebonds'), sum(home, 'rebounds'), sum(away, 'rebounds'))}
+      {line(t('Passes décisives'), sum(home, 'assists'), sum(away, 'assists'))}
+      {line(t('Interceptions'), sum(home, 'steals'), sum(away, 'steals'))}
+      {line(t('Contres'), sum(home, 'blocks'), sum(away, 'blocks'))}
+      {line(t('% aux tirs'), pct(home), pct(away))}
     </Card>
   );
 }

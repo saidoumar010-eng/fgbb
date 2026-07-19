@@ -7,10 +7,12 @@ import { Pressable, Text, View } from 'react-native';
 import { Card, Empty, Header, Pill, Screen } from '@/components/ui';
 import { listNews } from '@/lib/db';
 import { fullDate } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function ActusScreen() {
+  const { t } = useT();
   const { data, loading, reload } = useFetch(() => listNews());
   const news = data ?? [];
   const [refreshing, setRefreshing] = useState(false);
@@ -22,7 +24,7 @@ export default function ActusScreen() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
-      <Header title="Actualités" />
+      <Header title={t('Actualités')} />
       {news.length > 0 ? (
         <View style={{ padding: S.lg, gap: 11 }}>
           {news.map((n) => (
@@ -55,8 +57,12 @@ export default function ActusScreen() {
       ) : (
         <Empty
           icon="newspaper-outline"
-          title={loading ? 'Chargement…' : 'Aucune actualité'}
-          subtitle={loading ? undefined : 'Les communiqués et articles publiés par la fédération apparaîtront ici.'}
+          title={loading ? t('Chargement…') : t('Aucune actualité')}
+          subtitle={
+            loading
+              ? undefined
+              : t('Les communiqués et articles publiés par la fédération apparaîtront ici.')
+          }
         />
       )}
     </Screen>

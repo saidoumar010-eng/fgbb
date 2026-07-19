@@ -5,12 +5,14 @@ import { MatchRow } from '@/components/match-row';
 import { Card, Row } from '@/components/ui';
 import { getHeadToHead } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 import type { Match } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
 // Face-à-face : bilan des confrontations passées entre les deux équipes.
 export function HeadToHead({ match }: { match: Match }) {
+  const { t } = useT();
   const h2h = useFetch(() => getHeadToHead(match.home_team_id, match.away_team_id), [match.id]);
   const past = (h2h.data ?? []).filter((m) => m.id !== match.id);
 
@@ -18,7 +20,9 @@ export function HeadToHead({ match }: { match: Match }) {
     return (
       <Card>
         <Text style={{ color: C.dim, fontSize: 12.5 }}>
-          {h2h.error ? 'Historique indisponible pour le moment.' : 'Chargement du face-à-face…'}
+          {h2h.error
+            ? t('Historique indisponible pour le moment.')
+            : t('Chargement du face-à-face…')}
         </Text>
       </Card>
     );
@@ -28,7 +32,7 @@ export function HeadToHead({ match }: { match: Match }) {
     return (
       <Card>
         <Text style={{ color: C.dim, fontSize: 12.5 }}>
-          Première confrontation enregistrée entre ces deux équipes.
+          {t('Première confrontation enregistrée entre ces deux équipes.')}
         </Text>
       </Card>
     );
@@ -48,14 +52,16 @@ export function HeadToHead({ match }: { match: Match }) {
     <View style={{ gap: 9 }}>
       <Card>
         <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600', marginBottom: 10 }}>
-          Face-à-face ({past.length} match{past.length > 1 ? 's' : ''})
+          {past.length > 1
+            ? t('Face-à-face ({n} matchs)', { n: past.length })
+            : t('Face-à-face ({n} match)', { n: past.length })}
         </Text>
         <Row style={{ justifyContent: 'space-around' }}>
           <View style={{ alignItems: 'center' }}>
             <Text style={{ color: C.text, fontSize: 24, fontWeight: '700' }}>{winsHome}</Text>
             <Text style={{ color: C.dim, fontSize: 11, marginTop: 2 }}>{teamShort(match.home_team)}</Text>
           </View>
-          <Text style={{ color: C.dim, fontSize: 13, alignSelf: 'center' }}>victoires</Text>
+          <Text style={{ color: C.dim, fontSize: 13, alignSelf: 'center' }}>{t('victoires')}</Text>
           <View style={{ alignItems: 'center' }}>
             <Text style={{ color: C.text, fontSize: 24, fontWeight: '700' }}>{winsAway}</Text>
             <Text style={{ color: C.dim, fontSize: 11, marginTop: 2 }}>{teamShort(match.away_team)}</Text>

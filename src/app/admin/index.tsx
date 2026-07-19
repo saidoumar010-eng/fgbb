@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { Card, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 
 const QUICK: { icon: keyof typeof Ionicons.glyphMap; label: string; href: string; color: string }[] = [
@@ -62,10 +63,12 @@ const SECTIONS: { title: string; items: Entry[] }[] = [
 ];
 
 export default function AdminDashboard() {
+  const { t } = useT();
+
   return (
     <Screen>
       <Header
-        title="Fédération"
+        title={t('Fédération')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -80,7 +83,7 @@ export default function AdminDashboard() {
             <Card style={{ alignItems: 'center', paddingVertical: 16 }}>
               <Ionicons name={q.icon} size={22} color={q.color} />
               <Text style={{ color: C.muted, fontSize: 11, marginTop: 7, textAlign: 'center' }}>
-                {q.label}
+                {t(q.label)}
               </Text>
             </Card>
           </Pressable>
@@ -89,7 +92,7 @@ export default function AdminDashboard() {
 
       {SECTIONS.map((section) => (
         <View key={section.title}>
-          <SectionTitle title={section.title} />
+          <SectionTitle title={t(section.title)} />
           <View style={{ paddingHorizontal: S.lg }}>
             <Card style={{ paddingVertical: 4 }}>
               {section.items.map((m, i) => (
@@ -103,8 +106,8 @@ export default function AdminDashboard() {
                     }}>
                     <Ionicons name={m.icon} size={20} color={C.accent} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: C.text, fontSize: 14 }}>{m.title}</Text>
-                      <Text style={{ color: C.dim, fontSize: 12 }}>{m.sub}</Text>
+                      <Text style={{ color: C.text, fontSize: 14 }}>{t(m.title)}</Text>
+                      <Text style={{ color: C.dim, fontSize: 12 }}>{t(m.sub)}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={C.dim} />
                   </Row>

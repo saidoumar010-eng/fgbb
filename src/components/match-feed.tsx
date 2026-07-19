@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { Card, Empty, Row } from '@/components/ui';
 import { listMatchEvents } from '@/lib/db';
 import { matchWhen, teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useMatchEventsRealtime } from '@/lib/realtime';
 import { C, S } from '@/lib/theme';
 import type { Match, MatchEvent } from '@/lib/types';
@@ -12,6 +13,7 @@ import { useFetch } from '@/lib/useFetch';
 // Fil du match (play-by-play) : chaque action saisie par la table de marque
 // apparaît ici en temps réel, la plus récente en premier.
 export function MatchFeed({ match }: { match: Match }) {
+  const { t } = useT();
   const events = useFetch(() => listMatchEvents(match.id), [match.id]);
   useMatchEventsRealtime(match.id, () => events.reload());
   const list = events.data ?? [];
@@ -20,11 +22,11 @@ export function MatchFeed({ match }: { match: Match }) {
     return (
       <Empty
         icon="pulse-outline"
-        title="Pas encore d'action"
+        title={t("Pas encore d'action")}
         subtitle={
           match.status === 'scheduled'
-            ? 'Le fil du match démarrera au coup d’envoi.'
-            : 'Les actions saisies par la table de marque apparaîtront ici.'
+            ? t('Le fil du match démarrera au coup d’envoi.')
+            : t('Les actions saisies par la table de marque apparaîtront ici.')
         }
       />
     );
@@ -40,6 +42,7 @@ export function MatchFeed({ match }: { match: Match }) {
 }
 
 function EventRow({ ev, match }: { ev: MatchEvent; match: Match }) {
+  const { t } = useT();
   const isHome = ev.team_id === match.home_team_id;
   const team = isHome ? match.home_team : ev.team_id === match.away_team_id ? match.away_team : ev.team;
   const time = matchWhen(ev.created_at).time;
@@ -57,7 +60,7 @@ function EventRow({ ev, match }: { ev: MatchEvent; match: Match }) {
     case 'correction':
       icon = 'remove-circle-outline';
       color = C.muted;
-      title = `Correction ${ev.points}`;
+      title = t('Correction {n}', { n: String(ev.points) });
       sub = team?.name ?? '';
       break;
     case 'quarter':
@@ -65,8 +68,8 @@ function EventRow({ ev, match }: { ev: MatchEvent; match: Match }) {
       color = C.flagYellow;
       title =
         ev.quarter && ev.quarter > 4
-          ? `Prolongation ${ev.quarter - 4}`
-          : `Début du ${ev.quarter ?? '?'}e quart-temps`;
+          ? t('Prolongation {n}', { n: ev.quarter - 4 })
+          : t('Début du {n}e quart-temps', { n: ev.quarter ?? '?' });
       sub = '';
       break;
     case 'info':

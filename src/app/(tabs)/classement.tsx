@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Card, Crest, Empty, Header, Row, Screen, SectionTitle } from '@/components/ui';
 import { listCompetitions, listLeaders, listStandings } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
@@ -20,6 +21,7 @@ const DATA_LINKS: { icon: keyof typeof Ionicons.glyphMap; label: string; href: s
 ];
 
 export default function ClassementScreen() {
+  const { t } = useT();
   const comps = useFetch(() => listCompetitions());
   const [compId, setCompId] = useState<string | undefined>();
   const active = compId ?? comps.data?.[0]?.id;
@@ -39,10 +41,10 @@ export default function ClassementScreen() {
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       <Header
-        title="Classement"
+        title={t('Classement')}
         right={
           <Pressable onPress={() => router.push('/leaders')}>
-            <Text style={{ color: C.accent, fontSize: 13, fontWeight: '500' }}>Leaders</Text>
+            <Text style={{ color: C.accent, fontSize: 13, fontWeight: '500' }}>{t('Leaders')}</Text>
           </Pressable>
         }
       />
@@ -55,7 +57,7 @@ export default function ClassementScreen() {
           <Pressable key={l.href} onPress={() => router.push(l.href as never)}>
             <Card style={{ paddingVertical: 10, paddingHorizontal: 13, minWidth: 108 }}>
               <Ionicons name={l.icon} size={18} color={C.accent} />
-              <Text style={{ color: C.text, fontSize: 12.5, marginTop: 6 }}>{l.label}</Text>
+              <Text style={{ color: C.text, fontSize: 12.5, marginTop: 6 }}>{t(l.label)}</Text>
             </Card>
           </Pressable>
         ))}
@@ -92,8 +94,10 @@ export default function ClassementScreen() {
       {rows.length === 0 && top.length === 0 ? (
         <Empty
           icon="trophy-outline"
-          title="Pas encore de classement"
-          subtitle="Le classement se calcule automatiquement à partir des matchs terminés saisis par la fédération."
+          title={t('Pas encore de classement')}
+          subtitle={t(
+            'Le classement se calcule automatiquement à partir des matchs terminés saisis par la fédération.',
+          )}
         />
       ) : (
         <>
@@ -101,11 +105,11 @@ export default function ClassementScreen() {
             <View style={{ paddingHorizontal: S.lg }}>
               <Card style={{ paddingVertical: 6, paddingHorizontal: 11 }}>
                 <Row style={{ paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border }}>
-                  <Text style={[hCell, { flex: 1, textAlign: 'left' }]}>Équipe</Text>
-                  <Text style={hCell}>J</Text>
-                  <Text style={hCell}>V</Text>
-                  <Text style={hCell}>D</Text>
-                  <Text style={[hCell, { color: C.text }]}>Pts</Text>
+                  <Text style={[hCell, { flex: 1, textAlign: 'left' }]}>{t('Équipe')}</Text>
+                  <Text style={hCell}>{t('J')}</Text>
+                  <Text style={hCell}>{t('V')}</Text>
+                  <Text style={hCell}>{t('D')}</Text>
+                  <Text style={[hCell, { color: C.text }]}>{t('Pts')}</Text>
                 </Row>
                 {rows.map((s, i) => (
                   <Pressable key={s.team_id} onPress={() => router.push(`/team/${s.team_id}`)}>
@@ -131,7 +135,7 @@ export default function ClassementScreen() {
 
           {top.length > 0 && (
             <>
-              <SectionTitle title="Meilleurs marqueurs" />
+              <SectionTitle title={t('Meilleurs marqueurs')} />
               <View style={{ paddingHorizontal: S.lg, gap: 9 }}>
                 {top.slice(0, 5).map((p) => (
                   <Pressable key={p.player_id} onPress={() => router.push(`/player/${p.player_id}`)}>

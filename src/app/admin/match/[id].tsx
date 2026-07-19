@@ -7,6 +7,7 @@ import { ChipSelect } from '@/components/chip-select';
 import { Button, Field, Row } from '@/components/ui';
 import { getMatch } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
 import type { MatchStatus } from '@/lib/types';
@@ -27,6 +28,7 @@ const emptyQuarters: Q[] = [
 ];
 
 export default function AdminMatchEdit() {
+  const { t } = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: m, loading } = useFetch(() => getMatch(id), [id]);
 
@@ -81,14 +83,14 @@ export default function AdminMatchEdit() {
       setError(err.message);
       return;
     }
-    setFlash('Match mis à jour.');
+    setFlash(t('Match mis à jour.'));
   }
 
   function confirmDelete() {
-    Alert.alert('Supprimer le match', 'Cette action est irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Supprimer le match'), t('Cette action est irréversible.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('Supprimer'),
         style: 'destructive',
         onPress: async () => {
           await supabase.from('matches').delete().eq('id', id);
@@ -98,25 +100,26 @@ export default function AdminMatchEdit() {
     ]);
   }
 
-  const title = m ? `${teamShort(m.home_team)} – ${teamShort(m.away_team)}` : 'Match';
+  const title = m ? `${teamShort(m.home_team)} – ${teamShort(m.away_team)}` : t('Match');
+  const statusOptions = STATUS.map((s) => ({ ...s, label: t(s.label) }));
 
   return (
     <AdminForm
-      title={loading ? 'Match' : title}
+      title={loading ? t('Match') : title}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel="Enregistrer les modifications">
-      <FormLabel>Statut</FormLabel>
-      <ChipSelect options={STATUS} value={status} onChange={(v) => setStatus(v as MatchStatus)} wrap />
+      saveLabel={t('Enregistrer les modifications')}>
+      <FormLabel>{t('Statut')}</FormLabel>
+      <ChipSelect options={statusOptions} value={status} onChange={(v) => setStatus(v as MatchStatus)} wrap />
 
       <Row style={{ gap: 10 }}>
-        <Field label={`Score ${teamShort(m?.home_team)}`} keyboardType="number-pad" value={homeScore} onChangeText={setHomeScore} />
-        <Field label={`Score ${teamShort(m?.away_team)}`} keyboardType="number-pad" value={awayScore} onChangeText={setAwayScore} />
+        <Field label={`${t('Score')} ${teamShort(m?.home_team)}`} keyboardType="number-pad" value={homeScore} onChangeText={setHomeScore} />
+        <Field label={`${t('Score')} ${teamShort(m?.away_team)}`} keyboardType="number-pad" value={awayScore} onChangeText={setAwayScore} />
       </Row>
 
-      <FormLabel>Score par quart-temps (domicile - extérieur)</FormLabel>
+      <FormLabel>{t('Score par quart-temps (domicile - extérieur)')}</FormLabel>
       {quarters.map((q, i) => (
         <Row key={i} style={{ gap: 10, alignItems: 'center', marginBottom: 8 }}>
           <Text style={{ color: C.dim, fontSize: 12, width: 28 }}>Q{i + 1}</Text>
@@ -127,7 +130,7 @@ export default function AdminMatchEdit() {
       ))}
 
       <Field
-        label="Lien du résumé vidéo (YouTube/Facebook)"
+        label={t('Lien du résumé vidéo (YouTube/Facebook)')}
         placeholder="https://youtube.com/..."
         autoCapitalize="none"
         value={videoUrl}
@@ -135,29 +138,29 @@ export default function AdminMatchEdit() {
       />
 
       <Button
-        title="Contrôle en direct (temps réel)"
+        title={t('Contrôle en direct (temps réel)')}
         icon="radio-outline"
         onPress={() => router.push(`/admin/live/${id}`)}
       />
       <Button
-        title="Saisir les statistiques (box score)"
+        title={t('Saisir les statistiques (box score)')}
         tone="alt"
         icon="stats-chart-outline"
         onPress={() => router.push(`/admin/box-score/${id}`)}
       />
       <Button
-        title="Saisir la carte des tirs"
+        title={t('Saisir la carte des tirs')}
         tone="alt"
         icon="basketball-outline"
         onPress={() => router.push(`/admin/shots/${id}` as never)}
       />
       <Button
-        title="Désigner les arbitres"
+        title={t('Désigner les arbitres')}
         tone="alt"
         icon="people-circle-outline"
         onPress={() => router.push(`/admin/officials/${id}` as never)}
       />
-      <Button title="Supprimer le match" tone="alt" icon="trash-outline" onPress={confirmDelete} />
+      <Button title={t('Supprimer le match')} tone="alt" icon="trash-outline" onPress={confirmDelete} />
     </AdminForm>
   );
 }

@@ -6,11 +6,13 @@ import { AdminForm, FormLabel } from '@/components/admin-form';
 import { ImageField } from '@/components/image-field';
 import { Button, Field, Row } from '@/components/ui';
 import { getTeam } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { C, TEAM_COLORS } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function TeamForm() {
+  const { t } = useT();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editing = !!id;
   const existing = useFetch(async () => (id ? getTeam(id) : null), [id]);
@@ -30,24 +32,24 @@ export default function TeamForm() {
   const seeded = useRef(false);
 
   useEffect(() => {
-    const t = existing.data;
-    if (t && !seeded.current) {
-      setName(t.name);
-      setShortName(t.short_name ?? '');
-      setCity(t.city ?? '');
-      setDivision(t.division ?? '');
-      setCoach(t.coach ?? '');
-      setFounded(t.founded_year ? String(t.founded_year) : '');
-      setColor(t.color ?? TEAM_COLORS[0]);
-      setIsNational(t.is_national);
-      setLogoUrl(t.logo_url ?? null);
+    const team = existing.data;
+    if (team && !seeded.current) {
+      setName(team.name);
+      setShortName(team.short_name ?? '');
+      setCity(team.city ?? '');
+      setDivision(team.division ?? '');
+      setCoach(team.coach ?? '');
+      setFounded(team.founded_year ? String(team.founded_year) : '');
+      setColor(team.color ?? TEAM_COLORS[0]);
+      setIsNational(team.is_national);
+      setLogoUrl(team.logo_url ?? null);
       seeded.current = true;
     }
   }, [existing.data]);
 
   async function save() {
     if (!name.trim()) {
-      setError("Le nom de l'équipe est obligatoire.");
+      setError(t("Le nom de l'équipe est obligatoire."));
       return;
     }
     setSaving(true);
@@ -73,9 +75,9 @@ export default function TeamForm() {
       return;
     }
     if (editing) {
-      setFlash('Équipe mise à jour.');
+      setFlash(t('Équipe mise à jour.'));
     } else {
-      setFlash(`${name.trim()} a été enregistrée.`);
+      setFlash(t('{name} a été enregistrée.', { name: name.trim() }));
       setName('');
       setShortName('');
       setCity('');
@@ -87,10 +89,10 @@ export default function TeamForm() {
   }
 
   function confirmDelete() {
-    Alert.alert('Supprimer l’équipe', 'Les matchs liés seront aussi supprimés. Action irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Supprimer l’équipe'), t('Les matchs liés seront aussi supprimés. Action irréversible.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('Supprimer'),
         style: 'destructive',
         onPress: async () => {
           await supabase.from('teams').delete().eq('id', id);
@@ -102,25 +104,25 @@ export default function TeamForm() {
 
   return (
     <AdminForm
-      title={editing ? 'Modifier l’équipe' : 'Ajouter une équipe'}
+      title={editing ? t('Modifier l’équipe') : t('Ajouter une équipe')}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel={editing ? 'Enregistrer les modifications' : "Enregistrer l'équipe"}>
-      <ImageField label="Logo du club" value={logoUrl} onChange={setLogoUrl} folder="teams" shape="square" />
-      <Field label="Nom du club" placeholder="Ex : SLAC Conakry" value={name} onChangeText={setName} />
+      saveLabel={editing ? t('Enregistrer les modifications') : t("Enregistrer l'équipe")}>
+      <ImageField label={t('Logo du club')} value={logoUrl} onChange={setLogoUrl} folder="teams" shape="square" />
+      <Field label={t('Nom du club')} placeholder={t('Ex : SLAC Conakry')} value={name} onChangeText={setName} />
       <Row style={{ gap: 10 }}>
-        <Field label="Sigle (3 lettres)" placeholder="SLA" autoCapitalize="characters" maxLength={4} value={shortName} onChangeText={setShortName} />
-        <Field label="Ville" placeholder="Conakry" value={city} onChangeText={setCity} />
+        <Field label={t('Sigle (3 lettres)')} placeholder="SLA" autoCapitalize="characters" maxLength={4} value={shortName} onChangeText={setShortName} />
+        <Field label={t('Ville')} placeholder="Conakry" value={city} onChangeText={setCity} />
       </Row>
       <Row style={{ gap: 10 }}>
-        <Field label="Division" placeholder="Ligue 1 (H)" value={division} onChangeText={setDivision} />
-        <Field label="Année de création" placeholder="1968" keyboardType="number-pad" value={founded} onChangeText={setFounded} />
+        <Field label={t('Division')} placeholder="Ligue 1 (H)" value={division} onChangeText={setDivision} />
+        <Field label={t('Année de création')} placeholder="1968" keyboardType="number-pad" value={founded} onChangeText={setFounded} />
       </Row>
-      <Field label="Entraîneur" placeholder="Nom du coach" value={coach} onChangeText={setCoach} />
+      <Field label={t('Entraîneur')} placeholder={t('Nom du coach')} value={coach} onChangeText={setCoach} />
 
-      <FormLabel>Couleur du club</FormLabel>
+      <FormLabel>{t('Couleur du club')}</FormLabel>
       <Row style={{ gap: 9 }}>
         {TEAM_COLORS.map((c) => (
           <Pressable
@@ -133,14 +135,14 @@ export default function TeamForm() {
 
       <Row style={{ justifyContent: 'space-between', marginTop: 16 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.text, fontSize: 14 }}>Équipe nationale</Text>
-          <Text style={{ color: C.dim, fontSize: 12 }}>Sélection (Syli National)</Text>
+          <Text style={{ color: C.text, fontSize: 14 }}>{t('Équipe nationale')}</Text>
+          <Text style={{ color: C.dim, fontSize: 12 }}>{t('Sélection (Syli National)')}</Text>
         </View>
         <Switch value={isNational} onValueChange={setIsNational} trackColor={{ false: '#2A3140', true: C.green }} thumbColor="#fff" />
       </Row>
 
       {editing ? (
-        <Button title="Supprimer l’équipe" tone="alt" icon="trash-outline" onPress={confirmDelete} />
+        <Button title={t('Supprimer l’équipe')} tone="alt" icon="trash-outline" onPress={confirmDelete} />
       ) : null}
     </AdminForm>
   );

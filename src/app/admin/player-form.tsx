@@ -7,11 +7,13 @@ import { ChipSelect } from '@/components/chip-select';
 import { ImageField } from '@/components/image-field';
 import { Button, Field, Row } from '@/components/ui';
 import { getPlayer, listTeams } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { POSITIONS } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function PlayerForm() {
+  const { t } = useT();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editing = !!id;
   const teams = useFetch(() => listTeams());
@@ -47,7 +49,7 @@ export default function PlayerForm() {
 
   async function save() {
     if (!fullName.trim()) {
-      setError('Le nom du joueur est obligatoire.');
+      setError(t('Le nom du joueur est obligatoire.'));
       return;
     }
     setSaving(true);
@@ -72,9 +74,9 @@ export default function PlayerForm() {
       return;
     }
     if (editing) {
-      setFlash('Joueur mis à jour.');
+      setFlash(t('Joueur mis à jour.'));
     } else {
-      setFlash(`${fullName.trim()} a été ajouté à l'effectif.`);
+      setFlash(t("{name} a été ajouté à l'effectif.", { name: fullName.trim() }));
       setFullName('');
       setNumber('');
       setPosition(undefined);
@@ -85,10 +87,10 @@ export default function PlayerForm() {
   }
 
   function confirmDelete() {
-    Alert.alert('Supprimer le joueur', 'Cette action est irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Supprimer le joueur'), t('Cette action est irréversible.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('Supprimer'),
         style: 'destructive',
         onPress: async () => {
           await supabase.from('players').delete().eq('id', id);
@@ -100,37 +102,37 @@ export default function PlayerForm() {
 
   return (
     <AdminForm
-      title={editing ? 'Modifier le joueur' : 'Ajouter un joueur'}
+      title={editing ? t('Modifier le joueur') : t('Ajouter un joueur')}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel={editing ? 'Enregistrer les modifications' : 'Enregistrer le joueur'}>
-      <ImageField label="Photo du joueur" value={photoUrl} onChange={setPhotoUrl} folder="players" shape="circle" />
-      <Field label="Nom complet" placeholder="Prénom et nom" value={fullName} onChangeText={setFullName} />
+      saveLabel={editing ? t('Enregistrer les modifications') : t('Enregistrer le joueur')}>
+      <ImageField label={t('Photo du joueur')} value={photoUrl} onChange={setPhotoUrl} folder="players" shape="circle" />
+      <Field label={t('Nom complet')} placeholder={t('Prénom et nom')} value={fullName} onChangeText={setFullName} />
 
-      <FormLabel>Club</FormLabel>
+      <FormLabel>{t('Club')}</FormLabel>
       <ChipSelect
-        options={(teams.data ?? []).map((t) => ({ id: t.id, label: t.name, color: t.color }))}
+        options={(teams.data ?? []).map((team) => ({ id: team.id, label: team.name, color: team.color }))}
         value={teamId}
         onChange={setTeamId}
       />
 
       <Row style={{ gap: 10 }}>
-        <Field label="Numéro" placeholder="7" keyboardType="number-pad" value={number} onChangeText={setNumber} />
-        <Field label="Taille (cm)" placeholder="189" keyboardType="number-pad" value={height} onChangeText={setHeight} />
+        <Field label={t('Numéro')} placeholder="7" keyboardType="number-pad" value={number} onChangeText={setNumber} />
+        <Field label={t('Taille (cm)')} placeholder="189" keyboardType="number-pad" value={height} onChangeText={setHeight} />
       </Row>
 
-      <FormLabel>Poste</FormLabel>
-      <ChipSelect options={POSITIONS.map((p) => ({ id: p, label: p }))} value={position} onChange={setPosition} wrap />
+      <FormLabel>{t('Poste')}</FormLabel>
+      <ChipSelect options={POSITIONS.map((p) => ({ id: p, label: t(p) }))} value={position} onChange={setPosition} wrap />
 
       <Row style={{ gap: 10 }}>
-        <Field label="Naissance" placeholder="AAAA-MM-JJ" value={birth} onChangeText={setBirth} />
-        <Field label="Nationalité" placeholder="Guinéenne" value={nationality} onChangeText={setNationality} />
+        <Field label={t('Naissance')} placeholder={t('AAAA-MM-JJ')} value={birth} onChangeText={setBirth} />
+        <Field label={t('Nationalité')} placeholder={t('Guinéenne')} value={nationality} onChangeText={setNationality} />
       </Row>
 
       {editing ? (
-        <Button title="Supprimer le joueur" tone="alt" icon="trash-outline" onPress={confirmDelete} />
+        <Button title={t('Supprimer le joueur')} tone="alt" icon="trash-outline" onPress={confirmDelete} />
       ) : null}
     </AdminForm>
   );

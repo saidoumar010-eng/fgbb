@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { setDateLang } from '@/lib/format';
 import { EN } from '@/lib/locales/en';
 
 // L'application est écrite en français : la clé de traduction EST le texte
@@ -26,6 +27,10 @@ function interpolate(text: string, vars?: Record<string, string | number>) {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>('fr');
+
+  // Déposé avant le rendu des enfants : les dates formatées par format.ts
+  // (hors composant React, donc sans accès au contexte) suivent la langue.
+  setDateLang(lang);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)

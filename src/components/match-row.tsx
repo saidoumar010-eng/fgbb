@@ -2,10 +2,12 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Card, Crest, Pill, Row } from '@/components/ui';
 import { matchWhen, teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C } from '@/lib/theme';
 import type { Match } from '@/lib/types';
 
 export function MatchRow({ match, onPress }: { match: Match; onPress?: () => void }) {
+  const { t } = useT();
   const scheduled = match.status === 'scheduled';
   const live = match.status === 'live';
   const finished = match.status === 'finished';
@@ -18,7 +20,7 @@ export function MatchRow({ match, onPress }: { match: Match; onPress?: () => voi
       <Row style={{ gap: 8, flex: 1 }}>
         <Crest label={teamShort(team)} color={team?.color ?? C.surface2} size={20} image={team?.logo_url} />
         <Text style={{ color: dimmed ? C.dim : C.text, fontSize: 13 }} numberOfLines={1}>
-          {team?.name ?? 'Équipe'}
+          {team?.name ?? t('Équipe')}
         </Text>
       </Row>
       {!scheduled && (
@@ -45,7 +47,7 @@ export function MatchRow({ match, onPress }: { match: Match; onPress?: () => voi
           </View>
           <View style={{ alignItems: 'center', minWidth: 44 }}>
             {live && <Pill label="LIVE" tone="red" dot />}
-            {finished && <Pill label="Fini" tone="neutral" />}
+            {finished && <Pill label={t('Fini')} tone="neutral" />}
             {scheduled && <Ionicon />}
           </View>
         </Row>

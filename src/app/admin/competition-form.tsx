@@ -6,6 +6,7 @@ import { AdminForm, FormLabel } from '@/components/admin-form';
 import { ChipSelect } from '@/components/chip-select';
 import { Button, Field, Row } from '@/components/ui';
 import { getCompetition } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import type { Category, CompetitionType } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -25,6 +26,7 @@ export default function CompetitionForm() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editing = !!id;
   const existing = useFetch(async () => (id ? getCompetition(id) : null), [id]);
+  const { t } = useT();
 
   const [name, setName] = useState('');
   const [type, setType] = useState<CompetitionType>('championnat');
@@ -50,7 +52,7 @@ export default function CompetitionForm() {
 
   async function save() {
     if (!name.trim()) {
-      setError('Le nom de la compétition est obligatoire.');
+      setError(t('Le nom de la compétition est obligatoire.'));
       return;
     }
     setSaving(true);
@@ -72,9 +74,9 @@ export default function CompetitionForm() {
       return;
     }
     if (editing) {
-      setFlash('Compétition mise à jour.');
+      setFlash(t('Compétition mise à jour.'));
     } else {
-      setFlash(`Compétition « ${name.trim()} » créée.`);
+      setFlash(t('Compétition « {name} » créée.', { name: name.trim() }));
       setName('');
       setSeason('');
       setFormat('');
@@ -82,10 +84,10 @@ export default function CompetitionForm() {
   }
 
   function confirmDelete() {
-    Alert.alert('Supprimer la compétition', 'Action irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Supprimer la compétition'), t('Action irréversible.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('Supprimer'),
         style: 'destructive',
         onPress: async () => {
           await supabase.from('competitions').delete().eq('id', id);
@@ -97,27 +99,37 @@ export default function CompetitionForm() {
 
   return (
     <AdminForm
-      title={editing ? 'Modifier la compétition' : 'Créer une compétition'}
+      title={editing ? t('Modifier la compétition') : t('Créer une compétition')}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel={editing ? 'Enregistrer les modifications' : 'Créer la compétition'}>
-      <Field label="Nom" placeholder="Ex : Ligue 1 Messieurs 2026" value={name} onChangeText={setName} />
+      saveLabel={editing ? t('Enregistrer les modifications') : t('Créer la compétition')}>
+      <Field label={t('Nom')} placeholder={t('Ex : Ligue 1 Messieurs 2026')} value={name} onChangeText={setName} />
 
-      <FormLabel>Type</FormLabel>
-      <ChipSelect options={TYPES} value={type} onChange={(v) => setType(v as CompetitionType)} wrap />
+      <FormLabel>{t('Type')}</FormLabel>
+      <ChipSelect
+        options={TYPES.map((o) => ({ ...o, label: t(o.label) }))}
+        value={type}
+        onChange={(v) => setType(v as CompetitionType)}
+        wrap
+      />
 
-      <FormLabel>Catégorie</FormLabel>
-      <ChipSelect options={CATS} value={category} onChange={(v) => setCategory(v as Category)} wrap />
+      <FormLabel>{t('Catégorie')}</FormLabel>
+      <ChipSelect
+        options={CATS.map((o) => ({ ...o, label: t(o.label) }))}
+        value={category}
+        onChange={(v) => setCategory(v as Category)}
+        wrap
+      />
 
       <Row style={{ gap: 10 }}>
-        <Field label="Saison" placeholder="2025-2026" value={season} onChangeText={setSeason} />
-        <Field label="Format" placeholder="8 équipes" value={format} onChangeText={setFormat} />
+        <Field label={t('Saison')} placeholder="2025-2026" value={season} onChangeText={setSeason} />
+        <Field label={t('Format')} placeholder={t('8 équipes')} value={format} onChangeText={setFormat} />
       </Row>
 
       {editing ? (
-        <Button title="Supprimer la compétition" tone="alt" icon="trash-outline" onPress={confirmDelete} />
+        <Button title={t('Supprimer la compétition')} tone="alt" icon="trash-outline" onPress={confirmDelete} />
       ) : null}
     </AdminForm>
   );

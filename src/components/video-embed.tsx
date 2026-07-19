@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+import { useT } from '@/lib/i18n';
 import { C, R } from '@/lib/theme';
 import { toEmbed } from '@/lib/video';
 
 export function VideoEmbed({ url }: { url?: string | null }) {
+  const { t } = useT();
   const e = toEmbed(url);
   if (!e) return null;
 
@@ -25,7 +27,7 @@ export function VideoEmbed({ url }: { url?: string | null }) {
           gap: 8,
         }}>
         <Ionicons name="play-circle-outline" size={22} color={C.red} />
-        <Text style={{ color: C.text, fontSize: 14 }}>Ouvrir le résumé vidéo</Text>
+        <Text style={{ color: C.text, fontSize: 14 }}>{t('Ouvrir le résumé vidéo')}</Text>
       </Pressable>
     );
   }

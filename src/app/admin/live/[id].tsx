@@ -6,6 +6,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 import { Crest, Empty, Header, Pill, Row, Screen } from '@/components/ui';
 import { addMatchEvent, getMatch, getTeamPlayers } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { C, R, S } from '@/lib/theme';
 import type { MatchStatus, Player, QuarterScore } from '@/lib/types';
@@ -16,6 +17,7 @@ type QScore = { home: number; away: number };
 export default function LiveController() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: m, loading } = useFetch(() => getMatch(id), [id]);
+  const { t } = useT();
 
   // Effectifs pour attribuer chaque panier à un marqueur (optionnel).
   const homeRoster = useFetch(
@@ -74,7 +76,11 @@ export default function LiveController() {
   );
 
   async function persist(nextQuarters: QScore[], nextCurrent: number, nextStatus: MatchStatus) {
-    const t = nextQuarters.reduce((a, q) => ({ home: a.home + q.home, away: a.away + q.away }), { home: 0, away: 0 });
+    // Nommé explicitement : `t` est la fonction de traduction dans ce fichier.
+    const nextTotals = nextQuarters.reduce(
+      (a, q) => ({ home: a.home + q.home, away: a.away + q.away }),
+      { home: 0, away: 0 },
+    );
     // On conserve tous les quarts jusqu'au quart courant ET jusqu'au dernier
     // quart contenant des points : jamais tronquer un quart déjà rempli.
     const lastWithData = nextQuarters.reduce((acc, q, i) => (q.home > 0 || q.away > 0 ? i + 1 : acc), 0);
@@ -86,8 +92,8 @@ export default function LiveController() {
       .from('matches')
       .update({
         status: nextStatus,
-        home_score: t.home,
-        away_score: t.away,
+        home_score: nextTotals.home,
+        away_score: nextTotals.away,
         current_quarter: nextCurrent,
         quarter_scores: qs,
       })
@@ -115,7 +121,7 @@ export default function LiveController() {
             quarter: current,
           }
         : { match_id: id, team_id: teamId, kind: 'correction', points: n, quarter: current },
-    ).catch((e) => setErr(e instanceof Error ? e.message : 'Erreur fil du match'));
+    ).catch((e) => setErr(e instanceof Error ? e.message : t('Erreur fil du match')));
   }
 
   function addPoints(side: 'home' | 'away', n: number) {
@@ -142,10 +148,10 @@ export default function LiveController() {
   }
 
   function finish() {
-    Alert.alert('Terminer le match', 'Le score sera figé et le match marqué comme terminé.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Terminer le match'), t('Le score sera figé et le match marqué comme terminé.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Terminer',
+        text: t('Terminer'),
         style: 'destructive',
         onPress: async () => {
           setStatus('finished');
@@ -161,30 +167,33 @@ export default function LiveController() {
     return (
       <Screen>
         <Header
-          title="En direct"
+          title={t('En direct')}
           left={
             <Pressable onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={24} color={C.muted} />
             </Pressable>
           }
         />
-        <Empty icon="radio-outline" title={loading ? 'Chargement…' : 'Match introuvable'} />
+        <Empty icon="radio-outline" title={loading ? t('Chargement…') : t('Match introuvable')} />
       </Screen>
     );
   }
 
-  const qLabel = current <= 4 ? `${current}e quart-temps` : `Prolongation ${current - 4}`;
+  const qLabel =
+    current <= 4
+      ? t('{n}e quart-temps', { n: current })
+      : t('Prolongation {n}', { n: current - 4 });
 
   return (
     <Screen>
       <Header
-        title="Contrôle en direct"
+        title={t('Contrôle en direct')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }
-        right={<Pill label={status === 'finished' ? 'Terminé' : 'LIVE'} tone={status === 'finished' ? 'neutral' : 'red'} dot={status !== 'finished'} />}
+        right={<Pill label={status === 'finished' ? t('Terminé') : 'LIVE'} tone={status === 'finished' ? 'neutral' : 'red'} dot={status !== 'finished'} />}
       />
 
       <View style={{ padding: S.lg }}>
@@ -208,7 +217,11 @@ export default function LiveController() {
           </Row>
           <Text style={{ color: C.accent, fontSize: 13, textAlign: 'center', marginTop: 10, fontWeight: '500' }}>{qLabel}</Text>
           <Text style={{ color: savedAt ? C.green : C.dim, fontSize: 11, textAlign: 'center', marginTop: 4 }}>
-            {err ? `Erreur : ${err}` : savedAt ? 'Enregistré ✓' : 'Les changements sont enregistrés automatiquement'}
+            {err
+              ? t('Erreur : {msg}', { msg: err })
+              : savedAt
+                ? t('Enregistré ✓')
+                : t('Les changements sont enregistrés automatiquement')}
           </Text>
         </View>
 
@@ -234,12 +247,12 @@ export default function LiveController() {
         <Pressable
           onPress={nextQuarter}
           style={{ marginTop: S.lg, backgroundColor: C.surface2, borderRadius: R.md, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: C.border }}>
-          <Text style={{ color: C.text, fontSize: 15, fontWeight: '500' }}>Quart-temps suivant →</Text>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '500' }}>{t('Quart-temps suivant →')}</Text>
         </Pressable>
         <Pressable
           onPress={finish}
           style={{ marginTop: 10, borderRadius: R.md, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(226,59,59,0.5)' }}>
-          <Text style={{ color: C.red, fontSize: 15, fontWeight: '500' }}>Terminer le match</Text>
+          <Text style={{ color: C.red, fontSize: 15, fontWeight: '500' }}>{t('Terminer le match')}</Text>
         </Pressable>
       </View>
     </Screen>
@@ -256,11 +269,12 @@ function ScorerPicker({
   value: string | null;
   onChange: (v: string | null) => void;
 }) {
+  const { t } = useT();
   if (roster.length === 0) return null;
   return (
     <View style={{ marginTop: 10 }}>
       <Text style={{ color: C.dim, fontSize: 11, marginBottom: 6, textAlign: 'center' }}>
-        Marqueur (optionnel)
+        {t('Marqueur (optionnel)')}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' }}>
         {roster.map((p) => {
@@ -292,6 +306,7 @@ function ScorerPicker({
 }
 
 function TeamPad({ label, onAdd, onSub }: { label: string; onAdd: (n: number) => void; onSub: () => void }) {
+  const { t } = useT();
   return (
     <View style={{ flex: 1 }}>
       <Text style={{ color: C.muted, fontSize: 13, textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>{label}</Text>
@@ -310,7 +325,7 @@ function TeamPad({ label, onAdd, onSub }: { label: string; onAdd: (n: number) =>
       <Pressable
         onPress={onSub}
         style={{ marginTop: 8, borderRadius: R.md, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: C.border }}>
-        <Text style={{ color: C.dim, fontSize: 13 }}>− 1 (corriger)</Text>
+        <Text style={{ color: C.dim, fontSize: 13 }}>{t('− 1 (corriger)')}</Text>
       </Pressable>
     </View>
   );

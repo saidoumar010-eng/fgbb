@@ -6,11 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, Crest, Empty, Row, SectionTitle } from '@/components/ui';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { C, S } from '@/lib/theme';
 import type { Player, Team } from '@/lib/types';
 
 export default function SearchScreen() {
+  const { t: tr } = useT();
   const [q, setQ] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -56,7 +58,7 @@ export default function SearchScreen() {
             value={q}
             onChangeText={setQ}
             autoFocus
-            placeholder="Joueur, équipe…"
+            placeholder={tr('Joueur, équipe…')}
             placeholderTextColor={C.dim}
             style={{
               backgroundColor: '#09271F',
@@ -75,14 +77,22 @@ export default function SearchScreen() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {q.trim().length < 2 ? (
-          <Empty icon="search-outline" title="Rechercher" subtitle="Tape au moins 2 lettres pour trouver un joueur ou une équipe." />
+          <Empty
+            icon="search-outline"
+            title={tr('Rechercher')}
+            subtitle={tr('Tape au moins 2 lettres pour trouver un joueur ou une équipe.')}
+          />
         ) : empty ? (
-          <Empty icon="search-outline" title="Aucun résultat" subtitle={`Rien trouvé pour « ${q.trim()} ».`} />
+          <Empty
+            icon="search-outline"
+            title={tr('Aucun résultat')}
+            subtitle={tr('Rien trouvé pour « {q} ».', { q: q.trim() })}
+          />
         ) : (
           <>
             {teams.length > 0 && (
               <>
-                <SectionTitle title="Équipes" />
+                <SectionTitle title={tr('Équipes')} />
                 <View style={{ paddingHorizontal: S.lg }}>
                   <Card style={{ paddingVertical: 4, paddingHorizontal: 13 }}>
                     {teams.map((t, i) => (
@@ -100,7 +110,7 @@ export default function SearchScreen() {
             )}
             {players.length > 0 && (
               <>
-                <SectionTitle title="Joueurs" />
+                <SectionTitle title={tr('Joueurs')} />
                 <View style={{ paddingHorizontal: S.lg }}>
                   <Card style={{ paddingVertical: 4, paddingHorizontal: 13 }}>
                     {players.map((p, i) => (

@@ -6,6 +6,7 @@ import { ProgressionChart } from '@/components/progression-chart';
 import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { getPlayer, getPlayerGames, getPlayerSeason } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
@@ -21,6 +22,7 @@ function heightM(cm?: number | null) {
 
 export default function PlayerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useT();
   const player = useFetch(() => getPlayer(id), [id]);
   const season = useFetch(() => getPlayerSeason(id), [id]);
   const games = useFetch(() => getPlayerGames(id), [id]);
@@ -28,24 +30,24 @@ export default function PlayerDetail() {
   const p = player.data;
   const s = season.data;
   const sub = p
-    ? [p.team?.name, p.position, heightM(p.height_cm), age(p.birth_date) ? `${age(p.birth_date)} ans` : null]
+    ? [p.team?.name, p.position, heightM(p.height_cm), age(p.birth_date) ? t('{n} ans', { n: age(p.birth_date)! }) : null]
         .filter(Boolean)
         .join(' · ')
     : '';
 
   const metrics: [string, string | number][] = [
-    ['Points', s?.ppg ?? '—'],
-    ['Passes', s?.apg ?? '—'],
-    ['Rebonds', s?.rpg ?? '—'],
-    ['Intercep.', s?.spg ?? '—'],
-    ['% tirs', s ? `${s.fg_pct}%` : '—'],
-    ['% 3 pts', s ? `${s.three_pct}%` : '—'],
+    [t('Points'), s?.ppg ?? '—'],
+    [t('Passes'), s?.apg ?? '—'],
+    [t('Rebonds'), s?.rpg ?? '—'],
+    [t('Intercep.'), s?.spg ?? '—'],
+    [t('% tirs'), s ? `${s.fg_pct}%` : '—'],
+    [t('% 3 pts'), s ? `${s.three_pct}%` : '—'],
   ];
 
   return (
     <Screen>
       <Header
-        title="Joueur"
+        title={t('Joueur')}
         left={
           <View>
             <Ionicons name="chevron-back" size={24} color={C.muted} onPress={() => router.back()} />
@@ -61,7 +63,7 @@ export default function PlayerDetail() {
         }
       />
       {!p ? (
-        <Empty icon="person-outline" title={player.loading ? 'Chargement…' : 'Joueur introuvable'} />
+        <Empty icon="person-outline" title={player.loading ? t('Chargement…') : t('Joueur introuvable')} />
       ) : (
         <View>
           <View style={{ padding: S.lg }}>
@@ -85,7 +87,7 @@ export default function PlayerDetail() {
             </Card>
           </View>
 
-          <SectionTitle title="Moyennes de la saison" />
+          <SectionTitle title={t('Moyennes de la saison')} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: S.lg, gap: 9 }}>
             {metrics.map(([label, val]) => (
               <View
@@ -103,19 +105,19 @@ export default function PlayerDetail() {
             ))}
           </View>
 
-          <SectionTitle title="Derniers matchs" />
+          <SectionTitle title={t('Derniers matchs')} />
           <View style={{ paddingHorizontal: S.lg }}>
             {(games.data ?? []).length === 0 ? (
               <Card>
-                <Text style={{ color: C.dim, fontSize: 13 }}>Aucune statistique enregistrée.</Text>
+                <Text style={{ color: C.dim, fontSize: 13 }}>{t('Aucune statistique enregistrée.')}</Text>
               </Card>
             ) : (
               <Card style={{ paddingVertical: 6, paddingHorizontal: 11 }}>
                 <Row style={{ paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.border }}>
-                  <Text style={{ flex: 1, color: C.dim, fontSize: 11 }}>Adversaire</Text>
-                  <Text style={gh}>PTS</Text>
-                  <Text style={gh}>REB</Text>
-                  <Text style={gh}>PD</Text>
+                  <Text style={{ flex: 1, color: C.dim, fontSize: 11 }}>{t('Adversaire')}</Text>
+                  <Text style={gh}>{t('PTS')}</Text>
+                  <Text style={gh}>{t('REB')}</Text>
+                  <Text style={gh}>{t('PD')}</Text>
                 </Row>
                 {(games.data ?? []).map((g, i, arr) => {
                   const mt = g.match;
@@ -136,7 +138,7 @@ export default function PlayerDetail() {
             )}
           </View>
 
-          <SectionTitle title="Évolution" />
+          <SectionTitle title={t('Évolution')} />
           <View style={{ paddingHorizontal: S.lg }}>
             <ProgressionChart playerId={id} />
           </View>

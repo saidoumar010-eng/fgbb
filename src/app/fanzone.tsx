@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Card, Empty, Header, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { getMyPollVote, listPollResults, listPolls, votePoll } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 import type { Poll } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -13,6 +14,7 @@ import { useFetch } from '@/lib/useFetch';
 // Fan zone : les sondages de la fédération. Le vote MVP et les pronostics
 // se trouvent sur la page de chaque match.
 export default function FanZoneScreen() {
+  const { t } = useT();
   const polls = useFetch(() => listPolls());
   const [refreshing, setRefreshing] = useState(false);
   const list = (polls.data ?? []).filter((p) => p.is_active);
@@ -26,7 +28,7 @@ export default function FanZoneScreen() {
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       <Header
-        title="Fan zone"
+        title={t('Fan zone')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -36,25 +38,29 @@ export default function FanZoneScreen() {
 
       <View style={{ padding: S.lg, gap: 12 }}>
         <Row style={{ gap: 10 }}>
-          <ShortcutCard icon="help-circle-outline" label="Quiz" onPress={() => router.push('/quiz' as never)} />
+          <ShortcutCard icon="help-circle-outline" label={t('Quiz')} onPress={() => router.push('/quiz' as never)} />
           <ShortcutCard
             icon="podium-outline"
-            label="Classement fans"
+            label={t('Classement fans')}
             onPress={() => router.push('/classement-supporters' as never)}
           />
-          <ShortcutCard icon="trophy-outline" label="Records" onPress={() => router.push('/records' as never)} />
+          <ShortcutCard
+            icon="trophy-outline"
+            label={t('Records')}
+            onPress={() => router.push('/records' as never)}
+          />
         </Row>
         <Row style={{ gap: 10 }}>
-          <ShortcutCard icon="git-compare-outline" label="Comparateur" onPress={() => router.push('/compare')} />
-          <ShortcutCard icon="videocam-outline" label="Vidéos" onPress={() => router.push('/videos')} />
-          <ShortcutCard icon="flame-outline" label="Leaders" onPress={() => router.push('/leaders')} />
+          <ShortcutCard icon="git-compare-outline" label={t('Comparateur')} onPress={() => router.push('/compare')} />
+          <ShortcutCard icon="videocam-outline" label={t('Vidéos')} onPress={() => router.push('/videos')} />
+          <ShortcutCard icon="flame-outline" label={t('Leaders')} onPress={() => router.push('/leaders')} />
         </Row>
 
         {list.length === 0 ? (
           <Empty
             icon="megaphone-outline"
-            title={polls.loading ? 'Chargement…' : 'Aucun sondage en cours'}
-            subtitle="Les sondages de la fédération apparaîtront ici. Reviens bientôt !"
+            title={polls.loading ? t('Chargement…') : t('Aucun sondage en cours')}
+            subtitle={t('Les sondages de la fédération apparaîtront ici. Reviens bientôt !')}
           />
         ) : (
           list.map((p) => <PollCard key={p.id} poll={p} />)
@@ -84,6 +90,7 @@ function ShortcutCard({
 }
 
 function PollCard({ poll }: { poll: Poll }) {
+  const { t } = useT();
   const { session } = useAuth();
   const uid = session?.user.id;
   const results = useFetch(() => listPollResults(poll.id), [poll.id]);
@@ -108,7 +115,7 @@ function PollCard({ poll }: { poll: Poll }) {
       await votePoll(poll.id, session.user.id, index);
       await Promise.all([results.reload(), myVoteFetch.reload()]);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Erreur');
+      setErr(e instanceof Error ? e.message : t('Erreur'));
     } finally {
       setBusy(false);
     }
@@ -159,12 +166,12 @@ function PollCard({ poll }: { poll: Poll }) {
       </View>
       <Text style={{ color: C.dim, fontSize: 11, marginTop: 10 }}>
         {err
-          ? `Erreur : ${err}`
+          ? t('Erreur : {msg}', { msg: err })
           : total === 0
             ? session
-              ? 'Sois le premier à voter !'
-              : 'Connecte-toi pour voter.'
-            : `${total} vote${total > 1 ? 's' : ''}`}
+              ? t('Sois le premier à voter !')
+              : t('Connecte-toi pour voter.')
+            : t(total > 1 ? '{n} votes' : '{n} vote', { n: total })}
       </Text>
     </Card>
   );

@@ -14,7 +14,7 @@ import { useFetch } from '@/lib/useFetch';
 
 export default function CompteScreen() {
   const { session, profile, isAdmin, signOut } = useAuth();
-  const { lang, setLang } = useT();
+  const { lang, setLang, t } = useT();
   const [notif, setNotif] = useState(true);
   const [video, setVideo] = useState(true);
   const favsQ = useFetch(() => listFavoriteTeams(), []);
@@ -27,7 +27,7 @@ export default function CompteScreen() {
       const res = await registerForPush(session.user.id);
       if (!res.ok) {
         setNotif(false);
-        Alert.alert('Notifications', res.error ?? 'Activation impossible.');
+        Alert.alert(t('Notifications'), res.error ?? t('Activation impossible.'));
       }
     } else {
       await unregisterPush(session.user.id);
@@ -37,23 +37,23 @@ export default function CompteScreen() {
   if (!session) {
     return (
       <Screen>
-        <Header title="Mon compte" />
+        <Header title={t('Mon compte')} />
         <View style={{ alignItems: 'center', paddingHorizontal: S.xl, paddingTop: S.xl, gap: S.md }}>
           <Logo size={84} />
           <Text style={{ color: C.text, fontSize: 18, fontWeight: '600', textAlign: 'center' }}>
-            Connecte-toi
+            {t('Connecte-toi')}
           </Text>
           <Text style={{ color: C.dim, fontSize: 13, textAlign: 'center', lineHeight: 19 }}>
-            Suis tes équipes favorites, reçois les notifications et accède à l'espace fédération.
+            {t("Suis tes équipes favorites, reçois les notifications et accède à l'espace fédération.")}
           </Text>
           <View style={{ alignSelf: 'stretch' }}>
-            <Button title="Connexion / inscription" icon="log-in-outline" onPress={() => router.push('/login')} />
+            <Button title={t('Connexion / inscription')} icon="log-in-outline" onPress={() => router.push('/login')} />
           </View>
         </View>
 
         {/* Le choix de la langue doit rester accessible sans compte :
             un visiteur anglophone doit pouvoir basculer avant de s'inscrire. */}
-        <SectionTitle title="Langue de l’application" />
+        <SectionTitle title={t('Langue de l’application')} />
         <View style={{ paddingHorizontal: S.lg }}>
           <Card>
             <LangSwitch lang={lang} setLang={setLang} />
@@ -62,7 +62,7 @@ export default function CompteScreen() {
 
         <View style={{ padding: S.lg }}>
           <Button
-            title="À propos de la fédération"
+            title={t('À propos de la fédération')}
             tone="alt"
             icon="information-circle-outline"
             onPress={() => router.push('/apropos' as never)}
@@ -72,12 +72,12 @@ export default function CompteScreen() {
     );
   }
 
-  const name = profile?.full_name || session.user.email || 'Utilisateur';
+  const name = profile?.full_name || session.user.email || t('Utilisateur');
   const initials = name.slice(0, 2).toUpperCase();
 
   return (
     <Screen>
-      <Header title="Mon compte" />
+      <Header title={t('Mon compte')} />
       <View style={{ padding: S.lg }}>
         <Card>
           <Row style={{ gap: 13 }}>
@@ -85,29 +85,31 @@ export default function CompteScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.text, fontSize: 16, fontWeight: '600' }}>{name}</Text>
               <Text style={{ color: C.dim, fontSize: 12 }}>
-                {isAdmin ? 'Administrateur · Fédération' : 'Supporter'}
+                {isAdmin ? t('Administrateur · Fédération') : t('Supporter')}
               </Text>
             </View>
           </Row>
         </Card>
       </View>
 
-      <SectionTitle title="Mes équipes favorites" />
+      <SectionTitle title={t('Mes équipes favorites')} />
       <View style={{ paddingHorizontal: S.lg }}>
         {favorites.length === 0 ? (
           <Card>
             <Text style={{ color: C.dim, fontSize: 13, lineHeight: 19 }}>
-              Aucune équipe favorite pour le moment. Ouvre la page d’un club et touche l’étoile ⭐ pour le suivre.
+              {t(
+                'Aucune équipe favorite pour le moment. Ouvre la page d’un club et touche l’étoile ⭐ pour le suivre.',
+              )}
             </Text>
           </Card>
         ) : (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
-            {favorites.map((t) => (
-              <Pressable key={t.id} onPress={() => router.push(`/team/${t.id}`)} style={{ width: '31.5%' }}>
+            {favorites.map((fav) => (
+              <Pressable key={fav.id} onPress={() => router.push(`/team/${fav.id}`)} style={{ width: '31.5%' }}>
                 <Card style={{ alignItems: 'center', paddingVertical: 12 }}>
-                  <Crest label={teamShort(t)} color={t.color ?? C.surface2} size={34} />
+                  <Crest label={teamShort(fav)} color={fav.color ?? C.surface2} size={34} />
                   <Text style={{ color: C.muted, fontSize: 11, marginTop: 6 }} numberOfLines={1}>
-                    {t.short_name ?? t.name}
+                    {fav.short_name ?? fav.name}
                   </Text>
                 </Card>
               </Pressable>
@@ -116,35 +118,45 @@ export default function CompteScreen() {
         )}
       </View>
 
-      <SectionTitle title="Ma participation" />
+      <SectionTitle title={t('Ma participation')} />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card style={{ paddingVertical: 4 }}>
           <LinkRow
             icon="podium-outline"
-            title="Classement des supporters"
-            sub="Mes points, mon rang, mes pronostics"
+            title={t('Classement des supporters')}
+            sub={t('Mes points, mon rang, mes pronostics')}
             href="/classement-supporters"
           />
-          <LinkRow icon="help-circle-outline" title="Quiz basket" sub="Teste tes connaissances" href="/quiz" />
+          <LinkRow
+            icon="help-circle-outline"
+            title={t('Quiz basket')}
+            sub={t('Teste tes connaissances')}
+            href="/quiz"
+          />
           <LinkRow
             icon="business-outline"
-            title="Inscrire mon club"
-            sub="Demande d’engagement en compétition"
+            title={t('Inscrire mon club')}
+            sub={t('Demande d’engagement en compétition')}
             href="/inscription-club"
             last
           />
         </Card>
       </View>
 
-      <SectionTitle title="Notifications" />
+      <SectionTitle title={t('Notifications')} />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card style={{ paddingVertical: 4 }}>
-          <SettingRow icon="notifications-outline" label="Notifications de match" value={notif} onChange={onToggleNotif} />
-          <SettingRow icon="play-outline" label="Alerte résumé vidéo" value={video} onChange={setVideo} last />
+          <SettingRow
+            icon="notifications-outline"
+            label={t('Notifications de match')}
+            value={notif}
+            onChange={onToggleNotif}
+          />
+          <SettingRow icon="play-outline" label={t('Alerte résumé vidéo')} value={video} onChange={setVideo} last />
         </Card>
       </View>
 
-      <SectionTitle title="Langue de l’application" />
+      <SectionTitle title={t('Langue de l’application')} />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card>
           <LangSwitch lang={lang} setLang={setLang} />
@@ -155,15 +167,15 @@ export default function CompteScreen() {
         <Card style={{ paddingVertical: 4 }}>
           <LinkRow
             icon="information-circle-outline"
-            title="À propos de la fédération"
-            sub="Présentation, contacts, partenaires"
+            title={t('À propos de la fédération')}
+            sub={t('Présentation, contacts, partenaires')}
             href="/apropos"
             last
           />
         </Card>
       </View>
 
-      <SectionTitle title="Administration" />
+      <SectionTitle title={t('Administration')} />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card style={{ paddingVertical: 4 }}>
           {isAdmin ? (
@@ -171,8 +183,8 @@ export default function CompteScreen() {
               <Row style={{ paddingVertical: 13, gap: 13 }}>
                 <Ionicons name="shield-checkmark-outline" size={20} color={C.accent} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontSize: 14 }}>Espace fédération</Text>
-                  <Text style={{ color: C.dim, fontSize: 12 }}>Gérer joueurs, équipes, matchs, stats</Text>
+                  <Text style={{ color: C.text, fontSize: 14 }}>{t('Espace fédération')}</Text>
+                  <Text style={{ color: C.dim, fontSize: 12 }}>{t('Gérer joueurs, équipes, matchs, stats')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.dim} />
               </Row>
@@ -181,7 +193,7 @@ export default function CompteScreen() {
             <Row style={{ paddingVertical: 13, gap: 13 }}>
               <Ionicons name="lock-closed-outline" size={20} color={C.dim} />
               <Text style={{ color: C.dim, fontSize: 13, flex: 1 }}>
-                Accès réservé aux comptes administrateurs de la fédération.
+                {t('Accès réservé aux comptes administrateurs de la fédération.')}
               </Text>
             </Row>
           )}
@@ -189,7 +201,7 @@ export default function CompteScreen() {
       </View>
 
       <View style={{ padding: S.lg }}>
-        <Button title="Se déconnecter" tone="alt" icon="log-out-outline" onPress={signOut} />
+        <Button title={t('Se déconnecter')} tone="alt" icon="log-out-outline" onPress={signOut} />
       </View>
     </Screen>
   );

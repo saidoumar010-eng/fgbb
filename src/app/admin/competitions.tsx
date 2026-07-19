@@ -5,17 +5,19 @@ import { Pressable, Text, View } from 'react-native';
 import { Button, Card, Empty, Header, Row, Screen } from '@/components/ui';
 import { listCompetitions } from '@/lib/db';
 import { categoryLabel } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function AdminCompetitions() {
   const { data, loading } = useFetch(() => listCompetitions());
+  const { t } = useT();
   const comps = data ?? [];
 
   return (
     <Screen>
       <Header
-        title="Compétitions"
+        title={t('Compétitions')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -23,10 +25,10 @@ export default function AdminCompetitions() {
         }
       />
       <View style={{ padding: S.lg }}>
-        <Button title="Créer une compétition" icon="add" onPress={() => router.push('/admin/competition-form')} />
+        <Button title={t('Créer une compétition')} icon="add" onPress={() => router.push('/admin/competition-form')} />
       </View>
       {comps.length === 0 ? (
-        <Empty icon="trophy-outline" title={loading ? 'Chargement…' : 'Aucune compétition'} />
+        <Empty icon="trophy-outline" title={loading ? t('Chargement…') : t('Aucune compétition')} />
       ) : (
         <View style={{ paddingHorizontal: S.lg }}>
           <Card style={{ paddingVertical: 4, paddingHorizontal: 13 }}>

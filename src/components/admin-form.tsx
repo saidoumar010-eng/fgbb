@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import { Pressable, Text } from 'react-native';
 
 import { Button, Card, Header, Screen } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 
 export function FormLabel({ children }: { children: string }) {
@@ -29,6 +30,7 @@ export function AdminForm({
   flash?: string | null;
   saveLabel?: string;
 }) {
+  const { t } = useT();
   return (
     <Screen>
       <Header

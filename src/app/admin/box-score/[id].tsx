@@ -6,6 +6,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { AdminForm } from '@/components/admin-form';
 import { Button, Card, Empty, Header, Screen } from '@/components/ui';
 import { getMatch, getMatchStats, getTeamPlayers } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { pickImageBase64 } from '@/lib/upload';
 import { C, S } from '@/lib/theme';
@@ -72,6 +73,7 @@ function findRoster(rosters: Player[], ex: { name?: string; number?: number | nu
 export default function BoxScoreEntry() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, loading } = useFetch(() => loadBox(id), [id]);
+  const { t } = useT();
   const [vals, setVals] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -97,14 +99,14 @@ export default function BoxScoreEntry() {
     return (
       <Screen>
         <Header
-          title="Box score"
+          title={t('Box score')}
           left={
             <Pressable onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={24} color={C.muted} />
             </Pressable>
           }
         />
-        <Empty icon="stats-chart-outline" title={loading ? 'Chargement…' : 'Match introuvable'} />
+        <Empty icon="stats-chart-outline" title={loading ? t('Chargement…') : t('Match introuvable')} />
       </Screen>
     );
   }
@@ -158,14 +160,19 @@ export default function BoxScoreEntry() {
       }
       setVals(next);
       setFlash(
-        `${matched} joueur(s) pré-remplis depuis la feuille.` +
+        t('{n} joueur(s) pré-remplis depuis la feuille.', { n: matched }) +
           (unmatched.length
-            ? ` Non reconnus : ${unmatched.slice(0, 4).join(', ')}${unmatched.length > 4 ? '…' : ''}.`
+            ? ' ' +
+              t('Non reconnus : {names}', {
+                names: `${unmatched.slice(0, 4).join(', ')}${unmatched.length > 4 ? '…' : ''}`,
+              }) +
+              '.'
             : '') +
-          ' Vérifie les chiffres puis enregistre.',
+          ' ' +
+          t('Vérifie les chiffres puis enregistre.'),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec de l'analyse de la feuille de match.");
+      setError(e instanceof Error ? e.message : t("Échec de l'analyse de la feuille de match."));
     } finally {
       setImporting(false);
     }
@@ -187,7 +194,7 @@ export default function BoxScoreEntry() {
     });
     if (rows.length === 0) {
       setSaving(false);
-      setError('Saisis les statistiques d’au moins un joueur.');
+      setError(t('Saisis les statistiques d’au moins un joueur.'));
       return;
     }
     const { error: err } = await supabase
@@ -198,46 +205,47 @@ export default function BoxScoreEntry() {
       setError(err.message);
       return;
     }
-    setFlash(`Statistiques enregistrées pour ${rows.length} joueur(s).`);
+    setFlash(t('Statistiques enregistrées pour {n} joueur(s).', { n: rows.length }));
   }
 
   const noPlayers = data.home.length === 0 && data.away.length === 0;
 
   return (
     <AdminForm
-      title="Saisir le box score"
+      title={t('Saisir le box score')}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel="Enregistrer le box score">
+      saveLabel={t('Enregistrer le box score')}>
       <Button
-        title="Importer une feuille de match (IA)"
+        title={t('Importer une feuille de match (IA)')}
         tone="alt"
         icon="sparkles-outline"
         loading={importing}
         onPress={importSheet}
       />
       <Text style={{ color: C.dim, fontSize: 11, lineHeight: 16, marginTop: 8, marginBottom: 10 }}>
-        Photographie la feuille de match : l’IA lit les statistiques et pré-remplit les joueurs reconnus.
-        Vérifie toujours les chiffres avant d’enregistrer.
+        {t(
+          'Photographie la feuille de match : l’IA lit les statistiques et pré-remplit les joueurs reconnus. Vérifie toujours les chiffres avant d’enregistrer.',
+        )}
       </Text>
       <Text style={{ color: C.dim, fontSize: 11, lineHeight: 16, marginBottom: 4 }}>
-        MIN minutes · PTS points · REB rebonds (RO offensifs) · PD passes · INT interceptions · CTR contres ·
-        BP balles perdues · FTE fautes · TR/TT tirs réussis/tentés · 3R/3T à 3 points · LFR/LFT lancers francs ·
-        +/− différentiel (un nombre négatif est accepté)
+        {t(
+          'MIN minutes · PTS points · REB rebonds (RO offensifs) · PD passes · INT interceptions · CTR contres · BP balles perdues · FTE fautes · TR/TT tirs réussis/tentés · 3R/3T à 3 points · LFR/LFT lancers francs · +/− différentiel (un nombre négatif est accepté)',
+        )}
       </Text>
 
       {noPlayers ? (
         <Card style={{ marginTop: 8 }}>
           <Text style={{ color: C.dim, fontSize: 13 }}>
-            Aucun joueur dans les effectifs de ces équipes. Ajoute d’abord des joueurs (Gestion → Joueurs).
+            {t('Aucun joueur dans les effectifs de ces équipes. Ajoute d’abord des joueurs (Gestion → Joueurs).')}
           </Text>
         </Card>
       ) : (
         <>
-          <TeamSection title={data.m.home_team?.name ?? 'Domicile'} players={data.home} vals={vals} onSet={setVal} />
-          <TeamSection title={data.m.away_team?.name ?? 'Extérieur'} players={data.away} vals={vals} onSet={setVal} />
+          <TeamSection title={data.m.home_team?.name ?? t('Domicile')} players={data.home} vals={vals} onSet={setVal} />
+          <TeamSection title={data.m.away_team?.name ?? t('Extérieur')} players={data.away} vals={vals} onSet={setVal} />
         </>
       )}
     </AdminForm>
@@ -255,6 +263,7 @@ function TeamSection({
   vals: Record<string, Record<string, string>>;
   onSet: (pid: string, k: string, v: string) => void;
 }) {
+  const { t } = useT();
   if (players.length === 0) return null;
   return (
     <View style={{ marginTop: 14 }}>
@@ -269,7 +278,7 @@ function TeamSection({
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {FIELDS.map((f) => (
                 <View key={f.k} style={{ width: 54 }}>
-                  <Text style={{ color: C.dim, fontSize: 11, marginBottom: 3, textAlign: 'center' }}>{f.l}</Text>
+                  <Text style={{ color: C.dim, fontSize: 11, marginBottom: 3, textAlign: 'center' }}>{t(f.l)}</Text>
                   <TextInput
                     value={vals[p.id]?.[f.k] ?? ''}
                     onChangeText={(v) => onSet(p.id, f.k, v)}

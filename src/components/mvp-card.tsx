@@ -7,12 +7,14 @@ import { Card, Row } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { getMyMvpVote, getTeamPlayers, listMvpResults, voteMvp } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, R } from '@/lib/theme';
 import type { Match, Player } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
 // Vote MVP des supporters : ouvert pendant et après le match.
 export function MvpCard({ match }: { match: Match }) {
+  const { t } = useT();
   const { session } = useAuth();
   const uid = session?.user.id;
   const results = useFetch(() => listMvpResults(match.id), [match.id]);
@@ -46,24 +48,30 @@ export function MvpCard({ match }: { match: Match }) {
       await Promise.all([results.reload(), myVoteFetch.reload()]);
       setExpanded(false);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Erreur');
+      setErr(e instanceof Error ? e.message : t('Erreur'));
     } finally {
       setBusy(false);
     }
   }
 
   const playerLabel = (p?: Player) =>
-    p ? `${p.number != null ? `#${p.number} ` : ''}${p.full_name}` : 'Joueur';
+    p ? `${p.number != null ? `#${p.number} ` : ''}${p.full_name}` : t('Joueur');
 
   return (
     <Card>
       <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
         <Row style={{ gap: 7 }}>
           <Ionicons name="trophy-outline" size={15} color={C.flagYellow} />
-          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>MVP du match — vote des supporters</Text>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>
+            {t('MVP du match — vote des supporters')}
+          </Text>
         </Row>
         <Text style={{ color: C.dim, fontSize: 11 }}>
-          {totalVotes > 0 ? `${totalVotes} vote${totalVotes > 1 ? 's' : ''}` : ''}
+          {totalVotes > 0
+            ? totalVotes > 1
+              ? t('{n} votes', { n: totalVotes })
+              : t('{n} vote', { n: totalVotes })
+            : ''}
         </Text>
       </Row>
 
@@ -111,7 +119,7 @@ export function MvpCard({ match }: { match: Match }) {
         </View>
       ) : (
         <Text style={{ color: C.dim, fontSize: 12, marginBottom: 6 }}>
-          Aucun vote pour le moment — désigne ton MVP !
+          {t('Aucun vote pour le moment — désigne ton MVP !')}
         </Text>
       )}
 
@@ -128,7 +136,13 @@ export function MvpCard({ match }: { match: Match }) {
           pressed && { opacity: 0.85 },
         ]}>
         <Text style={{ color: C.accent, fontSize: 13, fontWeight: '600' }}>
-          {!session ? 'Se connecter pour voter' : expanded ? 'Fermer' : myVote ? 'Changer mon vote' : 'Voter pour le MVP'}
+          {!session
+            ? t('Se connecter pour voter')
+            : expanded
+              ? t('Fermer')
+              : myVote
+                ? t('Changer mon vote')
+                : t('Voter pour le MVP')}
         </Text>
       </Pressable>
 
@@ -141,10 +155,10 @@ export function MvpCard({ match }: { match: Match }) {
             ] as const
           ).map(([team, roster]) => (
             <View key={teamShort(team)}>
-              <Text style={{ color: C.dim, fontSize: 11, marginBottom: 6 }}>{team?.name ?? 'Équipe'}</Text>
+              <Text style={{ color: C.dim, fontSize: 11, marginBottom: 6 }}>{team?.name ?? t('Équipe')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {roster.length === 0 ? (
-                  <Text style={{ color: C.dim, fontSize: 12 }}>Aucun joueur enregistré.</Text>
+                  <Text style={{ color: C.dim, fontSize: 12 }}>{t('Aucun joueur enregistré.')}</Text>
                 ) : (
                   roster.map((p) => (
                     <Pressable
@@ -173,7 +187,9 @@ export function MvpCard({ match }: { match: Match }) {
           ))}
         </View>
       )}
-      {err ? <Text style={{ color: C.red, fontSize: 11, marginTop: 8 }}>Erreur : {err}</Text> : null}
+      {err ? (
+        <Text style={{ color: C.red, fontSize: 11, marginTop: 8 }}>{t('Erreur : {msg}', { msg: err })}</Text>
+      ) : null}
     </Card>
   );
 }

@@ -17,11 +17,13 @@ import {
 } from '@/lib/db';
 import { getTeamSeasonStat } from '@/lib/db-stats';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function TeamDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useT();
   const team = useFetch(() => getTeam(id), [id]);
   const standing = useFetch(() => getTeamStanding(id), [id]);
   const season = useFetch(() => getTeamSeasonStat(id), [id]);
@@ -42,14 +44,18 @@ export default function TeamDetail() {
     favs.reload();
   }
 
-  const t = team.data;
+  const tm = team.data;
   const st = standing.data;
-  const sub = t ? [t.city, t.division, t.founded_year ? `Fondé en ${t.founded_year}` : null].filter(Boolean).join(' · ') : '';
+  const sub = tm
+    ? [tm.city, tm.division, tm.founded_year ? t('Fondé en {y}', { y: tm.founded_year }) : null]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
 
   return (
     <Screen>
       <Header
-        title="Club"
+        title={t('Club')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -61,20 +67,20 @@ export default function TeamDetail() {
           </Pressable>
         }
       />
-      {!t ? (
-        <Empty icon="shield-outline" title={team.loading ? 'Chargement…' : 'Club introuvable'} />
+      {!tm ? (
+        <Empty icon="shield-outline" title={team.loading ? t('Chargement…') : t('Club introuvable')} />
       ) : (
         <View>
           <View style={{ padding: S.lg }}>
             <Card style={{ alignItems: 'center' }}>
-              <Crest label={teamShort(t)} color={t.color ?? C.surface2} size={64} image={t.logo_url} />
-              <Text style={{ color: C.text, fontSize: 19, fontWeight: '600', marginTop: 12 }}>{t.name}</Text>
+              <Crest label={teamShort(tm)} color={tm.color ?? C.surface2} size={64} image={tm.logo_url} />
+              <Text style={{ color: C.text, fontSize: 19, fontWeight: '600', marginTop: 12 }}>{tm.name}</Text>
               <Text style={{ color: C.dim, fontSize: 12, marginTop: 4, textAlign: 'center' }}>{sub}</Text>
               <Row style={{ marginTop: 14, gap: 22 }}>
-                <Stat label="Joués" value={st?.played ?? 0} />
-                <Stat label="Victoires" value={st?.wins ?? 0} color={C.green} />
-                <Stat label="Défaites" value={st?.losses ?? 0} />
-                <Stat label="Points" value={st?.points ?? 0} color={C.accent} />
+                <Stat label={t('Joués')} value={st?.played ?? 0} />
+                <Stat label={t('Victoires')} value={st?.wins ?? 0} color={C.green} />
+                <Stat label={t('Défaites')} value={st?.losses ?? 0} />
+                <Stat label={t('Points')} value={st?.points ?? 0} color={C.accent} />
               </Row>
             </Card>
           </View>
@@ -84,18 +90,18 @@ export default function TeamDetail() {
               <Pressable onPress={() => router.push('/stats-equipes' as never)}>
                 <Card>
                   <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-                    <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>Moyennes par match</Text>
+                    <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>{t('Moyennes par match')}</Text>
                     <Ionicons name="chevron-forward" size={16} color={C.dim} />
                   </Row>
                   <Row style={{ justifyContent: 'space-around' }}>
-                    <Stat label="Marqués" value={season.data.pts_for} color={C.accent} />
-                    <Stat label="Encaissés" value={season.data.pts_against} />
+                    <Stat label={t('Marqués')} value={season.data.pts_for} color={C.accent} />
+                    <Stat label={t('Encaissés')} value={season.data.pts_against} />
                     <Stat
-                      label="Différentiel"
+                      label={t('Différentiel')}
                       value={season.data.diff > 0 ? `+${season.data.diff}` : season.data.diff}
                       color={season.data.diff >= 0 ? C.green : C.red}
                     />
-                    <Stat label="Record" value={season.data.best_score} />
+                    <Stat label={t('Record')} value={season.data.best_score} />
                   </Row>
                 </Card>
               </Pressable>
@@ -103,15 +109,15 @@ export default function TeamDetail() {
           ) : null}
 
           <Row style={{ marginHorizontal: S.lg, gap: 6 }}>
-            <Tab label="Effectif" active={tab === 'roster'} onPress={() => setTab('roster')} />
-            <Tab label="Calendrier" active={tab === 'cal'} onPress={() => setTab('cal')} />
+            <Tab label={t('Effectif')} active={tab === 'roster'} onPress={() => setTab('roster')} />
+            <Tab label={t('Calendrier')} active={tab === 'cal'} onPress={() => setTab('cal')} />
           </Row>
 
           {tab === 'roster' ? (
             <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
               {(players.data ?? []).length === 0 ? (
                 <Card>
-                  <Text style={{ color: C.dim, fontSize: 13 }}>Aucun joueur dans l'effectif.</Text>
+                  <Text style={{ color: C.dim, fontSize: 13 }}>{t("Aucun joueur dans l'effectif.")}</Text>
                 </Card>
               ) : (
                 <Card style={{ paddingVertical: 4, paddingHorizontal: 13 }}>
@@ -119,7 +125,7 @@ export default function TeamDetail() {
                     <Pressable key={pl.id} onPress={() => router.push(`/player/${pl.id}`)}>
                       <Row
                         style={{ paddingVertical: 11, gap: 12, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: C.border }}>
-                        <Crest label={pl.number ? `${pl.number}` : teamShort(t)} color={t.color ?? C.surface2} size={30} round />
+                        <Crest label={pl.number ? `${pl.number}` : teamShort(tm)} color={tm.color ?? C.surface2} size={30} round />
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: C.text, fontSize: 14 }}>{pl.full_name}</Text>
                           <Text style={{ color: C.dim, fontSize: 12 }}>{pl.position ?? ''}</Text>
@@ -135,7 +141,7 @@ export default function TeamDetail() {
             <View style={{ paddingHorizontal: S.lg, paddingTop: 12, gap: 9 }}>
               {(matches.data ?? []).length === 0 ? (
                 <Card>
-                  <Text style={{ color: C.dim, fontSize: 13 }}>Aucun match programmé.</Text>
+                  <Text style={{ color: C.dim, fontSize: 13 }}>{t('Aucun match programmé.')}</Text>
                 </Card>
               ) : (
                 (matches.data ?? []).map((m) => (

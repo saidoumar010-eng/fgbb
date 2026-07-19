@@ -5,9 +5,11 @@ import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-nat
 
 import { Button, Field, Logo, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 
 export default function LoginScreen() {
+  const { t } = useT();
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [fullName, setFullName] = useState('');
@@ -39,9 +41,9 @@ export default function LoginScreen() {
         <View style={{ alignItems: 'center', paddingTop: S.md, gap: 12 }}>
           <Logo size={84} />
           <Text style={{ color: C.text, fontSize: 18, fontWeight: '600', textAlign: 'center' }}>
-            Fédération Guinéenne{'\n'}de Basketball
+            {t('Fédération Guinéenne\nde Basketball')}
           </Text>
-          <Text style={{ color: C.dim, fontSize: 12 }}>Scores · stats · vidéos · en direct</Text>
+          <Text style={{ color: C.dim, fontSize: 12 }}>{t('Scores · stats · vidéos · en direct')}</Text>
         </View>
 
         <Row style={{ marginHorizontal: S.lg, marginTop: S.xl, gap: 6 }}>
@@ -61,7 +63,7 @@ export default function LoginScreen() {
                   borderColor: on ? 'rgba(59,214,27,0.5)' : 'transparent',
                 }}>
                 <Text style={{ color: on ? C.text : C.muted, fontSize: 13, fontWeight: '500' }}>
-                  {m === 'in' ? 'Connexion' : 'Inscription'}
+                  {m === 'in' ? t('Connexion') : t('Inscription')}
                 </Text>
               </Pressable>
             );
@@ -70,18 +72,23 @@ export default function LoginScreen() {
 
         <View style={{ paddingHorizontal: S.lg }}>
           {mode === 'up' && (
-            <Field label="Nom complet" placeholder="Votre nom" value={fullName} onChangeText={setFullName} />
+            <Field
+              label={t('Nom complet')}
+              placeholder={t('Votre nom')}
+              value={fullName}
+              onChangeText={setFullName}
+            />
           )}
           <Field
-            label="Adresse e-mail"
-            placeholder="vous@exemple.com"
+            label={t('Adresse e-mail')}
+            placeholder={t('vous@exemple.com')}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
           />
           <Field
-            label="Mot de passe"
+            label={t('Mot de passe')}
             placeholder="••••••••"
             secureTextEntry
             value={password}
@@ -91,13 +98,13 @@ export default function LoginScreen() {
           {error ? <Text style={{ color: C.red, fontSize: 13, marginTop: 12 }}>{error}</Text> : null}
 
           <Button
-            title={mode === 'in' ? 'Se connecter' : 'Créer mon compte'}
+            title={mode === 'in' ? t('Se connecter') : t('Créer mon compte')}
             onPress={submit}
             loading={loading}
             disabled={!email || !password}
           />
           <Text style={{ color: C.dim, fontSize: 11, textAlign: 'center', marginTop: 14, lineHeight: 17 }}>
-            L'accès à l'espace fédération nécessite un compte administrateur validé.
+            {t("L'accès à l'espace fédération nécessite un compte administrateur validé.")}
           </Text>
         </View>
       </KeyboardAvoidingView>

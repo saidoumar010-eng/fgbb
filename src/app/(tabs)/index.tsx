@@ -9,12 +9,14 @@ import { SponsorBand } from '@/components/sponsor-band';
 import { Card, Crest, Empty, Header, Logo, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { listMatches, listNews } from '@/lib/db';
 import { fullDate, matchWhen, teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useMatchesRealtime } from '@/lib/realtime';
 import { C, R, S } from '@/lib/theme';
 import type { Match } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
 export default function HomeScreen() {
+  const { t } = useT();
   const matches = useFetch(() => listMatches());
   const news = useFetch(() => listNews());
   useMatchesRealtime(() => matches.reload());
@@ -61,8 +63,10 @@ export default function HomeScreen() {
       {nothing ? (
         <Empty
           icon="basketball-outline"
-          title="Bienvenue sur l'app FGBB"
-          subtitle="Aucun contenu pour le moment. Connecte-toi à l'espace fédération pour ajouter des équipes, des matchs et des actualités."
+          title={t("Bienvenue sur l'app FGBB")}
+          subtitle={t(
+            "Aucun contenu pour le moment. Connecte-toi à l'espace fédération pour ajouter des équipes, des matchs et des actualités.",
+          )}
         />
       ) : (
         <View style={{ paddingTop: S.md }}>
@@ -73,21 +77,21 @@ export default function HomeScreen() {
           )}
 
           <Row style={{ paddingHorizontal: S.lg, gap: 9, marginTop: S.md }}>
-            <QuickLink icon="videocam-outline" label="Vidéos" href="/videos" />
-            <QuickLink icon="podium-outline" label="Leaders" href="/leaders" />
-            <QuickLink icon="heart-outline" label="Fan zone" href="/fanzone" />
-            <QuickLink icon="git-compare-outline" label="Comparer" href="/compare" />
+            <QuickLink icon="videocam-outline" label={t('Vidéos')} href="/videos" />
+            <QuickLink icon="podium-outline" label={t('Leaders')} href="/leaders" />
+            <QuickLink icon="heart-outline" label={t('Fan zone')} href="/fanzone" />
+            <QuickLink icon="git-compare-outline" label={t('Comparer')} href="/compare" />
           </Row>
           <Row style={{ paddingHorizontal: S.lg, gap: 9, marginTop: 9 }}>
-            <QuickLink icon="images-outline" label="Photos" href="/galerie" />
-            <QuickLink icon="calendar-outline" label="Agenda" href="/agenda" />
-            <QuickLink icon="mic-outline" label="Médias" href="/medias" />
-            <QuickLink icon="information-circle-outline" label="À propos" href="/apropos" />
+            <QuickLink icon="images-outline" label={t('Photos')} href="/galerie" />
+            <QuickLink icon="calendar-outline" label={t('Agenda')} href="/agenda" />
+            <QuickLink icon="mic-outline" label={t('Médias')} href="/medias" />
+            <QuickLink icon="information-circle-outline" label={t('À propos')} href="/apropos" />
           </Row>
 
           {otherLive.length > 0 && (
             <>
-              <SectionTitle title="Aussi en direct" />
+              <SectionTitle title={t('Aussi en direct')} />
               <View style={{ paddingHorizontal: S.lg, gap: 9 }}>
                 {otherLive.map((m) => (
                   <MatchRow key={m.id} match={m} onPress={() => router.push(`/match/${m.id}`)} />
@@ -97,10 +101,10 @@ export default function HomeScreen() {
           )}
 
           <SectionTitle
-            title="Prochains matchs"
+            title={t('Prochains matchs')}
             action={
               <Pressable onPress={() => router.push('/matchs')}>
-                <Text style={{ color: C.accent, fontSize: 12 }}>Tout voir</Text>
+                <Text style={{ color: C.accent, fontSize: 12 }}>{t('Tout voir')}</Text>
               </Pressable>
             }
           />
@@ -111,7 +115,7 @@ export default function HomeScreen() {
               ))
             ) : (
               <Card>
-                <Text style={{ color: C.dim, fontSize: 13 }}>Aucun match programmé.</Text>
+                <Text style={{ color: C.dim, fontSize: 13 }}>{t('Aucun match programmé.')}</Text>
               </Card>
             )}
           </View>
@@ -119,10 +123,10 @@ export default function HomeScreen() {
           {latestNews.length > 0 && (
             <>
               <SectionTitle
-                title="Actualités"
+                title={t('Actualités')}
                 action={
                   <Pressable onPress={() => router.push('/actus')}>
-                    <Text style={{ color: C.accent, fontSize: 12 }}>Tout voir</Text>
+                    <Text style={{ color: C.accent, fontSize: 12 }}>{t('Tout voir')}</Text>
                   </Pressable>
                 }
               />
@@ -164,7 +168,7 @@ export default function HomeScreen() {
 
           {lastResults.length > 0 && (
             <>
-              <SectionTitle title="Derniers résultats" />
+              <SectionTitle title={t('Derniers résultats')} />
               <View style={{ paddingHorizontal: S.lg, gap: 9, marginBottom: S.md }}>
                 {lastResults.map((m) => (
                   <MatchRow key={m.id} match={m} onPress={() => router.push(`/match/${m.id}`)} />
@@ -182,6 +186,7 @@ export default function HomeScreen() {
 
 // Grande carte « à la une », inspirée des affiches de la fédération (vert canard).
 function FeaturedMatch({ match: m }: { match: Match }) {
+  const { t } = useT();
   const scheduled = m.status === 'scheduled';
   const live = m.status === 'live';
   const { day, time } = matchWhen(m.scheduled_at);
@@ -206,13 +211,13 @@ function FeaturedMatch({ match: m }: { match: Match }) {
 
         <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
           <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600', letterSpacing: 0.6 }}>
-            {(m.competition?.name ?? 'À LA UNE').toUpperCase()}
+            {(m.competition?.name ?? t('À LA UNE')).toUpperCase()}
           </Text>
           {live ? (
-            <Pill label="DIRECT" tone="red" dot />
+            <Pill label={t('DIRECT')} tone="red" dot />
           ) : (
             <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>
-              {scheduled ? `${day} ${fullDate(m.scheduled_at)}` : 'Résultat'}
+              {scheduled ? `${day} ${fullDate(m.scheduled_at)}` : t('Résultat')}
             </Text>
           )}
         </Row>
@@ -221,7 +226,7 @@ function FeaturedMatch({ match: m }: { match: Match }) {
           <View style={{ flex: 1, alignItems: 'center', gap: 7 }}>
             <Crest label={teamShort(m.home_team)} color={m.home_team?.color ?? C.tealDeep} size={46} image={m.home_team?.logo_url} />
             <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
-              {m.home_team?.name ?? 'Équipe'}
+              {m.home_team?.name ?? t('Équipe')}
             </Text>
           </View>
 
@@ -232,7 +237,7 @@ function FeaturedMatch({ match: m }: { match: Match }) {
                   {time || 'vs'}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}>
-                  {m.venue ?? 'Coup d’envoi'}
+                  {m.venue ?? t('Coup d’envoi')}
                 </Text>
               </>
             ) : (
@@ -242,7 +247,9 @@ function FeaturedMatch({ match: m }: { match: Match }) {
                 </Text>
                 {live && m.current_quarter ? (
                   <Text style={{ color: C.accent, fontSize: 11, marginTop: 2, fontWeight: '600' }}>
-                    {m.current_quarter <= 4 ? `Q${m.current_quarter}` : `Prol. ${m.current_quarter - 4}`}
+                    {m.current_quarter <= 4
+                      ? `Q${m.current_quarter}`
+                      : t('Prol. {n}', { n: m.current_quarter - 4 })}
                   </Text>
                 ) : null}
               </>
@@ -252,14 +259,14 @@ function FeaturedMatch({ match: m }: { match: Match }) {
           <View style={{ flex: 1, alignItems: 'center', gap: 7 }}>
             <Crest label={teamShort(m.away_team)} color={m.away_team?.color ?? C.tealDeep} size={46} image={m.away_team?.logo_url} />
             <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
-              {m.away_team?.name ?? 'Équipe'}
+              {m.away_team?.name ?? t('Équipe')}
             </Text>
           </View>
         </Row>
 
         <Row style={{ justifyContent: 'center', marginTop: 14, gap: 5 }}>
           <Text style={{ color: C.accent, fontSize: 12.5, fontWeight: '600' }}>
-            {live ? 'Suivre le direct' : scheduled ? 'Voir le match' : 'Voir le résumé'}
+            {live ? t('Suivre le direct') : scheduled ? t('Voir le match') : t('Voir le résumé')}
           </Text>
           <Ionicons name="arrow-forward" size={13} color={C.accent} />
         </Row>

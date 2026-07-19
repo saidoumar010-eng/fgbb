@@ -7,6 +7,7 @@ import { ChipSelect } from '@/components/chip-select';
 import { ImageField } from '@/components/image-field';
 import { Button, Field, Row } from '@/components/ui';
 import { getNewsItem } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { notifySubscribers } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -23,6 +24,7 @@ export default function NewsForm() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editing = !!id;
   const existing = useFetch(async () => (id ? getNewsItem(id) : null), [id]);
+  const { t } = useT();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('officiel');
@@ -49,7 +51,7 @@ export default function NewsForm() {
 
   async function save() {
     if (!title.trim()) {
-      setError('Le titre est obligatoire.');
+      setError(t('Le titre est obligatoire.'));
       return;
     }
     setSaving(true);
@@ -74,9 +76,9 @@ export default function NewsForm() {
       await notifySubscribers({ title: 'Nouvelle actualité FGBB', body: title.trim() });
     }
     if (editing) {
-      setFlash('Actualité mise à jour.');
+      setFlash(t('Actualité mise à jour.'));
     } else {
-      setFlash('Actualité publiée.');
+      setFlash(t('Actualité publiée.'));
       setTitle('');
       setBody('');
       setCoverUrl(null);
@@ -84,10 +86,10 @@ export default function NewsForm() {
   }
 
   function confirmDelete() {
-    Alert.alert('Supprimer l’actualité', 'Action irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('Supprimer l’actualité'), t('Action irréversible.'), [
+      { text: t('Annuler'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('Supprimer'),
         style: 'destructive',
         onPress: async () => {
           await supabase.from('news').delete().eq('id', id);
@@ -99,41 +101,41 @@ export default function NewsForm() {
 
   return (
     <AdminForm
-      title={editing ? 'Modifier l’actualité' : 'Publier une actualité'}
+      title={editing ? t('Modifier l’actualité') : t('Publier une actualité')}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel={editing ? 'Enregistrer les modifications' : 'Publier'}>
-      <ImageField label="Image de couverture" value={coverUrl} onChange={setCoverUrl} folder="news" shape="wide" />
-      <Field label="Titre" placeholder="Titre de l'article" value={title} onChangeText={setTitle} />
+      saveLabel={editing ? t('Enregistrer les modifications') : t('Publier')}>
+      <ImageField label={t('Image de couverture')} value={coverUrl} onChange={setCoverUrl} folder="news" shape="wide" />
+      <Field label={t('Titre')} placeholder={t("Titre de l'article")} value={title} onChangeText={setTitle} />
 
-      <FormLabel>Catégorie</FormLabel>
-      <ChipSelect options={CATS} value={category} onChange={setCategory} wrap />
+      <FormLabel>{t('Catégorie')}</FormLabel>
+      <ChipSelect options={CATS.map((o) => ({ ...o, label: t(o.label) }))} value={category} onChange={setCategory} wrap />
 
       <Field
-        label="Contenu"
-        placeholder="Rédige le communiqué…"
+        label={t('Contenu')}
+        placeholder={t('Rédige le communiqué…')}
         value={body}
         onChangeText={setBody}
         multiline
         numberOfLines={6}
         style={{ height: 130, textAlignVertical: 'top', paddingTop: 11 } as never}
       />
-      <Field label="Auteur" placeholder="Service communication" value={author} onChangeText={setAuthor} />
+      <Field label={t('Auteur')} placeholder={t('Service communication')} value={author} onChangeText={setAuthor} />
 
       {!editing ? (
         <Row style={{ justifyContent: 'space-between', marginTop: 16 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontSize: 14 }}>Notifier les supporters</Text>
-            <Text style={{ color: C.dim, fontSize: 12 }}>Alerte à tous les abonnés</Text>
+            <Text style={{ color: C.text, fontSize: 14 }}>{t('Notifier les supporters')}</Text>
+            <Text style={{ color: C.dim, fontSize: 12 }}>{t('Alerte à tous les abonnés')}</Text>
           </View>
           <Switch value={notify} onValueChange={setNotify} trackColor={{ false: '#2A3140', true: C.green }} thumbColor="#fff" />
         </Row>
       ) : null}
 
       {editing ? (
-        <Button title="Supprimer l’actualité" tone="alt" icon="trash-outline" onPress={confirmDelete} />
+        <Button title={t('Supprimer l’actualité')} tone="alt" icon="trash-outline" onPress={confirmDelete} />
       ) : null}
     </AdminForm>
   );

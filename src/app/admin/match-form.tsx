@@ -5,6 +5,7 @@ import { AdminForm, FormLabel } from '@/components/admin-form';
 import { ChipSelect } from '@/components/chip-select';
 import { Field, Row } from '@/components/ui';
 import { listCompetitions, listTeams } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { notifySubscribers } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -18,6 +19,7 @@ const STATUS = [
 ];
 
 export default function MatchForm() {
+  const { t } = useT();
   const teams = useFetch(() => listTeams());
   const comps = useFetch(() => listCompetitions());
 
@@ -35,15 +37,16 @@ export default function MatchForm() {
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
-  const teamOptions = (teams.data ?? []).map((t) => ({ id: t.id, label: t.name, color: t.color }));
+  const teamOptions = (teams.data ?? []).map((team) => ({ id: team.id, label: team.name, color: team.color }));
+  const statusOptions = STATUS.map((s) => ({ ...s, label: t(s.label) }));
 
   async function save() {
     if (!homeId || !awayId) {
-      setError('Sélectionne les deux équipes.');
+      setError(t('Sélectionne les deux équipes.'));
       return;
     }
     if (homeId === awayId) {
-      setError('Les deux équipes doivent être différentes.');
+      setError(t('Les deux équipes doivent être différentes.'));
       return;
     }
     setSaving(true);
@@ -66,15 +69,15 @@ export default function MatchForm() {
       return;
     }
     if (notify) {
-      const home = (teams.data ?? []).find((t) => t.id === homeId);
-      const away = (teams.data ?? []).find((t) => t.id === awayId);
+      const home = (teams.data ?? []).find((team) => team.id === homeId);
+      const away = (teams.data ?? []).find((team) => team.id === awayId);
       await notifySubscribers({
         title: status === 'scheduled' ? 'Nouveau match programmé' : 'Résultat de match',
         body: `${home?.name ?? ''} vs ${away?.name ?? ''}`,
         team_ids: [homeId, awayId].filter(Boolean) as string[],
       });
     }
-    setFlash('Match enregistré et publié.');
+    setFlash(t('Match enregistré et publié.'));
     setHomeId(undefined);
     setAwayId(undefined);
     setScheduledAt('');
@@ -86,46 +89,46 @@ export default function MatchForm() {
 
   return (
     <AdminForm
-      title="Saisir / programmer un match"
+      title={t('Saisir / programmer un match')}
       onSave={save}
       saving={saving}
       error={error}
       flash={flash}
-      saveLabel="Publier le match">
-      <FormLabel>Compétition</FormLabel>
+      saveLabel={t('Publier le match')}>
+      <FormLabel>{t('Compétition')}</FormLabel>
       <ChipSelect
         options={(comps.data ?? []).map((c) => ({ id: c.id, label: c.name }))}
         value={competitionId}
         onChange={setCompetitionId}
       />
 
-      <FormLabel>Équipe à domicile</FormLabel>
+      <FormLabel>{t('Équipe à domicile')}</FormLabel>
       <ChipSelect options={teamOptions} value={homeId} onChange={setHomeId} />
 
-      <FormLabel>Équipe à l'extérieur</FormLabel>
+      <FormLabel>{t("Équipe à l'extérieur")}</FormLabel>
       <ChipSelect options={teamOptions} value={awayId} onChange={setAwayId} />
 
-      <FormLabel>Statut</FormLabel>
-      <ChipSelect options={STATUS} value={status} onChange={(v) => setStatus(v as MatchStatus)} wrap />
+      <FormLabel>{t('Statut')}</FormLabel>
+      <ChipSelect options={statusOptions} value={status} onChange={(v) => setStatus(v as MatchStatus)} wrap />
 
       {status !== 'scheduled' && (
         <Row style={{ gap: 10 }}>
-          <Field label="Score domicile" keyboardType="number-pad" value={homeScore} onChangeText={setHomeScore} />
-          <Field label="Score extérieur" keyboardType="number-pad" value={awayScore} onChangeText={setAwayScore} />
+          <Field label={t('Score domicile')} keyboardType="number-pad" value={homeScore} onChangeText={setHomeScore} />
+          <Field label={t('Score extérieur')} keyboardType="number-pad" value={awayScore} onChangeText={setAwayScore} />
         </Row>
       )}
 
       <Row style={{ gap: 10 }}>
-        <Field label="Date & heure" placeholder="AAAA-MM-JJ HH:MM" value={scheduledAt} onChangeText={setScheduledAt} />
-        <Field label="Lieu" placeholder="Palais des Sports" value={venue} onChangeText={setVenue} />
+        <Field label={t('Date & heure')} placeholder={t('AAAA-MM-JJ HH:MM')} value={scheduledAt} onChangeText={setScheduledAt} />
+        <Field label={t('Lieu')} placeholder="Palais des Sports" value={venue} onChangeText={setVenue} />
       </Row>
 
-      <Field label="Lien du résumé vidéo (YouTube/Facebook)" placeholder="https://youtube.com/..." autoCapitalize="none" value={videoUrl} onChangeText={setVideoUrl} />
+      <Field label={t('Lien du résumé vidéo (YouTube/Facebook)')} placeholder="https://youtube.com/..." autoCapitalize="none" value={videoUrl} onChangeText={setVideoUrl} />
 
       <Row style={{ justifyContent: 'space-between', marginTop: 16 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.text, fontSize: 14 }}>Notifier les supporters</Text>
-          <Text style={{ color: C.dim, fontSize: 12 }}>Alerte aux abonnés des deux équipes</Text>
+          <Text style={{ color: C.text, fontSize: 14 }}>{t('Notifier les supporters')}</Text>
+          <Text style={{ color: C.dim, fontSize: 12 }}>{t('Alerte aux abonnés des deux équipes')}</Text>
         </View>
         <Switch value={notify} onValueChange={setNotify} trackColor={{ false: '#2A3140', true: C.green }} thumbColor="#fff" />
       </Row>

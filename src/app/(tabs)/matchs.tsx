@@ -6,6 +6,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { MatchRow } from '@/components/match-row';
 import { Empty, Header, Screen } from '@/components/ui';
 import { listMatches } from '@/lib/db';
+import { useT } from '@/lib/i18n';
 import { useMatchesRealtime } from '@/lib/realtime';
 import { C, R, S } from '@/lib/theme';
 import type { MatchStatus } from '@/lib/types';
@@ -19,6 +20,7 @@ const FILTERS: { key: MatchStatus | 'all'; label: string }[] = [
 ];
 
 export default function MatchsScreen() {
+  const { t } = useT();
   const [filter, setFilter] = useState<MatchStatus | 'all'>('all');
   const { data, loading, reload } = useFetch(() => listMatches());
   useMatchesRealtime(reload);
@@ -34,7 +36,7 @@ export default function MatchsScreen() {
   return (
     <Screen scroll={false}>
       <Header
-        title="Matchs"
+        title={t('Matchs')}
         right={<Ionicons name="search-outline" size={22} color={C.muted} onPress={() => router.push('/search')} />}
       />
       <View style={{ paddingVertical: S.md }}>
@@ -55,7 +57,7 @@ export default function MatchsScreen() {
                   paddingVertical: 7,
                 }}>
                 <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>
-                  {f.label}
+                  {t(f.label)}
                 </Text>
               </Pressable>
             );
@@ -74,8 +76,8 @@ export default function MatchsScreen() {
         ) : (
           <Empty
             icon="calendar-outline"
-            title={loading ? 'Chargement…' : 'Aucun match'}
-            subtitle={loading ? undefined : 'Les matchs ajoutés par la fédération apparaîtront ici.'}
+            title={loading ? t('Chargement…') : t('Aucun match')}
+            subtitle={loading ? undefined : t('Les matchs ajoutés par la fédération apparaîtront ici.')}
           />
         )}
       </ScrollView>

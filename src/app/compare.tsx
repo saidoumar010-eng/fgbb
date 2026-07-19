@@ -7,6 +7,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { Card, Crest, Empty, Header, Row, Screen } from '@/components/ui';
 import { getPlayerSeason, listPlayers, listTeams } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 import type { Player, PlayerSeasonStat } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
@@ -16,6 +17,7 @@ const COLOR_B = C.flagYellow;
 
 // Comparateur : deux joueurs face à face, stat par stat (moyennes de la saison).
 export default function CompareScreen() {
+  const { t } = useT();
   const { a } = useLocalSearchParams<{ a?: string }>();
   const players = useFetch(() => listPlayers());
   const teams = useFetch(() => listTeams());
@@ -50,7 +52,7 @@ export default function CompareScreen() {
   return (
     <Screen>
       <Header
-        title="Comparateur"
+        title={t('Comparateur')}
         left={
           <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
@@ -82,10 +84,10 @@ export default function CompareScreen() {
         {picking && (
           <Card>
             <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>
-              Choisir le joueur {picking}
+              {t('Choisir le joueur {slot}', { slot: picking })}
             </Text>
             <TextInput
-              placeholder="Rechercher un joueur…"
+              placeholder={t('Rechercher un joueur…')}
               placeholderTextColor={C.dim}
               value={query}
               onChangeText={setQuery}
@@ -103,7 +105,7 @@ export default function CompareScreen() {
             />
             {candidates.length === 0 ? (
               <Text style={{ color: C.dim, fontSize: 12.5, paddingVertical: 8 }}>
-                {players.loading ? 'Chargement…' : 'Aucun joueur trouvé.'}
+                {players.loading ? t('Chargement…') : t('Aucun joueur trouvé.')}
               </Text>
             ) : (
               candidates.map((p, i) => (
@@ -139,7 +141,7 @@ export default function CompareScreen() {
           seasonA.loading || seasonB.loading ? (
             <Card>
               <Text style={{ color: C.dim, fontSize: 12.5, textAlign: 'center', paddingVertical: 8 }}>
-                Chargement des statistiques…
+                {t('Chargement des statistiques…')}
               </Text>
             </Card>
           ) : (
@@ -148,8 +150,8 @@ export default function CompareScreen() {
         ) : (
           <Empty
             icon="git-compare-outline"
-            title="Choisis deux joueurs"
-            subtitle="Sélectionne un joueur de chaque côté pour comparer leurs statistiques de la saison."
+            title={t('Choisis deux joueurs')}
+            subtitle={t('Sélectionne un joueur de chaque côté pour comparer leurs statistiques de la saison.')}
           />
         )}
       </View>
@@ -170,6 +172,7 @@ function PlayerSlot({
   onPress: () => void;
   picking: boolean;
 }) {
+  const { t } = useT();
   return (
     <Pressable onPress={onPress} style={{ flex: 1 }}>
       <Card
@@ -200,7 +203,7 @@ function PlayerSlot({
           </View>
         )}
         <Text style={{ color: player ? C.text : color, fontSize: 12.5, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
-          {player ? player.full_name : 'Choisir un joueur'}
+          {player ? player.full_name : t('Choisir un joueur')}
         </Text>
         {player ? (
           <Text style={{ color: C.dim, fontSize: 11 }}>
@@ -226,11 +229,12 @@ const STATS: { key: keyof PlayerSeasonStat; label: string; pct?: boolean }[] = [
 ];
 
 function CompareTable({ a, b }: { a: PlayerSeasonStat | null; b: PlayerSeasonStat | null }) {
+  const { t } = useT();
   if (!a && !b) {
     return (
       <Card>
         <Text style={{ color: C.dim, fontSize: 12.5 }}>
-          Aucune statistique enregistrée pour ces joueurs cette saison.
+          {t('Aucune statistique enregistrée pour ces joueurs cette saison.')}
         </Text>
       </Card>
     );
@@ -248,7 +252,7 @@ function CompareTable({ a, b }: { a: PlayerSeasonStat | null; b: PlayerSeasonSta
               <Text style={{ color: va >= vb ? C.text : C.muted, fontSize: 13, fontWeight: va >= vb ? '700' : '400', width: 52 }}>
                 {fmt(va)}
               </Text>
-              <Text style={{ color: C.dim, fontSize: 11.5 }}>{label}</Text>
+              <Text style={{ color: C.dim, fontSize: 11.5 }}>{t(label)}</Text>
               <Text
                 style={{
                   color: vb >= va ? C.text : C.muted,
