@@ -40,7 +40,8 @@
             "imageWidth": 220
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": false,

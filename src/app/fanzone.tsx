@@ -36,9 +36,18 @@ export default function FanZoneScreen() {
 
       <View style={{ padding: S.lg, gap: 12 }}>
         <Row style={{ gap: 10 }}>
+          <ShortcutCard icon="help-circle-outline" label="Quiz" onPress={() => router.push('/quiz' as never)} />
+          <ShortcutCard
+            icon="podium-outline"
+            label="Classement fans"
+            onPress={() => router.push('/classement-supporters' as never)}
+          />
+          <ShortcutCard icon="trophy-outline" label="Records" onPress={() => router.push('/records' as never)} />
+        </Row>
+        <Row style={{ gap: 10 }}>
           <ShortcutCard icon="git-compare-outline" label="Comparateur" onPress={() => router.push('/compare')} />
           <ShortcutCard icon="videocam-outline" label="Vidéos" onPress={() => router.push('/videos')} />
-          <ShortcutCard icon="podium-outline" label="Leaders" onPress={() => router.push('/leaders')} />
+          <ShortcutCard icon="flame-outline" label="Leaders" onPress={() => router.push('/leaders')} />
         </Row>
 
         {list.length === 0 ? (

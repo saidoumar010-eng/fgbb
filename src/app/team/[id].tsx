@@ -15,6 +15,7 @@ import {
   listFavoriteTeams,
   removeFavorite,
 } from '@/lib/db';
+import { getTeamSeasonStat } from '@/lib/db-stats';
 import { teamShort } from '@/lib/format';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
@@ -23,6 +24,7 @@ export default function TeamDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const team = useFetch(() => getTeam(id), [id]);
   const standing = useFetch(() => getTeamStanding(id), [id]);
+  const season = useFetch(() => getTeamSeasonStat(id), [id]);
   const players = useFetch(() => getTeamPlayers(id), [id]);
   const matches = useFetch(() => getTeamMatches(id), [id]);
   const [tab, setTab] = useState<'roster' | 'cal'>('roster');
@@ -76,6 +78,29 @@ export default function TeamDetail() {
               </Row>
             </Card>
           </View>
+
+          {season.data ? (
+            <View style={{ paddingHorizontal: S.lg, marginTop: -S.sm, marginBottom: S.md }}>
+              <Pressable onPress={() => router.push('/stats-equipes' as never)}>
+                <Card>
+                  <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>Moyennes par match</Text>
+                    <Ionicons name="chevron-forward" size={16} color={C.dim} />
+                  </Row>
+                  <Row style={{ justifyContent: 'space-around' }}>
+                    <Stat label="Marqués" value={season.data.pts_for} color={C.accent} />
+                    <Stat label="Encaissés" value={season.data.pts_against} />
+                    <Stat
+                      label="Différentiel"
+                      value={season.data.diff > 0 ? `+${season.data.diff}` : season.data.diff}
+                      color={season.data.diff >= 0 ? C.green : C.red}
+                    />
+                    <Stat label="Record" value={season.data.best_score} />
+                  </Row>
+                </Card>
+              </Pressable>
+            </View>
+          ) : null}
 
           <Row style={{ marginHorizontal: S.lg, gap: 6 }}>
             <Tab label="Effectif" active={tab === 'roster'} onPress={() => setTab('roster')} />

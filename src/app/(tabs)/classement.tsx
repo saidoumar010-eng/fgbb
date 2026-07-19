@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -6,6 +7,17 @@ import { Card, Crest, Empty, Header, Row, Screen, SectionTitle } from '@/compone
 import { listCompetitions, listLeaders, listStandings } from '@/lib/db';
 import { C, R, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
+
+// Raccourcis vers les écrans de données : le classement est la porte d'entrée
+// naturelle de tout ce qui est chiffré dans l'application.
+const DATA_LINKS: { icon: keyof typeof Ionicons.glyphMap; label: string; href: string }[] = [
+  { icon: 'flame-outline', label: 'Leaders', href: '/leaders' },
+  { icon: 'trophy-outline', label: 'Records', href: '/records' },
+  { icon: 'bar-chart-outline', label: 'Stats équipes', href: '/stats-equipes' },
+  { icon: 'git-compare-outline', label: 'Comparer', href: '/compare' },
+  { icon: 'warning-outline', label: 'Discipline', href: '/discipline' },
+  { icon: 'people-circle-outline', label: 'Arbitres', href: '/arbitres' },
+];
 
 export default function ClassementScreen() {
   const comps = useFetch(() => listCompetitions());
@@ -34,6 +46,20 @@ export default function ClassementScreen() {
           </Pressable>
         }
       />
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: 8 }}>
+        {DATA_LINKS.map((l) => (
+          <Pressable key={l.href} onPress={() => router.push(l.href as never)}>
+            <Card style={{ paddingVertical: 10, paddingHorizontal: 13, minWidth: 108 }}>
+              <Ionicons name={l.icon} size={18} color={C.accent} />
+              <Text style={{ color: C.text, fontSize: 12.5, marginTop: 6 }}>{l.label}</Text>
+            </Card>
+          </Pressable>
+        ))}
+      </ScrollView>
 
       {competitions.length > 0 && (
         <View style={{ paddingVertical: S.md }}>

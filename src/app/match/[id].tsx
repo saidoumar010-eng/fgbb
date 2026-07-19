@@ -1,26 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Share, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 
+import { Comments } from '@/components/comments';
 import { HeadToHead } from '@/components/head-to-head';
+import { LiveChat } from '@/components/live-chat';
 import { MatchFeed } from '@/components/match-feed';
+import { MatchOfficials } from '@/components/match-officials';
 import { MvpCard } from '@/components/mvp-card';
 import { PredictionCard } from '@/components/prediction-card';
 import { VideoEmbed } from '@/components/video-embed';
 import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { getMatch, getMatchStats } from '@/lib/db';
+import { exportMatchSheetPdf } from '@/lib/export';
 import { fullDate, teamShort } from '@/lib/format';
 import { useMatchRealtime } from '@/lib/realtime';
 import { C, S } from '@/lib/theme';
 import type { MatchStatus, PlayerMatchStat, QuarterScore } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
+type Tab = 'fil' | 'box' | 'team' | 'chat' | 'reactions';
+
 export default function MatchDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const match = useFetch(() => getMatch(id), [id]);
   const stats = useFetch(() => getMatchStats(id), [id]);
-  const [tab, setTab] = useState<'fil' | 'box' | 'team' | null>(null);
+  const [tab, setTab] = useState<Tab | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const m = match.data;
   const [overlay, setOverlay] = useState<{
@@ -61,7 +69,19 @@ export default function MatchDetail() {
   // Match avec le statut « live » superposé (temps réel) pour les sous-composants.
   const mm = m ? { ...m, status: dispStatus } : undefined;
   // Onglet par défaut selon le contexte : fil en direct, box score après, équipes avant.
-  const activeTab = tab ?? (dispStatus === 'live' ? 'fil' : dispStatus === 'finished' ? 'box' : 'team');
+  const activeTab: Tab = tab ?? (dispStatus === 'live' ? 'fil' : dispStatus === 'finished' ? 'box' : 'team');
+
+  async function exportSheet() {
+    setExportError(null);
+    setExporting(true);
+    try {
+      await exportMatchSheetPdf(id);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Export impossible pour l'instant.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <Screen>
@@ -75,6 +95,14 @@ export default function MatchDetail() {
         right={
           <Row style={{ gap: 14, alignItems: 'center' }}>
             {dispStatus === 'live' ? <Pill label="DIRECT" tone="red" dot /> : null}
+            {dispStatus === 'finished' ? (
+              <Ionicons
+                name="document-text-outline"
+                size={22}
+                color={exporting ? C.dim : C.muted}
+                onPress={exporting ? undefined : exportSheet}
+              />
+            ) : null}
             <Ionicons name="share-social-outline" size={22} color={C.muted} onPress={shareMatch} />
           </Row>
         }
@@ -137,6 +165,16 @@ export default function MatchDetail() {
             </Card>
           </View>
 
+          {exportError ? (
+            <Text style={{ color: C.red, fontSize: 12, paddingHorizontal: S.lg, marginBottom: S.sm }}>
+              {exportError}
+            </Text>
+          ) : null}
+
+          <View style={{ paddingHorizontal: S.lg }}>
+            <MatchOfficials matchId={id} />
+          </View>
+
           <View style={{ paddingHorizontal: S.lg, marginTop: 2 }}>
             <PredictionCard match={mm!} />
           </View>
@@ -150,13 +188,28 @@ export default function MatchDetail() {
             </>
           ) : null}
 
-          <Row style={{ marginHorizontal: S.lg, marginTop: S.lg, gap: 6 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: S.lg, gap: 6, marginTop: S.lg }}>
             <SubTab label="Fil" active={activeTab === 'fil'} onPress={() => setTab('fil')} />
             <SubTab label="Box score" active={activeTab === 'box'} onPress={() => setTab('box')} />
             <SubTab label="Équipes" active={activeTab === 'team'} onPress={() => setTab('team')} />
-          </Row>
+            {dispStatus !== 'scheduled' ? (
+              <SubTab label="Chat" active={activeTab === 'chat'} onPress={() => setTab('chat')} />
+            ) : null}
+            <SubTab label="Réactions" active={activeTab === 'reactions'} onPress={() => setTab('reactions')} />
+          </ScrollView>
 
-          {activeTab === 'fil' ? (
+          {activeTab === 'chat' ? (
+            <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
+              <LiveChat match={mm!} />
+            </View>
+          ) : activeTab === 'reactions' ? (
+            <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
+              <Comments targetType="match" targetId={id} />
+            </View>
+          ) : activeTab === 'fil' ? (
             <MatchFeed match={mm!} />
           ) : activeTab === 'box' ? (
             allStats.length === 0 ? (

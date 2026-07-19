@@ -12,16 +12,23 @@ import { C, S } from '@/lib/theme';
 import type { Player, PlayerMatchStat } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
-const FIELDS: { k: string; l: string }[] = [
+const FIELDS: { k: string; l: string; signed?: boolean }[] = [
+  { k: 'minutes', l: 'MIN' },
   { k: 'points', l: 'PTS' },
   { k: 'rebounds', l: 'REB' },
+  { k: 'off_rebounds', l: 'RO' },
   { k: 'assists', l: 'PD' },
   { k: 'steals', l: 'INT' },
   { k: 'blocks', l: 'CTR' },
+  { k: 'turnovers', l: 'BP' },
+  { k: 'fouls', l: 'FTE' },
   { k: 'fg_made', l: 'TR' },
   { k: 'fg_att', l: 'TT' },
   { k: 'three_made', l: '3R' },
   { k: 'three_att', l: '3T' },
+  { k: 'ft_made', l: 'LFR' },
+  { k: 'ft_att', l: 'LFT' },
+  { k: 'plus_minus', l: '+/−', signed: true },
 ];
 
 async function loadBox(id: string) {
@@ -134,8 +141,14 @@ export default function BoxScoreEntry() {
         for (const pl of team.players ?? []) {
           const r = findRoster(rosters, pl);
           if (r) {
-            const entry: Record<string, string> = {};
-            FIELDS.forEach((f) => (entry[f.k] = String((pl as Record<string, number>)[f.k] ?? 0)));
+            // La feuille de match ne couvre pas toutes les colonnes (minutes,
+            // +/−, balles perdues…) : on ne remplace que ce qui a été lu et on
+            // conserve ce que l'admin a déjà saisi à la main.
+            const entry: Record<string, string> = { ...(next[r.id] ?? {}) };
+            FIELDS.forEach((f) => {
+              const read = (pl as Record<string, number>)[f.k];
+              if (read != null) entry[f.k] = String(read);
+            });
             next[r.id] = entry;
             matched++;
           } else if (pl.name) {
@@ -169,7 +182,7 @@ export default function BoxScoreEntry() {
       const hasAny = FIELDS.some((f) => (v[f.k] ?? '') !== '');
       if (!hasAny) return;
       const row: Record<string, unknown> = { match_id: id, player_id: pl.id, team_id: teamOf[pl.id] };
-      FIELDS.forEach((f) => (row[f.k] = parseInt(v[f.k] || '0', 10) || 0));
+      FIELDS.forEach((f) => (row[f.k] = parseInt((v[f.k] || '0').replace('−', '-'), 10) || 0));
       rows.push(row);
     });
     if (rows.length === 0) {
@@ -210,8 +223,9 @@ export default function BoxScoreEntry() {
         Vérifie toujours les chiffres avant d’enregistrer.
       </Text>
       <Text style={{ color: C.dim, fontSize: 11, lineHeight: 16, marginBottom: 4 }}>
-        PTS points · REB rebonds · PD passes · INT interceptions · CTR contres · TR/TT tirs réussis/tentés ·
-        3R/3T 3 points réussis/tentés
+        MIN minutes · PTS points · REB rebonds (RO offensifs) · PD passes · INT interceptions · CTR contres ·
+        BP balles perdues · FTE fautes · TR/TT tirs réussis/tentés · 3R/3T à 3 points · LFR/LFT lancers francs ·
+        +/− différentiel (un nombre négatif est accepté)
       </Text>
 
       {noPlayers ? (
@@ -259,7 +273,7 @@ function TeamSection({
                   <TextInput
                     value={vals[p.id]?.[f.k] ?? ''}
                     onChangeText={(v) => onSet(p.id, f.k, v)}
-                    keyboardType="number-pad"
+                    keyboardType={f.signed ? 'numbers-and-punctuation' : 'number-pad'}
                     placeholder="0"
                     placeholderTextColor={C.dim}
                     style={{

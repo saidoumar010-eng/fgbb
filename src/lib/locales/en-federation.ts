@@ -1,0 +1,160 @@
+// Traductions anglaises du domaine « federation ».
+// Cle = texte francais exact affiche dans l'app.
+// Les cles deja portees par EN_CORE (Annuler, Supprimer, Toutes, Saison...)
+// ne sont pas reprises ici : le dictionnaire est fusionne.
+export const EN_FEDERATION: Record<string, string> = {
+  // Saisons
+  Saisons: 'Seasons',
+  'Nouvelle saison': 'New season',
+  'Modifier la saison': 'Edit season',
+  'Nom de la saison': 'Season name',
+  'Saison en cours': 'Current season',
+  'Saison {name}': 'Season {name}',
+  'En cours': 'Current',
+  Début: 'Start',
+  Fin: 'End',
+  'Dates non renseignées': 'Dates not set',
+  'Aucune saison': 'No seasons',
+  'Crée une saison pour y rattacher les compétitions, les licences et les transferts.':
+    'Create a season to attach competitions, licences and transfers to it.',
+  'Une seule saison peut être en cours : l’ancienne sera automatiquement désactivée.':
+    'Only one season can be current: the previous one is deactivated automatically.',
+  'Le nom de la saison est obligatoire.': 'The season name is required.',
+  'Saison mise à jour.': 'Season updated.',
+  'La saison {name} a été créée.': 'Season {name} has been created.',
+  'Enregistrer la saison': 'Save season',
+  'Supprimer la saison': 'Delete season',
+
+  // Licences
+  Licences: 'Licences',
+  'Nouvelle licence': 'New licence',
+  'Modifier la licence': 'Edit licence',
+  'Numéro de licence': 'Licence number',
+  'Aucune licence': 'No licences',
+  'Les licences enregistrées par la fédération apparaissent ici.':
+    'Licences recorded by the federation appear here.',
+  'Aucune information complémentaire': 'No further information',
+  'Délivrée le': 'Issued on',
+  'Expire le': 'Expires on',
+  'Expire aujourd’hui': 'Expires today',
+  'Expire dans {n} jours ({date})': 'Expires in {n} days ({date})',
+  'Valable jusqu’au {date}': 'Valid until {date}',
+  Justificatif: 'Supporting document',
+  'Document joint': 'Document attached',
+  'Aucun document joint': 'No document attached',
+  'Joindre un document': 'Attach a document',
+  'Le justificatif est stocké dans un espace privé, visible uniquement par la fédération.':
+    'The supporting document is stored privately and is visible only to the federation.',
+  'Impossible d’ouvrir le justificatif.': 'Unable to open the supporting document.',
+  Consulter: 'View',
+  Remplacer: 'Replace',
+  Retirer: 'Remove',
+  'Note interne': 'Internal note',
+  'Observation de la commission': 'Committee remarks',
+  'Sélectionne le joueur titulaire de la licence.': 'Select the player the licence belongs to.',
+  'Licence enregistrée.': 'Licence saved.',
+  'Licence mise à jour.': 'Licence updated.',
+  'Enregistrer la licence': 'Save licence',
+  'Supprimer la licence': 'Delete licence',
+
+  // Transferts
+  Transferts: 'Transfers',
+  'Nouveau transfert': 'New transfer',
+  'Modifier le transfert': 'Edit transfer',
+  'Aucun transfert': 'No transfers',
+  'Les demandes de mutation enregistrées par la fédération apparaissent ici.':
+    'Transfer requests recorded by the federation appear here.',
+  'Club de départ': 'Former club',
+  'Club d’accueil': 'New club',
+  'Sans club': 'No club',
+  'Joueur inconnu': 'Unknown player',
+  'Motif / note': 'Reason / note',
+  'Précisions sur la mutation': 'Details about the transfer',
+  'Approuver le transfert': 'Approve the transfer',
+  'Le joueur sera officiellement rattaché à son nouveau club.':
+    'The player will be officially attached to their new club.',
+  'À l’approbation, le joueur est automatiquement rattaché à son club d’accueil.':
+    'On approval, the player is automatically attached to their new club.',
+  'Sélectionne le joueur concerné par le transfert.': 'Select the player involved in the transfer.',
+  'Sélectionne le club d’accueil.': 'Select the new club.',
+  'Le club de départ et le club d’accueil doivent être différents.':
+    'The former club and the new club must be different.',
+  'Demande de transfert enregistrée.': 'Transfer request saved.',
+  'Transfert mis à jour.': 'Transfer updated.',
+  'Enregistrer le transfert': 'Save transfer',
+  'Supprimer le transfert': 'Delete transfer',
+
+  // Inscriptions des clubs
+  'Inscriptions des clubs': 'Club registrations',
+  'Inscrire mon club': 'Register my club',
+  'Aucune demande': 'No requests',
+  'Les demandes d’inscription déposées par les clubs apparaissent ici.':
+    'Registration requests submitted by clubs appear here.',
+  'Approuver l’inscription': 'Approve the registration',
+  'Le club sera créé dans la liste des équipes de la fédération.':
+    'The club will be added to the federation’s list of teams.',
+  '{club} a été inscrit et ajouté aux équipes.': '{club} has been registered and added to the teams.',
+  'Nom du club': 'Club name',
+  'Logo du club': 'Club logo',
+  'Le nom du club est obligatoire.': 'The club name is required.',
+  'Compétition visée': 'Target competition',
+  'Aucune compétition ouverte pour le moment.': 'No competition is open at the moment.',
+  'Personne à contacter': 'Contact person',
+  'Nom du responsable': 'Contact person',
+  'Prénom et nom': 'First and last name',
+  Téléphone: 'Phone',
+  'E-mail': 'Email',
+  Ville: 'City',
+  Conakry: 'Conakry',
+  'Ex. Étoile de Conakry': 'E.g. Étoile de Conakry',
+  Message: 'Message',
+  'Précisions utiles à la fédération': 'Anything useful for the federation to know',
+  'Indique au moins un moyen de contact : téléphone ou e-mail.':
+    'Provide at least one way to reach you: phone or email.',
+  'Renseigne les informations de ton club. La fédération valide la demande, crée l’équipe et l’inscrit à la compétition choisie.':
+    'Fill in your club details. The federation reviews the request, creates the team and enters it in the chosen competition.',
+  'Envoyer la demande': 'Send request',
+  'Demande envoyée. La fédération te répondra prochainement.':
+    'Request sent. The federation will get back to you shortly.',
+  'Mes demandes': 'My requests',
+  'Tu n’as pas encore déposé de demande.': 'You have not submitted a request yet.',
+  'Connexion requise': 'Sign-in required',
+  'Se connecter': 'Sign in',
+  'Connecte-toi avec le compte du club pour déposer une demande d’inscription et suivre son avancement.':
+    'Sign in with the club account to submit a registration request and follow its progress.',
+
+  // Statuts & vocabulaire administratif commun
+  Statut: 'Status',
+  Contact: 'Contact',
+  'Non renseigné': 'Not provided',
+  'En attente': 'Pending',
+  Valide: 'Valid',
+  Valides: 'Valid',
+  Suspendue: 'Suspended',
+  Suspendues: 'Suspended',
+  Expirée: 'Expired',
+  Expirées: 'Expired',
+  Approuvé: 'Approved',
+  Approuvés: 'Approved',
+  Approuvée: 'Approved',
+  Approuvées: 'Approved',
+  Rejeté: 'Rejected',
+  Rejetés: 'Rejected',
+  Rejetée: 'Rejected',
+  Rejetées: 'Rejected',
+  Approuver: 'Approve',
+  Rejeter: 'Reject',
+  'Cette action est irréversible.': 'This action cannot be undone.',
+  'Enregistrer les modifications': 'Save changes',
+  'Rechercher un joueur': 'Search for a player',
+  'Nom du joueur': 'Player name',
+  'Aucun joueur trouvé': 'No player found',
+  'AAAA-MM-JJ': 'YYYY-MM-DD',
+
+  // Catégories (rendues par categoryLabel)
+  Catégorie: 'Category',
+  Messieurs: 'Men',
+  Dames: 'Women',
+  U18: 'U18',
+  Autre: 'Other',
+};

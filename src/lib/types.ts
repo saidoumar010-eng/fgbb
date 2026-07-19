@@ -9,6 +9,7 @@ export interface Profile {
   id: string;
   full_name: string | null;
   role: Role;
+  show_in_leaderboard: boolean;
   created_at: string;
 }
 
@@ -68,6 +69,9 @@ export interface Match {
   current_quarter: number | null;
   quarter_scores: QuarterScore[];
   video_url: string | null;
+  season_id: string | null;
+  round: number | null;        // journée du championnat
+  group_name: string | null;   // poule
   created_at: string;
   // jointures éventuelles
   home_team?: Team;
@@ -83,9 +87,12 @@ export interface PlayerMatchStat {
   minutes: number;
   points: number;
   rebounds: number;
+  off_rebounds: number;
   assists: number;
   steals: number;
   blocks: number;
+  turnovers: number;
+  plus_minus: number;
   fouls: number;
   fg_made: number;
   fg_att: number;
@@ -99,8 +106,10 @@ export interface PlayerMatchStat {
 export interface NewsItem {
   id: string;
   title: string;
+  title_en: string | null;
   category: string | null;
   body: string | null;
+  body_en: string | null;
   cover_url: string | null;
   author: string | null;
   published_at: string;
@@ -177,4 +186,361 @@ export interface PlayerSeasonStat {
   bpg: number;
   fg_pct: number;
   three_pct: number;
+}
+
+// ---------------------------------------------------------------------------
+// Gestion de la fédération : saisons, licences, arbitres, discipline,
+// transferts, inscriptions de clubs.
+
+export interface Season {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_current: boolean;
+  created_at: string;
+}
+
+export type LicenseStatus = 'pending' | 'valid' | 'suspended' | 'expired';
+
+export interface License {
+  id: string;
+  player_id: string;
+  season_id: string | null;
+  team_id: string | null;
+  number: string | null;
+  status: LicenseStatus;
+  issued_at: string | null;
+  expires_at: string | null;
+  document_url: string | null;
+  note: string | null;
+  created_at: string;
+  player?: Player;
+  season?: Season;
+  team?: Team;
+}
+
+export type RefereeLevel = 'regional' | 'national' | 'fiba';
+
+export interface Referee {
+  id: string;
+  full_name: string;
+  city: string | null;
+  level: RefereeLevel;
+  license_number: string | null;
+  photo_url: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface RefereeContact {
+  referee_id: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+}
+
+export type OfficialRole = 'principal' | 'assistant' | 'table' | 'commissaire';
+
+export interface MatchOfficial {
+  match_id: string;
+  referee_id: string;
+  role: OfficialRole;
+  created_at: string;
+  referee?: Referee;
+}
+
+export type SanctionKind = 'avertissement' | 'suspension' | 'amende' | 'exclusion';
+export type SanctionStatus = 'active' | 'served' | 'cancelled';
+
+export interface Sanction {
+  id: string;
+  player_id: string | null;
+  team_id: string | null;
+  match_id: string | null;
+  kind: SanctionKind;
+  games: number;
+  amount_gnf: number;
+  reason: string | null;
+  decided_at: string;
+  status: SanctionStatus;
+  created_at: string;
+  player?: Player;
+  team?: Team;
+}
+
+export type TransferStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Transfer {
+  id: string;
+  player_id: string;
+  from_team_id: string | null;
+  to_team_id: string | null;
+  season_id: string | null;
+  status: TransferStatus;
+  note: string | null;
+  requested_at: string;
+  decided_at: string | null;
+  created_at: string;
+  player?: Player;
+  from_team?: Team;
+  to_team?: Team;
+}
+
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ClubRegistration {
+  id: string;
+  user_id: string | null;
+  club_name: string;
+  city: string | null;
+  category: Category;
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  competition_id: string | null;
+  season_id: string | null;
+  logo_url: string | null;
+  note: string | null;
+  status: RegistrationStatus;
+  team_id: string | null;
+  created_at: string;
+  decided_at: string | null;
+  competition?: Competition;
+}
+
+// ---------------------------------------------------------------------------
+// Communauté : commentaires, chat en direct, signalements, modération.
+
+export type CommentTarget = 'match' | 'news';
+export type ContentStatus = 'visible' | 'hidden';
+
+export interface Comment {
+  id: string;
+  target_type: CommentTarget;
+  target_id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  status: ContentStatus;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  match_id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  status: ContentStatus;
+  created_at: string;
+}
+
+export interface ModerationRow {
+  report_id: string;
+  target_type: 'comment' | 'chat';
+  target_id: string;
+  reason: string | null;
+  reported_at: string;
+  author_name: string | null;
+  author_id: string | null;
+  body: string | null;
+  status: ContentStatus | null;
+  reports: number;
+}
+
+export interface Ban {
+  user_id: string;
+  reason: string | null;
+  until: string | null;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Quiz & classement des supporters.
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quiz_id: string;
+  question: string;
+  options: string[];
+  correct_index: number;
+  position: number;
+  created_at: string;
+}
+
+/** Question telle qu'envoyée au téléphone : sans la bonne réponse. */
+export interface PublicQuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  sort_order: number;
+}
+
+export interface QuizResult {
+  score: number;
+  total: number;
+  corrections: { question_id: string; correct_index: number; chosen: number | null }[];
+}
+
+export interface QuizAttempt {
+  quiz_id: string;
+  user_id: string;
+  score: number;
+  total: number;
+  created_at: string;
+}
+
+export interface LeaderboardRow {
+  position_no: number;
+  name: string;
+  points: number;
+  predictions: number;
+  correct: number;
+  is_me: boolean;
+}
+
+export interface FanStats {
+  points: number;
+  predictions: number;
+  correct: number;
+  quiz_points: number;
+  mvp_votes: number;
+  position_no: number;
+}
+
+// ---------------------------------------------------------------------------
+// Statistiques avancées.
+
+export interface Shot {
+  id: string;
+  match_id: string;
+  player_id: string | null;
+  team_id: string | null;
+  x: number;
+  y: number;
+  points: 1 | 2 | 3;
+  made: boolean;
+  quarter: number | null;
+  created_at: string;
+  player?: Player;
+}
+
+export interface TeamSeasonStat {
+  team_id: string;
+  competition_id: string | null;
+  team_name: string;
+  short_name: string | null;
+  color: string | null;
+  games: number;
+  wins: number;
+  losses: number;
+  pts_for: number;
+  pts_against: number;
+  diff: number;
+  best_score: number;
+}
+
+export interface GameHigh {
+  id: string;
+  match_id: string;
+  player_id: string;
+  full_name: string;
+  photo_url: string | null;
+  team_id: string | null;
+  team_short: string | null;
+  team_color: string | null;
+  scheduled_at: string | null;
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  three_made: number;
+}
+
+export interface ProgressionPoint {
+  match_id: string;
+  scheduled_at: string | null;
+  opponent: string | null;
+  points: number;
+  rebounds: number;
+  assists: number;
+}
+
+// ---------------------------------------------------------------------------
+// Contenus & médias.
+
+export interface Photo {
+  id: string;
+  match_id: string | null;
+  album: string | null;
+  url: string;
+  caption: string | null;
+  credit: string | null;
+  position: number;
+  created_at: string;
+}
+
+export type EventCategory = 'federation' | 'competition' | 'formation' | 'ceremonie' | 'autre';
+
+export interface FedEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  category: EventCategory;
+  starts_at: string;
+  ends_at: string | null;
+  location: string | null;
+  cover_url: string | null;
+  created_at: string;
+}
+
+export type MediaKind = 'interview' | 'podcast' | 'reportage' | 'video';
+
+export interface MediaItem {
+  id: string;
+  kind: MediaKind;
+  title: string;
+  description: string | null;
+  url: string;
+  cover_url: string | null;
+  duration_min: number | null;
+  published_at: string;
+  created_at: string;
+}
+
+export type SponsorTier = 'principal' | 'officiel' | 'media' | 'partenaire';
+export type SponsorPlacement = 'accueil' | 'match' | 'tous';
+
+export interface Sponsor {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  url: string | null;
+  tier: SponsorTier;
+  placement: SponsorPlacement;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+/** Coordonnées et présentation de la fédération (table `settings`, clé `federation`). */
+export interface FederationInfo {
+  about?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  facebook?: string;
+  youtube?: string;
+  president?: string;
 }

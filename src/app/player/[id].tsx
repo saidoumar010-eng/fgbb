@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
+import { ProgressionChart } from '@/components/progression-chart';
 import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { getPlayer, getPlayerGames, getPlayerSeason } from '@/lib/db';
 import { teamShort } from '@/lib/format';
@@ -133,6 +134,11 @@ export default function PlayerDetail() {
                 })}
               </Card>
             )}
+          </View>
+
+          <SectionTitle title="Évolution" />
+          <View style={{ paddingHorizontal: S.lg }}>
+            <ProgressionChart playerId={id} />
           </View>
         </View>
       )}

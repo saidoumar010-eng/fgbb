@@ -7,12 +7,14 @@ import { Button, Card, Crest, Header, Logo, Row, Screen, SectionTitle } from '@/
 import { useAuth } from '@/lib/auth';
 import { listFavoriteTeams } from '@/lib/db';
 import { teamShort } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { registerForPush, unregisterPush } from '@/lib/notifications';
 import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function CompteScreen() {
   const { session, profile, isAdmin, signOut } = useAuth();
+  const { lang, setLang } = useT();
   const [notif, setNotif] = useState(true);
   const [video, setVideo] = useState(true);
   const favsQ = useFetch(() => listFavoriteTeams(), []);
@@ -96,11 +98,60 @@ export default function CompteScreen() {
         )}
       </View>
 
+      <SectionTitle title="Ma participation" />
+      <View style={{ paddingHorizontal: S.lg }}>
+        <Card style={{ paddingVertical: 4 }}>
+          <LinkRow
+            icon="podium-outline"
+            title="Classement des supporters"
+            sub="Mes points, mon rang, mes pronostics"
+            href="/classement-supporters"
+          />
+          <LinkRow icon="help-circle-outline" title="Quiz basket" sub="Teste tes connaissances" href="/quiz" />
+          <LinkRow
+            icon="business-outline"
+            title="Inscrire mon club"
+            sub="Demande d’engagement en compétition"
+            href="/inscription-club"
+            last
+          />
+        </Card>
+      </View>
+
       <SectionTitle title="Notifications" />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card style={{ paddingVertical: 4 }}>
           <SettingRow icon="notifications-outline" label="Notifications de match" value={notif} onChange={onToggleNotif} />
           <SettingRow icon="play-outline" label="Alerte résumé vidéo" value={video} onChange={setVideo} last />
+        </Card>
+      </View>
+
+      <SectionTitle title="Langue de l’application" />
+      <View style={{ paddingHorizontal: S.lg }}>
+        <Card>
+          <Row style={{ gap: 9 }}>
+            {(['fr', 'en'] as const).map((l) => {
+              const on = lang === l;
+              return (
+                <Pressable
+                  key={l}
+                  onPress={() => setLang(l)}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingVertical: 11,
+                    borderRadius: 10,
+                    backgroundColor: on ? C.accentSoft : 'transparent',
+                    borderWidth: 1,
+                    borderColor: on ? C.accent : C.border,
+                  }}>
+                  <Text style={{ color: on ? C.accent : C.muted, fontSize: 13.5, fontWeight: '600' }}>
+                    {l === 'fr' ? 'Français' : 'English'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Row>
         </Card>
       </View>
 
@@ -133,6 +184,39 @@ export default function CompteScreen() {
         <Button title="Se déconnecter" tone="alt" icon="log-out-outline" onPress={signOut} />
       </View>
     </Screen>
+  );
+}
+
+function LinkRow({
+  icon,
+  title,
+  sub,
+  href,
+  last,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  sub: string;
+  href: string;
+  last?: boolean;
+}) {
+  return (
+    <Pressable onPress={() => router.push(href as never)}>
+      <Row
+        style={{
+          paddingVertical: 13,
+          gap: 13,
+          borderBottomWidth: last ? 0 : 1,
+          borderBottomColor: C.border,
+        }}>
+        <Ionicons name={icon} size={20} color={C.accent} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: C.text, fontSize: 14 }}>{title}</Text>
+          <Text style={{ color: C.dim, fontSize: 12 }}>{sub}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={C.dim} />
+      </Row>
+    </Pressable>
   );
 }
 

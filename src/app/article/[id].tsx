@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, Share, Text, View } from 'react-native';
 
+import { Comments } from '@/components/comments';
 import { Crest, Empty, Header, Pill, Row, Screen } from '@/components/ui';
 import { getNewsItem } from '@/lib/db';
 import { fullDate } from '@/lib/format';
@@ -75,6 +76,10 @@ export default function ArticleDetail() {
             ) : (
               <Text style={{ color: C.dim, fontSize: 14, marginTop: 13 }}>(Pas de contenu)</Text>
             )}
+
+            <View style={{ marginTop: S.xl }}>
+              <Comments targetType="news" targetId={id} />
+            </View>
           </View>
         </View>
       )}
