@@ -45,6 +45,12 @@ export default function LiveController() {
   const [err, setErr] = useState<string | null>(null);
   const seeded = useRef(false);
 
+  // Le marqueur tape vite, parfois deux fois dans la même image. Les refs
+  // portent la vérité du score : lire l'état de rendu ferait perdre le panier
+  // précédent si React n'a pas encore recommité entre les deux appuis.
+  const quartersRef = useRef<QScore[]>(quarters);
+  const currentRef = useRef(current);
+
   useEffect(() => {
     if (m && !seeded.current) {
       const base: QScore[] = [
@@ -63,6 +69,8 @@ export default function LiveController() {
       // que `quarters[current - 1]` existe toujours (pas de crash en prolongation).
       const seededCurrent = Math.max(m.current_quarter ?? 0, base.length, 1);
       while (base.length < seededCurrent) base.push({ home: 0, away: 0 });
+      quartersRef.current = base;
+      currentRef.current = seededCurrent;
       setQuarters(base);
       setCurrent(seededCurrent);
       setStatus(m.status === 'finished' ? 'finished' : 'live');
@@ -118,33 +126,36 @@ export default function LiveController() {
             player_id: scorer[side],
             kind: 'points',
             points: n,
-            quarter: current,
+            quarter: currentRef.current,
           }
-        : { match_id: id, team_id: teamId, kind: 'correction', points: n, quarter: current },
+        : { match_id: id, team_id: teamId, kind: 'correction', points: n, quarter: currentRef.current },
     ).catch((e) => setErr(e instanceof Error ? e.message : t('Erreur fil du match')));
   }
 
+  // Enregistrement réseau, journal du fil, alerte : autant d'effets de bord qui
+  // n'ont rien à faire dans une fonction de mise à jour d'état — React est
+  // libre de la rejouer, et chaque rejeu doublait l'écriture.
   function addPoints(side: 'home' | 'away', n: number) {
-    setQuarters((prev) => {
-      const next = prev.map((q) => ({ ...q }));
-      next[current - 1][side] = Math.max(0, next[current - 1][side] + n);
-      if (status !== 'live') setStatus('live');
-      persist(next, current, 'live');
-      return next;
-    });
+    const cur = currentRef.current;
+    const next = quartersRef.current.map((q) => ({ ...q }));
+    next[cur - 1][side] = Math.max(0, next[cur - 1][side] + n);
+    quartersRef.current = next;
+    setQuarters(next);
+    if (status !== 'live') setStatus('live');
+    persist(next, cur, 'live');
     logEvent(side, n);
   }
 
   function nextQuarter() {
-    setQuarters((prev) => {
-      const next = prev.map((q) => ({ ...q }));
-      const nc = current + 1;
-      if (nc > next.length) next.push({ home: 0, away: 0 });
-      setCurrent(nc);
-      persist(next, nc, 'live');
-      addMatchEvent({ match_id: id, kind: 'quarter', quarter: nc }).catch(() => {});
-      return next;
-    });
+    const nc = currentRef.current + 1;
+    const next = quartersRef.current.map((q) => ({ ...q }));
+    if (nc > next.length) next.push({ home: 0, away: 0 });
+    quartersRef.current = next;
+    currentRef.current = nc;
+    setQuarters(next);
+    setCurrent(nc);
+    persist(next, nc, 'live');
+    addMatchEvent({ match_id: id, kind: 'quarter', quarter: nc }).catch(() => {});
   }
 
   function finish() {
@@ -155,7 +166,7 @@ export default function LiveController() {
         style: 'destructive',
         onPress: async () => {
           setStatus('finished');
-          await persist(quarters, current, 'finished');
+          await persist(quartersRef.current, currentRef.current, 'finished');
           addMatchEvent({ match_id: id, kind: 'info', label: 'Fin du match' }).catch(() => {});
           router.back();
         },

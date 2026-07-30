@@ -26,7 +26,7 @@ export function ChipSelect({
         key={o.id}
         onPress={() => onChange(o.id)}
         style={{
-          backgroundColor: on ? C.accent : '#181D26',
+          backgroundColor: on ? C.accent : C.chipBg,
           borderColor: on ? C.accent : C.border,
           borderWidth: 1,
           borderRadius: R.pill,

@@ -38,8 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
-      if (newSession) loadProfile(newSession.user.id);
-      else setProfile(null);
+      if (!newSession) {
+        setProfile(null);
+        return;
+      }
+      // Le rappel s'exécute en tenant le verrou interne du client Supabase :
+      // y lancer une requête (qui voudra ce même verrou pour rafraîchir le
+      // jeton) peut bloquer l'app au démarrage. On sort de la pile d'appel.
+      setTimeout(() => {
+        loadProfile(newSession.user.id);
+      }, 0);
     });
     return () => sub.subscription.unsubscribe();
   }, []);

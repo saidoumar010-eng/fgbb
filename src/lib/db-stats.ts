@@ -1,7 +1,8 @@
 import { MATCH_SELECT } from '@/lib/db';
+import { listMatchOfficials } from '@/lib/db-officials';
 import { teamShort } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
-import type { GameHigh, Match, PlayerMatchStat, TeamSeasonStat } from '@/lib/types';
+import type { GameHigh, Match, MatchOfficial, PlayerMatchStat, TeamSeasonStat } from '@/lib/types';
 
 // Colonnes de la vue `game_highs` sur lesquelles on peut établir un record.
 export type HighColumn = 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks' | 'three_made';
@@ -21,6 +22,7 @@ export interface RecordCategory {
 export interface MatchSheet {
   match: Match;
   stats: PlayerMatchStat[];
+  officials: MatchOfficial[];
 }
 
 // ---------------------------------------------------------------------------
@@ -163,18 +165,22 @@ async function attachOpponents(rows: GameHigh[]): Promise<RecordRow[]> {
 // Export de la feuille de match
 
 export async function getMatchSheetData(matchId: string): Promise<MatchSheet> {
-  const [match, stats] = await Promise.all([
+  const [match, stats, officials] = await Promise.all([
     supabase.from('matches').select(MATCH_SELECT).eq('id', matchId).single(),
     supabase
       .from('player_match_stats')
       .select('*, player:players(*)')
       .eq('match_id', matchId)
       .order('points', { ascending: false }),
+    // La désignation peut manquer sans que cela empêche d'éditer la feuille :
+    // on retombe alors sur des lignes de signature vierges, à remplir à la main.
+    listMatchOfficials(matchId).catch(() => [] as MatchOfficial[]),
   ]);
   if (match.error) throw match.error;
   if (stats.error) throw stats.error;
   return {
     match: match.data as unknown as Match,
     stats: (stats.data ?? []) as unknown as PlayerMatchStat[],
+    officials,
   };
 }

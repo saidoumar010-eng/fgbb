@@ -94,7 +94,7 @@ export default function PlayerDetail() {
                 key={label}
                 style={{
                   width: '31.5%',
-                  backgroundColor: '#1A1F29',
+                  backgroundColor: C.surface2,
                   borderRadius: 11,
                   paddingVertical: 11,
                   alignItems: 'center',
@@ -121,7 +121,11 @@ export default function PlayerDetail() {
                 </Row>
                 {(games.data ?? []).map((g, i, arr) => {
                   const mt = g.match;
-                  const isHome = mt?.home_team_id === p.team_id;
+                  // L'équipe portée par la ligne de stats est celle du jour du
+                  // match : après un transfert, le club actuel du joueur
+                  // désignerait le mauvais adversaire.
+                  const side = g.team_id ?? p.team_id;
+                  const isHome = mt?.home_team_id === side;
                   const opp = isHome ? mt?.away_team : mt?.home_team;
                   return (
                     <Row

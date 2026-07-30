@@ -22,6 +22,14 @@ export const C = {
 
   inputBg: '#09271F',
   tabBar: '#08221E',
+  tabBarInactive: '#6F8B84',
+
+  // pastille de filtre inactive, rail d'interrupteur éteint, icône de
+  // remplacement d'image : des valeurs bleu-gris traînaient dans une dizaine
+  // d'écrans depuis le passage au vert canard, elles vivent ici désormais.
+  chipBg: '#0F332D',
+  switchTrack: '#173F38',
+  placeholderIcon: '#3E6B62',
 
   red: '#E23B3B', // live
   redSoft: 'rgba(226,59,59,0.16)',

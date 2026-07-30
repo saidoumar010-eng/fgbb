@@ -6,6 +6,10 @@ export function useFetch<T>(fn: () => Promise<T>, deps: unknown[] = []) {
   const [error, setError] = useState<string | null>(null);
   const fnRef = useRef(fn);
   fnRef.current = fn;
+  // Signal courant, partagé par le chargement automatique et par `reload` :
+  // un rechargement manuel lancé juste avant un changement de deps doit être
+  // annulé lui aussi, sinon sa réponse écrase les données du nouveau contexte.
+  const current = useRef({ cancelled: false });
 
   // `signal` permet d'ignorer une réponse obsolète : si les deps changent
   // (ex. on sélectionne un autre joueur) avant la fin de la requête, on ne
@@ -27,6 +31,7 @@ export function useFetch<T>(fn: () => Promise<T>, deps: unknown[] = []) {
 
   useEffect(() => {
     const signal = { cancelled: false };
+    current.current = signal;
     // Réinitialise à chaque changement de deps pour ne jamais afficher les
     // données de l'appel précédent sous les nouveaux paramètres.
     setData(null);
@@ -40,7 +45,7 @@ export function useFetch<T>(fn: () => Promise<T>, deps: unknown[] = []) {
 
   // Rechargement manuel (pull-to-refresh, après un vote) : conserve les
   // données actuelles pendant la requête pour éviter un clignotement.
-  const reload = useCallback(() => load({ cancelled: false }), [load]);
+  const reload = useCallback(() => load(current.current), [load]);
 
   return { data, loading, error, reload };
 }

@@ -61,7 +61,7 @@ export default function SearchScreen() {
             placeholder={tr('Joueur, équipe…')}
             placeholderTextColor={C.dim}
             style={{
-              backgroundColor: '#09271F',
+              backgroundColor: C.inputBg,
               borderWidth: 1,
               borderColor: C.borderStrong,
               borderRadius: 9,

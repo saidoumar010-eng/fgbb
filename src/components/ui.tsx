@@ -285,7 +285,7 @@ export const st = StyleSheet.create({
   pillText: { fontSize: 11, fontWeight: '600' },
   label: { color: C.muted, fontSize: 12, marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: '#09271F',
+    backgroundColor: C.inputBg,
     borderWidth: 1,
     borderColor: C.borderStrong,
     borderRadius: R.sm,

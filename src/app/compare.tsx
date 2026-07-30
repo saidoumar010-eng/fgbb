@@ -92,7 +92,7 @@ export default function CompareScreen() {
               value={query}
               onChangeText={setQuery}
               style={{
-                backgroundColor: '#09271F',
+                backgroundColor: C.inputBg,
                 borderWidth: 1,
                 borderColor: C.borderStrong,
                 borderRadius: R.sm,

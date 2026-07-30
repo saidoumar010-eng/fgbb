@@ -50,11 +50,11 @@ export default function ArticleDetail() {
                 height: 180,
                 marginHorizontal: S.lg,
                 borderRadius: R.lg,
-                backgroundColor: '#12403A',
+                backgroundColor: C.surface2,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <Ionicons name="image-outline" size={32} color="#3E6B62" />
+              <Ionicons name="image-outline" size={32} color={C.placeholderIcon} />
             </View>
           )}
           <View style={{ padding: S.lg }}>
@@ -71,7 +71,7 @@ export default function ArticleDetail() {
             </Row>
             {paragraphs.length > 0 ? (
               paragraphs.map((p, i) => (
-                <Text key={i} style={{ color: '#C7CED9', fontSize: 14, lineHeight: 24, marginTop: 13 }}>
+                <Text key={i} style={{ color: C.muted, fontSize: 14, lineHeight: 24, marginTop: 13 }}>
                   {p}
                 </Text>
               ))

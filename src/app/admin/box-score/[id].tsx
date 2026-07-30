@@ -286,7 +286,7 @@ function TeamSection({
                     placeholder="0"
                     placeholderTextColor={C.dim}
                     style={{
-                      backgroundColor: '#09271F',
+                      backgroundColor: C.inputBg,
                       borderWidth: 1,
                       borderColor: C.borderStrong,
                       borderRadius: 8,

@@ -47,7 +47,7 @@ export function ImageField({
       <Pressable
         onPress={pick}
         style={[
-          { backgroundColor: '#12403A', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+          { backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
           dims,
         ]}>
         {loading ? (
@@ -55,7 +55,7 @@ export function ImageField({
         ) : value ? (
           <Image source={{ uri: value }} style={dims} contentFit="cover" />
         ) : (
-          <Ionicons name="camera-outline" size={22} color="#3E6B62" />
+          <Ionicons name="camera-outline" size={22} color={C.placeholderIcon} />
         )}
       </Pressable>
       <Text style={{ color: C.dim, fontSize: 11, marginTop: 7 }}>{label}</Text>

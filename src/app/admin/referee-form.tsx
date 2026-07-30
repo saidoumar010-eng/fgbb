@@ -182,7 +182,7 @@ export default function RefereeForm() {
         <Switch
           value={isActive}
           onValueChange={setIsActive}
-          trackColor={{ false: '#2A3140', true: C.green }}
+          trackColor={{ false: C.switchTrack, true: C.green }}
           thumbColor="#fff"
         />
       </Row>

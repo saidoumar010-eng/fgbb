@@ -20,12 +20,17 @@ import type {
 export const MATCH_SELECT =
   '*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*), competition:competitions(*)';
 
-export async function listMatches(opts: { status?: MatchStatus | MatchStatus[] } = {}) {
+// Plafond de sécurité : l'accueil et l'onglet Matchs chargent tout le calendrier.
+// Au fil des saisons cela finirait par buter sur la limite de 1000 lignes de
+// PostgREST — silencieusement, en tronquant les matchs les plus récents.
+const MATCH_PAGE = 400;
+
+export async function listMatches(opts: { status?: MatchStatus | MatchStatus[]; limit?: number } = {}) {
   let q = supabase.from('matches').select(MATCH_SELECT).order('scheduled_at', { ascending: true });
   if (opts.status) {
     q = Array.isArray(opts.status) ? q.in('status', opts.status) : q.eq('status', opts.status);
   }
-  const { data, error } = await q;
+  const { data, error } = await q.limit(opts.limit ?? MATCH_PAGE);
   if (error) throw error;
   return (data ?? []) as unknown as Match[];
 }
@@ -108,16 +113,33 @@ export async function getPlayerSeason(id: string) {
   return (data as PlayerSeasonStat) ?? null;
 }
 
-export async function getPlayerGames(id: string) {
+/**
+ * Les N derniers matchs du joueur, du plus récent au plus ancien.
+ *
+ * La date vit sur `matches`, pas sur `player_match_stats` : PostgREST ne sait
+ * pas trier la table racine sur une colonne jointe. On ramène donc une fenêtre
+ * raisonnable et on trie ici — sans quoi `limit(5)` renvoyait cinq matchs
+ * arbitraires présentés comme « les derniers ».
+ */
+export async function getPlayerGames(id: string, count = 5) {
   const { data, error } = await supabase
     .from('player_match_stats')
     .select(
       '*, match:matches!match_id(id, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_team:teams!home_team_id(name,short_name), away_team:teams!away_team_id(name,short_name))',
     )
     .eq('player_id', id)
-    .limit(5);
+    .limit(200);
   if (error) throw error;
-  return (data ?? []) as unknown as (PlayerMatchStat & { match?: Match })[];
+  const rows = (data ?? []) as unknown as (PlayerMatchStat & { match?: Match })[];
+  return rows
+    .sort((a, b) => time(b.match?.scheduled_at) - time(a.match?.scheduled_at))
+    .slice(0, count);
+}
+
+// Un match sans date programmée passe en fin de liste plutôt qu'en tête.
+function time(iso?: string | null) {
+  const n = iso ? new Date(iso).getTime() : NaN;
+  return Number.isNaN(n) ? -Infinity : n;
 }
 
 export async function listCompetitions() {
@@ -150,8 +172,20 @@ export async function getNewsItem(id: string) {
   return data as NewsItem;
 }
 
+/**
+ * Classement FIBA : 2 pts par victoire, 1 par défaite. À égalité de points, le
+ * départage se fait sur le nombre de victoires puis sur le nom — sans ces
+ * critères Postgres rendait les ex æquo dans un ordre arbitraire, qui changeait
+ * d'un rafraîchissement à l'autre sous les yeux du supporter.
+ */
 export async function listStandings(competitionId?: string) {
-  let q = supabase.from('team_standings').select('*').order('points', { ascending: false });
+  let q = supabase
+    .from('team_standings')
+    .select('*')
+    .order('points', { ascending: false })
+    .order('wins', { ascending: false })
+    .order('played', { ascending: true })
+    .order('team_name', { ascending: true });
   if (competitionId) q = q.eq('competition_id', competitionId);
   const { data, error } = await q;
   if (error) throw error;

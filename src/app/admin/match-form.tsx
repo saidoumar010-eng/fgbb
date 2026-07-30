@@ -130,7 +130,7 @@ export default function MatchForm() {
           <Text style={{ color: C.text, fontSize: 14 }}>{t('Notifier les supporters')}</Text>
           <Text style={{ color: C.dim, fontSize: 12 }}>{t('Alerte aux abonnés des deux équipes')}</Text>
         </View>
-        <Switch value={notify} onValueChange={setNotify} trackColor={{ false: '#2A3140', true: C.green }} thumbColor="#fff" />
+        <Switch value={notify} onValueChange={setNotify} trackColor={{ false: C.switchTrack, true: C.green }} thumbColor="#fff" />
       </Row>
     </AdminForm>
   );

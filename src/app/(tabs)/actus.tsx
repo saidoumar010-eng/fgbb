@@ -36,11 +36,11 @@ export default function ActusScreen() {
                 <View
                   style={{
                     height: 130,
-                    backgroundColor: '#12403A',
+                    backgroundColor: C.surface2,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                  <Ionicons name="image-outline" size={28} color="#3E6B62" />
+                  <Ionicons name="image-outline" size={28} color={C.placeholderIcon} />
                 </View>
               )}
               <View style={{ padding: 12, gap: 8 }}>

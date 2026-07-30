@@ -2,16 +2,17 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 
+import { officialRoleLabel } from '@/lib/db-officials';
 import { getMatchSheetData } from '@/lib/db-stats';
 import { fullDate } from '@/lib/format';
-import type { Match, PlayerMatchStat } from '@/lib/types';
+import type { MatchOfficial, PlayerMatchStat, Match } from '@/lib/types';
 
 // La feuille de match est un document officiel de la fédération : elle reste
 // en français quelle que soit la langue de l'application.
 
 export async function exportMatchSheetPdf(matchId: string) {
-  const { match, stats } = await getMatchSheetData(matchId);
-  const html = matchSheetHtml(match, stats);
+  const { match, stats, officials } = await getMatchSheetData(matchId);
+  const html = matchSheetHtml(match, stats, officials);
 
   // Sur le web, printToFileAsync n'existe pas : on ouvre la boîte d'impression
   // du navigateur, qui permet aussi d'enregistrer en PDF.
@@ -61,7 +62,7 @@ function csvCell(v: string | number) {
 // ---------------------------------------------------------------------------
 // Génération du HTML de la feuille de match (noir sur blanc, pensé imprimé).
 
-function matchSheetHtml(m: Match, stats: PlayerMatchStat[]) {
+function matchSheetHtml(m: Match, stats: PlayerMatchStat[], officials: MatchOfficial[]) {
   const home = m.home_team?.name ?? 'Équipe A';
   const away = m.away_team?.name ?? 'Équipe B';
   const homeStats = stats.filter((s) => s.team_id === m.home_team_id);
@@ -89,8 +90,10 @@ function matchSheetHtml(m: Match, stats: PlayerMatchStat[]) {
   td.name, th.name { text-align: left; }
   tr.total td { font-weight: bold; background: #f2f2f2; }
   .quarters { width: auto; min-width: 55%; }
-  .foot { margin-top: 22px; display: flex; justify-content: space-between; font-size: 9.5px; color: #444; }
-  .sign { border-top: 1px solid #000; padding-top: 3px; width: 30%; text-align: center; }
+  /* Trois rôles par défaut, quatre quand la désignation complète est saisie :
+     on partage la largeur au lieu de la figer, sinon la 4e case déborde. */
+  .foot { margin-top: 22px; display: flex; justify-content: space-between; gap: 10px; font-size: 9.5px; color: #444; }
+  .sign { border-top: 1px solid #000; padding-top: 3px; flex: 1; text-align: center; }
 </style></head>
 <body>
   <div class="fed">
@@ -113,12 +116,29 @@ function matchSheetHtml(m: Match, stats: PlayerMatchStat[]) {
   <h2>${esc(away)}</h2>
   ${boxScoreTable(awayStats)}
 
-  <div class="foot">
-    <div class="sign">Arbitre principal</div>
-    <div class="sign">Commissaire</div>
-    <div class="sign">Marqueur</div>
-  </div>
+  ${signatures(officials)}
 </body></html>`;
+}
+
+/**
+ * Bloc de signatures. La désignation officielle est déjà en base : on imprime
+ * le nom au-dessus du trait plutôt que de laisser l'arbitre le recopier. Sans
+ * désignation, on retombe sur les trois rôles habituels d'une feuille FIBA.
+ */
+function signatures(officials: MatchOfficial[]) {
+  const named = officials.filter((o) => o.referee?.full_name);
+  const cells = named.length
+    ? named
+        .slice(0, 4)
+        .map(
+          (o) =>
+            `<div class="sign"><b>${esc(o.referee!.full_name)}</b><br />${esc(officialRoleLabel(o.role))}</div>`,
+        )
+        .join('')
+    : ['Arbitre principal', 'Commissaire', 'Marqueur']
+        .map((r) => `<div class="sign">${r}</div>`)
+        .join('');
+  return `<div class="foot">${cells}</div>`;
 }
 
 function quartersTable(m: Match) {

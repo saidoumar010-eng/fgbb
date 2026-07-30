@@ -44,7 +44,7 @@ export default function LeadersScreen() {
               <Pressable
                 key={c.key}
                 onPress={() => setCat(c.key)}
-                style={{ backgroundColor: on ? C.accent : '#181D26', borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 7 }}>
+                style={{ backgroundColor: on ? C.accent : C.chipBg, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 7 }}>
                 <Text style={{ color: on ? C.accentText : C.muted, fontSize: 12, fontWeight: '600' }}>{t(c.label)}</Text>
               </Pressable>
             );

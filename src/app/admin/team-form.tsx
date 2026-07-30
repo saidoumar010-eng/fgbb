@@ -138,7 +138,7 @@ export default function TeamForm() {
           <Text style={{ color: C.text, fontSize: 14 }}>{t('Équipe nationale')}</Text>
           <Text style={{ color: C.dim, fontSize: 12 }}>{t('Sélection (Syli National)')}</Text>
         </View>
-        <Switch value={isNational} onValueChange={setIsNational} trackColor={{ false: '#2A3140', true: C.green }} thumbColor="#fff" />
+        <Switch value={isNational} onValueChange={setIsNational} trackColor={{ false: C.switchTrack, true: C.green }} thumbColor="#fff" />
       </Row>
 
       {editing ? (

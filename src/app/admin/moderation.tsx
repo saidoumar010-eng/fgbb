@@ -134,7 +134,7 @@ export default function AdminModeration() {
               key={key}
               onPress={() => setTab(key)}
               style={{
-                backgroundColor: on ? C.accent : '#181D26',
+                backgroundColor: on ? C.accent : C.chipBg,
                 borderRadius: R.pill,
                 paddingHorizontal: 14,
                 paddingVertical: 7,

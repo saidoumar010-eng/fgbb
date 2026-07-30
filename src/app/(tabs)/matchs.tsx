@@ -51,7 +51,7 @@ export default function MatchsScreen() {
                 key={f.key}
                 onPress={() => setFilter(f.key)}
                 style={{
-                  backgroundColor: on ? C.accent : '#181D26',
+                  backgroundColor: on ? C.accent : C.chipBg,
                   borderRadius: R.pill,
                   paddingHorizontal: 14,
                   paddingVertical: 7,

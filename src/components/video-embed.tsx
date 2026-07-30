@@ -18,7 +18,7 @@ export function VideoEmbed({ url }: { url?: string | null }) {
         style={{
           height: 80,
           borderRadius: R.lg,
-          backgroundColor: '#09271F',
+          backgroundColor: C.inputBg,
           borderWidth: 1,
           borderColor: C.border,
           alignItems: 'center',
