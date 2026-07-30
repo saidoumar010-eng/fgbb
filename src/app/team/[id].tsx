@@ -24,11 +24,11 @@ import { useFetch } from '@/lib/useFetch';
 export default function TeamDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
-  const team = useFetch(() => getTeam(id), [id]);
-  const standing = useFetch(() => getTeamStanding(id), [id]);
-  const season = useFetch(() => getTeamSeasonStat(id), [id]);
-  const players = useFetch(() => getTeamPlayers(id), [id]);
-  const matches = useFetch(() => getTeamMatches(id), [id]);
+  const team = useFetch(() => getTeam(id), [id], { cacheKey: `team:${id}` });
+  const standing = useFetch(() => getTeamStanding(id), [id], { cacheKey: `team-standing:${id}` });
+  const season = useFetch(() => getTeamSeasonStat(id), [id], { cacheKey: `team-season:${id}` });
+  const players = useFetch(() => getTeamPlayers(id), [id], { cacheKey: `team-players:${id}` });
+  const matches = useFetch(() => getTeamMatches(id), [id], { cacheKey: `team-matches:${id}` });
   const [tab, setTab] = useState<'roster' | 'cal'>('roster');
 
   const { session } = useAuth();

@@ -22,7 +22,7 @@ const ICONS: Record<HighColumn, keyof typeof Ionicons.glyphMap> = {
 // Meilleures performances individuelles sur un match, catégorie par catégorie.
 export default function RecordsScreen() {
   const { t } = useT();
-  const { data, loading, reload } = useFetch(() => listSeasonRecords());
+  const { data, loading, reload } = useFetch(() => listSeasonRecords(), [], { cacheKey: 'records' });
   const [refreshing, setRefreshing] = useState(false);
 
   // Une catégorie sans aucune performance n'a rien à montrer : on la masque.

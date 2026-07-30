@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { MatchRow } from '@/components/match-row';
-import { Empty, Header, Screen } from '@/components/ui';
+import { Empty, Header, OfflineNotice, Screen } from '@/components/ui';
 import { listMatches } from '@/lib/db';
 import { useT } from '@/lib/i18n';
 import { useMatchesRealtime } from '@/lib/realtime';
@@ -22,7 +22,9 @@ const FILTERS: { key: MatchStatus | 'all'; label: string }[] = [
 export default function MatchsScreen() {
   const { t } = useT();
   const [filter, setFilter] = useState<MatchStatus | 'all'>('all');
-  const { data, loading, reload } = useFetch(() => listMatches());
+  const { data, loading, reload, stale, cachedAt } = useFetch(() => listMatches(), [], {
+    cacheKey: 'matches',
+  });
   useMatchesRealtime(reload);
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -39,6 +41,7 @@ export default function MatchsScreen() {
         title={t('Matchs')}
         right={<Ionicons name="search-outline" size={22} color={C.muted} onPress={() => router.push('/search')} />}
       />
+      {stale && <OfflineNotice cachedAt={cachedAt} onRetry={reload} />}
       <View style={{ paddingVertical: S.md }}>
         <ScrollView
           horizontal

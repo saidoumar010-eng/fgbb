@@ -27,7 +27,7 @@ interface MonthGroup {
 
 export default function AgendaScreen() {
   const { t } = useT();
-  const { data, loading, reload } = useFetch(() => listEvents());
+  const { data, loading, reload } = useFetch(() => listEvents(), [], { cacheKey: 'events' });
   const [showPast, setShowPast] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 

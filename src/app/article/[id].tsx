@@ -14,7 +14,7 @@ import { useFetch } from '@/lib/useFetch';
 export default function ArticleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
-  const article = useFetch(() => getNewsItem(id), [id]);
+  const article = useFetch(() => getNewsItem(id), [id], { cacheKey: `article:${id}` });
   const n = article.data;
   const paragraphs = (n?.body ?? '').split('\n').filter((p) => p.trim().length > 0);
 

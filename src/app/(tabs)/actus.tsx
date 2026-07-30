@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { Card, Empty, Header, Pill, Screen } from '@/components/ui';
+import { Card, Empty, Header, OfflineNotice, Pill, Screen } from '@/components/ui';
 import { listNews } from '@/lib/db';
 import { fullDate } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -13,7 +13,9 @@ import { useFetch } from '@/lib/useFetch';
 
 export default function ActusScreen() {
   const { t } = useT();
-  const { data, loading, reload } = useFetch(() => listNews());
+  const { data, loading, reload, stale, cachedAt } = useFetch(() => listNews(), [], {
+    cacheKey: 'news',
+  });
   const news = data ?? [];
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -25,6 +27,7 @@ export default function ActusScreen() {
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       <Header title={t('Actualités')} />
+      {stale && <OfflineNotice cachedAt={cachedAt} onRetry={reload} />}
       {news.length > 0 ? (
         <View style={{ padding: S.lg, gap: 11 }}>
           {news.map((n) => (

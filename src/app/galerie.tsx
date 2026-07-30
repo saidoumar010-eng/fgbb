@@ -16,7 +16,7 @@ import { useFetch } from '@/lib/useFetch';
 // La galerie s'ouvre dans le même écran pour éviter un aller-retour de route.
 export default function GalerieScreen() {
   const { t } = useT();
-  const { data, loading, reload } = useFetch(() => listAlbums());
+  const { data, loading, reload } = useFetch(() => listAlbums(), [], { cacheKey: 'albums' });
   const [selected, setSelected] = useState<GalleryGroup | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 

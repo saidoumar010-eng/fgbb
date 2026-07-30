@@ -23,9 +23,9 @@ function heightM(cm?: number | null) {
 export default function PlayerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
-  const player = useFetch(() => getPlayer(id), [id]);
-  const season = useFetch(() => getPlayerSeason(id), [id]);
-  const games = useFetch(() => getPlayerGames(id), [id]);
+  const player = useFetch(() => getPlayer(id), [id], { cacheKey: `player:${id}` });
+  const season = useFetch(() => getPlayerSeason(id), [id], { cacheKey: `player-season:${id}` });
+  const games = useFetch(() => getPlayerGames(id), [id], { cacheKey: `player-games:${id}` });
 
   const p = player.data;
   const s = season.data;

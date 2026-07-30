@@ -25,8 +25,8 @@ import { useFetch } from '@/lib/useFetch';
 // présentable dès la première installation.
 export default function AProposScreen() {
   const { t } = useT();
-  const federation = useFetch(() => getFederationInfo());
-  const sponsors = useFetch(() => listSponsors());
+  const federation = useFetch(() => getFederationInfo(), [], { cacheKey: 'federation' });
+  const sponsors = useFetch(() => listSponsors(), [], { cacheKey: 'sponsors' });
   const [refreshing, setRefreshing] = useState(false);
 
   const info = federation.data ?? {};

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 
 const logoCard = require('../../assets/images/logo-card.png');
@@ -237,6 +238,74 @@ export function Empty({
       {subtitle ? <Text style={st.emptySub}>{subtitle}</Text> : null}
     </View>
   );
+}
+
+/**
+ * Bandeau discret quand l'écran montre du contenu gardé sur le téléphone et
+ * que le serveur n'a pas répondu. Le supporter doit savoir qu'un score peut
+ * avoir bougé depuis — sans que l'écran se transforme en page d'erreur.
+ */
+export function OfflineNotice({
+  cachedAt,
+  onRetry,
+}: {
+  cachedAt: number | null;
+  onRetry?: () => void;
+}) {
+  const { t } = useT();
+  const [retrying, setRetrying] = useState(false);
+
+  async function retry() {
+    if (!onRetry || retrying) return;
+    setRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  return (
+    <Row
+      style={{
+        gap: 8,
+        marginHorizontal: S.lg,
+        marginTop: S.sm,
+        paddingHorizontal: 11,
+        paddingVertical: 8,
+        borderRadius: R.sm,
+        backgroundColor: C.surface2,
+        borderWidth: 1,
+        borderColor: C.border,
+      }}>
+      <Ionicons name="cloud-offline-outline" size={15} color={C.dim} />
+      <Text style={{ color: C.dim, fontSize: 11.5, flex: 1 }}>
+        {cachedAt
+          ? t('Hors ligne — contenu du {date}', { date: shortMoment(cachedAt) })
+          : t('Hors ligne — dernier contenu connu')}
+      </Text>
+      {/* Les onglets restent montés : sans ce bouton, un supporter qui retrouve
+          le réseau garderait le contenu périmé jusqu'à tirer pour rafraîchir. */}
+      {onRetry ? (
+        <Pressable onPress={retry} hitSlop={8} accessibilityRole="button">
+          <Text style={{ color: retrying ? C.dim : C.accent, fontSize: 11.5, fontWeight: '600' }}>
+            {retrying ? '…' : t('Réessayer')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </Row>
+  );
+}
+
+// Repère court : l'heure dans la journée, la date au-delà. Le supporter veut
+// savoir « ça date de quand », pas l'horodatage exact.
+function shortMoment(at: number) {
+  const d = new Date(at);
+  const sameDay = new Date().toDateString() === d.toDateString();
+  const two = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  return sameDay
+    ? `${two(d.getHours())}:${two(d.getMinutes())}`
+    : `${two(d.getDate())}/${two(d.getMonth() + 1)}`;
 }
 
 export function Row({ children, style }: { children: ReactNode; style?: ViewStyle }) {

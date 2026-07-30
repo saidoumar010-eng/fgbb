@@ -22,7 +22,7 @@ const CATS: { key: Cat; label: string; unit: string }[] = [
 export default function LeadersScreen() {
   const { t } = useT();
   const [cat, setCat] = useState<Cat>('ppg');
-  const { data, loading } = useFetch(() => listLeadersBy(cat), [cat]);
+  const { data, loading } = useFetch(() => listLeadersBy(cat), [cat], { cacheKey: `leaders:${cat}` });
   const rows = data ?? [];
   const unit = CATS.find((c) => c.key === cat)?.unit ?? '';
 

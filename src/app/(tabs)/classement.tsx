@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Card, Crest, Empty, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { Card, Crest, Empty, Header, OfflineNotice, Row, Screen, SectionTitle } from '@/components/ui';
 import { listCompetitions, listLeaders, listStandings } from '@/lib/db';
 import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
@@ -22,11 +22,11 @@ const DATA_LINKS: { icon: keyof typeof Ionicons.glyphMap; label: string; href: s
 
 export default function ClassementScreen() {
   const { t } = useT();
-  const comps = useFetch(() => listCompetitions());
+  const comps = useFetch(() => listCompetitions(), [], { cacheKey: 'competitions' });
   const [compId, setCompId] = useState<string | undefined>();
   const active = compId ?? comps.data?.[0]?.id;
-  const standings = useFetch(() => listStandings(active), [active]);
-  const leaders = useFetch(() => listLeaders());
+  const standings = useFetch(() => listStandings(active), [active], { cacheKey: `standings:${active ?? 'all'}` });
+  const leaders = useFetch(() => listLeaders(), [], { cacheKey: 'leaders' });
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
@@ -48,6 +48,8 @@ export default function ClassementScreen() {
           </Pressable>
         }
       />
+
+      {standings.stale && <OfflineNotice cachedAt={standings.cachedAt} onRetry={standings.reload} />}
 
       <ScrollView
         horizontal

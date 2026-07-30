@@ -6,7 +6,18 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { MatchRow } from '@/components/match-row';
 import { SponsorBand } from '@/components/sponsor-band';
-import { Card, Crest, Empty, Header, Logo, Pill, Row, Screen, SectionTitle } from '@/components/ui';
+import {
+  Card,
+  Crest,
+  Empty,
+  Header,
+  Logo,
+  OfflineNotice,
+  Pill,
+  Row,
+  Screen,
+  SectionTitle,
+} from '@/components/ui';
 import { listMatches, listNews } from '@/lib/db';
 import { fullDate, matchWhen, teamShort } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -17,8 +28,8 @@ import { useFetch } from '@/lib/useFetch';
 
 export default function HomeScreen() {
   const { t } = useT();
-  const matches = useFetch(() => listMatches());
-  const news = useFetch(() => listNews());
+  const matches = useFetch(() => listMatches(), [], { cacheKey: 'matches' });
+  const news = useFetch(() => listNews(), [], { cacheKey: 'news' });
   useMatchesRealtime(() => matches.reload());
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -70,6 +81,7 @@ export default function HomeScreen() {
         />
       ) : (
         <View style={{ paddingTop: S.md }}>
+          {matches.stale && <OfflineNotice cachedAt={matches.cachedAt} onRetry={matches.reload} />}
           {featured && (
             <View style={{ paddingHorizontal: S.lg }}>
               <FeaturedMatch match={featured} />

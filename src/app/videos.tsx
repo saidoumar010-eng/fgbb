@@ -16,8 +16,8 @@ import { videoThumbnail } from '@/lib/video';
 // Galerie des résumés vidéo, filtrable par compétition.
 export default function VideosScreen() {
   const { t } = useT();
-  const videos = useFetch(() => listVideos());
-  const competitions = useFetch(() => listCompetitions());
+  const videos = useFetch(() => listVideos(), [], { cacheKey: 'videos' });
+  const competitions = useFetch(() => listCompetitions(), [], { cacheKey: 'competitions' });
   const [compId, setCompId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 

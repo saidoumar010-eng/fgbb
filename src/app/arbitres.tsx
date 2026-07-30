@@ -15,7 +15,7 @@ import { useFetch } from '@/lib/useFetch';
 export default function RefereesDirectory() {
   const { t } = useT();
   const [level, setLevel] = useState<RefereeLevel | 'all'>('all');
-  const { data, loading } = useFetch(() => listReferees(true));
+  const { data, loading } = useFetch(() => listReferees(true), [], { cacheKey: 'referees' });
   const all = data ?? [];
   const referees = level === 'all' ? all : all.filter((r) => r.level === level);
 

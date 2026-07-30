@@ -14,7 +14,17 @@ import { PredictionCard } from '@/components/prediction-card';
 import { ShotChart } from '@/components/shot-chart';
 import { SponsorBand } from '@/components/sponsor-band';
 import { VideoEmbed } from '@/components/video-embed';
-import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
+import {
+  Card,
+  Crest,
+  Empty,
+  Header,
+  OfflineNotice,
+  Pill,
+  Row,
+  Screen,
+  SectionTitle,
+} from '@/components/ui';
 import { getMatch, getMatchStats } from '@/lib/db';
 import { exportMatchSheetPdf } from '@/lib/export';
 import { fullDate, teamShort } from '@/lib/format';
@@ -29,8 +39,8 @@ type Tab = 'fil' | 'box' | 'team' | 'chat' | 'reactions';
 export default function MatchDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
-  const match = useFetch(() => getMatch(id), [id]);
-  const stats = useFetch(() => getMatchStats(id), [id]);
+  const match = useFetch(() => getMatch(id), [id], { cacheKey: `match:${id}` });
+  const stats = useFetch(() => getMatchStats(id), [id], { cacheKey: `match-stats:${id}` });
   const [tab, setTab] = useState<Tab | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -119,6 +129,7 @@ export default function MatchDetail() {
         <Empty icon="basketball-outline" title={match.loading ? t('Chargement…') : t('Match introuvable')} />
       ) : (
         <View>
+          {match.stale && <OfflineNotice cachedAt={match.cachedAt} onRetry={match.reload} />}
           <View style={{ padding: S.lg }}>
             <Card>
               <Text style={{ color: C.dim, fontSize: 11, textAlign: 'center', marginBottom: 12 }}>

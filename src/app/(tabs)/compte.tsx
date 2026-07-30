@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, Switch, Text, View } from 'react-native';
 
 import { Button, Card, Crest, Header, Logo, Row, Screen, SectionTitle } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { cacheSize, clearCache } from '@/lib/cache';
 import { listFavoriteTeams } from '@/lib/db';
 import { teamShort } from '@/lib/format';
 import { useT, type Lang } from '@/lib/i18n';
@@ -163,6 +164,13 @@ export default function CompteScreen() {
         </Card>
       </View>
 
+      <SectionTitle title={t('Données et stockage')} />
+      <View style={{ paddingHorizontal: S.lg }}>
+        <Card style={{ paddingVertical: 4 }}>
+          <OfflineStorageRow />
+        </Card>
+      </View>
+
       <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
         <Card style={{ paddingVertical: 4 }}>
           <LinkRow
@@ -231,6 +239,57 @@ function LangSwitch({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void 
           </Pressable>
         );
       })}
+    </Row>
+  );
+}
+
+/**
+ * L'application garde les écrans consultés sur le téléphone pour rester
+ * lisible sans réseau. On dit combien elle en garde et on laisse effacer :
+ * un espace occupé sans explication ni bouton finit par faire désinstaller.
+ */
+function OfflineStorageRow() {
+  const { t } = useT();
+  const [count, setCount] = useState<number | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    cacheSize().then((n) => {
+      if (active) setCount(n);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function onClear() {
+    setClearing(true);
+    await clearCache();
+    setCount(0);
+    setClearing(false);
+  }
+
+  return (
+    <Row style={{ paddingVertical: 13, gap: 13 }}>
+      <Ionicons name="cloud-offline-outline" size={20} color={C.accent} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: C.text, fontSize: 14 }}>{t('Contenu hors ligne')}</Text>
+        <Text style={{ color: C.dim, fontSize: 12 }}>
+          {count === null
+            ? t('Calcul en cours…')
+            : count === 0
+              ? t('Aucun écran gardé sur ce téléphone')
+              : t('{n} écrans consultables sans réseau', { n: count })}
+        </Text>
+      </View>
+      {count ? (
+        <Pressable onPress={clearing ? undefined : onClear} hitSlop={8}>
+          <Text style={{ color: clearing ? C.dim : C.accent, fontSize: 12.5, fontWeight: '600' }}>
+            {clearing ? '…' : t('Effacer')}
+          </Text>
+        </Pressable>
+      ) : null}
     </Row>
   );
 }
