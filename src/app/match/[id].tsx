@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Comments } from '@/components/comments';
 import { HeadToHead } from '@/components/head-to-head';
@@ -11,6 +11,7 @@ import { MatchOfficials } from '@/components/match-officials';
 import { MvpCard } from '@/components/mvp-card';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { PredictionCard } from '@/components/prediction-card';
+import { ShareCardModal } from '@/components/share-card-modal';
 import { ShotChart } from '@/components/shot-chart';
 import { SponsorBand } from '@/components/sponsor-band';
 import { VideoEmbed } from '@/components/video-embed';
@@ -67,17 +68,9 @@ export default function MatchDetail() {
   const dispStatus: MatchStatus = overlay?.status ?? m?.status ?? 'scheduled';
   const dispQuarters = overlay?.quarter_scores ?? m?.quarter_scores ?? [];
 
-  async function shareMatch() {
-    if (!m) return;
-    const line =
-      dispStatus === 'scheduled'
-        ? `${m.home_team?.name} vs ${m.away_team?.name}`
-        : `${m.home_team?.name} ${homeScore} – ${awayScore} ${m.away_team?.name}`;
-    const comp = m.competition?.name ? ` · ${m.competition.name}` : '';
-    await Share.share({
-      message: `🏀 ${line}${comp}\n${t("Suivez le basket guinéen sur l'application FGBB.")}`,
-    });
-  }
+  // Le partage passe par un aperçu : le supporter envoie une image à ses
+  // contacts, il doit voir ce qui partira avant de l'envoyer.
+  const [sharing, setSharing] = useState(false);
 
   const allStats = stats.data ?? [];
   const homeStats = allStats.filter((s) => s.team_id === m?.home_team_id);
@@ -120,10 +113,26 @@ export default function MatchDetail() {
                 onPress={exporting ? undefined : exportSheet}
               />
             ) : null}
-            <Ionicons name="share-social-outline" size={22} color={C.muted} onPress={shareMatch} />
+            <Ionicons
+              name="share-social-outline"
+              size={22}
+              color={C.muted}
+              onPress={() => setSharing(true)}
+            />
           </Row>
         }
       />
+
+      {m ? (
+        <ShareCardModal
+          match={mm!}
+          homeScore={homeScore}
+          awayScore={awayScore}
+          live={dispStatus === 'live'}
+          visible={sharing}
+          onClose={() => setSharing(false)}
+        />
+      ) : null}
 
       {!m ? (
         <Empty icon="basketball-outline" title={match.loading ? t('Chargement…') : t('Match introuvable')} />
