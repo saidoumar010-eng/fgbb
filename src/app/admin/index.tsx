@@ -32,6 +32,7 @@ const ADMINISTRATIF: Entry[] = [
   { icon: 'card-outline', title: 'Licences', sub: 'Valider, suspendre, suivre les échéances', href: '/admin/licenses' },
   { icon: 'swap-horizontal-outline', title: 'Transferts', sub: 'Mutations entre clubs', href: '/admin/transfers' },
   { icon: 'business-outline', title: 'Inscriptions des clubs', sub: 'Demandes d’engagement en compétition', href: '/admin/registrations' },
+  { icon: 'key-outline', title: 'Délégations de club', sub: 'Confier l’effectif d’un club à un dirigeant', href: '/admin/delegates' },
   { icon: 'people-circle-outline', title: 'Arbitres', sub: 'Annuaire et coordonnées', href: '/admin/referees' },
   { icon: 'warning-outline', title: 'Discipline', sub: 'Avertissements, suspensions, amendes', href: '/admin/sanctions' },
 ];

@@ -7,6 +7,7 @@ import { Button, Card, Crest, Header, Logo, Row, Screen, SectionTitle } from '@/
 import { useAuth } from '@/lib/auth';
 import { cacheSize, clearCache } from '@/lib/cache';
 import { listFavoriteTeams } from '@/lib/db';
+import { listMyClubs } from '@/lib/db-club-space';
 import { teamShort } from '@/lib/format';
 import { useT, type Lang } from '@/lib/i18n';
 import { registerForPush, unregisterPush } from '@/lib/notifications';
@@ -20,6 +21,10 @@ export default function CompteScreen() {
   const [video, setVideo] = useState(true);
   const favsQ = useFetch(() => listFavoriteTeams(), []);
   const favorites = favsQ.data ?? [];
+  // Délégation de club : la requête ne renvoie que les rattachements de ce
+  // compte (RLS), inutile de filtrer côté client.
+  const myClubsQ = useFetch(() => (session ? listMyClubs() : Promise.resolve([])), [session?.user.id]);
+  const myClubs = myClubsQ.data ?? [];
 
   async function onToggleNotif(v: boolean) {
     setNotif(v);
@@ -197,7 +202,7 @@ export default function CompteScreen() {
                 <Ionicons name="chevron-forward" size={18} color={C.dim} />
               </Row>
             </Pressable>
-          ) : (
+          ) : myClubs.length > 0 ? null : (
             <Row style={{ paddingVertical: 13, gap: 13 }}>
               <Ionicons name="lock-closed-outline" size={20} color={C.dim} />
               <Text style={{ color: C.dim, fontSize: 13, flex: 1 }}>
@@ -205,6 +210,23 @@ export default function CompteScreen() {
               </Text>
             </Row>
           )}
+
+          {/* L'entrée n'apparaît que si la fédération a rattaché ce compte à un
+              club : un supporter ordinaire n'a pas à voir une porte fermée. */}
+          {myClubs.length > 0 ? (
+            <Pressable onPress={() => router.push('/club' as never)}>
+              <Row style={{ paddingVertical: 13, gap: 13 }}>
+                <Ionicons name="shirt-outline" size={20} color={C.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: C.text, fontSize: 14 }}>{t('Mon club')}</Text>
+                  <Text style={{ color: C.dim, fontSize: 12 }}>
+                    {myClubs.map((c) => c.name).join(' · ')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.dim} />
+              </Row>
+            </Pressable>
+          ) : null}
         </Card>
       </View>
 
