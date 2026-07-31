@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Comments } from '@/components/comments';
 import { HeadToHead } from '@/components/head-to-head';
 import { LiveChat } from '@/components/live-chat';
+import { LiveScoreboard } from '@/components/live-scoreboard';
 import { MatchFeed } from '@/components/match-feed';
 import { MatchOfficials } from '@/components/match-officials';
 import { MvpCard } from '@/components/mvp-card';
@@ -47,12 +48,21 @@ export default function MatchDetail() {
   const [exportError, setExportError] = useState<string | null>(null);
 
   const m = match.data;
+  // La superposition porte tout ce que la table de marque peut changer en
+  // direct : score, quart-temps, chrono, fautes et temps morts.
   const [overlay, setOverlay] = useState<{
     home_score: number;
     away_score: number;
     current_quarter: number | null;
     quarter_scores: QuarterScore[];
     status: MatchStatus;
+    clock_seconds: number;
+    clock_running: boolean;
+    clock_updated_at: string | null;
+    home_fouls: number;
+    away_fouls: number;
+    home_timeouts: number;
+    away_timeouts: number;
   } | null>(null);
   useMatchRealtime(id, (row) =>
     setOverlay({
@@ -61,12 +71,21 @@ export default function MatchDetail() {
       current_quarter: row.current_quarter == null ? null : Number(row.current_quarter),
       quarter_scores: (row.quarter_scores as QuarterScore[]) ?? [],
       status: row.status as MatchStatus,
+      clock_seconds: Number(row.clock_seconds ?? 600),
+      clock_running: !!row.clock_running,
+      clock_updated_at: (row.clock_updated_at as string | null) ?? null,
+      home_fouls: Number(row.home_fouls ?? 0),
+      away_fouls: Number(row.away_fouls ?? 0),
+      home_timeouts: Number(row.home_timeouts ?? 0),
+      away_timeouts: Number(row.away_timeouts ?? 0),
     }),
   );
   const homeScore = overlay?.home_score ?? m?.home_score ?? 0;
   const awayScore = overlay?.away_score ?? m?.away_score ?? 0;
   const dispStatus: MatchStatus = overlay?.status ?? m?.status ?? 'scheduled';
   const dispQuarters = overlay?.quarter_scores ?? m?.quarter_scores ?? [];
+  const board = overlay ?? m;
+  const dispQuarter = overlay?.current_quarter ?? m?.current_quarter ?? null;
 
   // Le partage passe par un aperçu : le supporter envoie une image à ses
   // contacts, il doit voir ce qui partira avant de l'envoyer.
@@ -165,6 +184,23 @@ export default function MatchDetail() {
                 <Text style={{ color: C.accent, fontSize: 12, textAlign: 'center', marginTop: 12 }}>
                   {fullDate(m.scheduled_at)}
                 </Text>
+              ) : null}
+
+              {dispStatus === 'live' && board ? (
+                <LiveScoreboard
+                  clock={{
+                    clock_seconds: board.clock_seconds ?? 600,
+                    clock_running: board.clock_running ?? false,
+                    clock_updated_at: board.clock_updated_at ?? null,
+                  }}
+                  quarter={dispQuarter}
+                  homeName={teamShort(m.home_team)}
+                  awayName={teamShort(m.away_team)}
+                  homeFouls={board.home_fouls ?? 0}
+                  awayFouls={board.away_fouls ?? 0}
+                  homeTimeouts={board.home_timeouts ?? 0}
+                  awayTimeouts={board.away_timeouts ?? 0}
+                />
               ) : null}
 
               {dispQuarters.length > 0 && (

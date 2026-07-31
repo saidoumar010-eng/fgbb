@@ -72,6 +72,22 @@ function EventRow({ ev, match }: { ev: MatchEvent; match: Match }) {
           : t('Début du {n}e quart-temps', { n: ev.quarter ?? '?' });
       sub = '';
       break;
+    case 'foul':
+      icon = 'hand-left-outline';
+      color = C.red;
+      // Le joueur n'est renseigné que si la table l'a désigné : sinon la faute
+      // reste au compte de l'équipe, sans inventer de coupable.
+      title = ev.player?.full_name
+        ? t('Faute de {name}', { name: ev.player.full_name })
+        : t('Faute {team}', { team: teamShort(team) });
+      sub = [team?.name, ev.quarter ? `Q${ev.quarter}` : null].filter(Boolean).join(' · ');
+      break;
+    case 'timeout':
+      icon = 'pause-circle-outline';
+      color = C.flagYellow;
+      title = t('Temps mort {team}', { team: teamShort(team) });
+      sub = [team?.name, ev.quarter ? `Q${ev.quarter}` : null].filter(Boolean).join(' · ');
+      break;
     case 'info':
       icon = 'flag-outline';
       color = C.red;

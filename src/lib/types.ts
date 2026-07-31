@@ -72,6 +72,15 @@ export interface Match {
   season_id: string | null;
   round: number | null;        // journée du championnat
   group_name: string | null;   // poule
+  // Table de marque. Le chrono est stocké en trois champs plutôt qu'écrit
+  // chaque seconde — cf. lib/game-clock.ts.
+  clock_seconds: number;       // restant dans la période à la dernière décision
+  clock_running: boolean;
+  clock_updated_at: string | null;
+  home_fouls: number;          // fautes d'équipe du quart-temps en cours
+  away_fouls: number;
+  home_timeouts: number;       // temps morts pris dans la mi-temps en cours
+  away_timeouts: number;
   created_at: string;
   // jointures éventuelles
   home_team?: Team;
@@ -128,7 +137,7 @@ export interface Standing {
   points: number;
 }
 
-export type MatchEventKind = 'points' | 'correction' | 'quarter' | 'info';
+export type MatchEventKind = 'points' | 'correction' | 'quarter' | 'info' | 'foul' | 'timeout';
 
 export interface MatchEvent {
   id: string;

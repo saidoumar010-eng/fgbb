@@ -7,6 +7,7 @@ import { EN_FAN } from '@/lib/locales/en-fan';
 import { EN_FEDERATION } from '@/lib/locales/en-federation';
 import { EN_OFFICIALS } from '@/lib/locales/en-officials';
 import { EN_OFFLINE } from '@/lib/locales/en-offline';
+import { EN_SCORERS_TABLE } from '@/lib/locales/en-scorers-table';
 import { EN_SHARE } from '@/lib/locales/en-share';
 import { EN_SHOTS } from '@/lib/locales/en-shots';
 import { EN_STATS } from '@/lib/locales/en-stats';
@@ -31,6 +32,7 @@ export const EN: Record<string, string> = {
   ...EN_CLUB,
   ...EN_OFFLINE,
   ...EN_SHARE,
+  ...EN_SCORERS_TABLE,
   ...EN_SWEEP_HOME,
   ...EN_SWEEP_DETAIL,
   ...EN_SWEEP_PUBLIC,
