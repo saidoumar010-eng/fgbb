@@ -1,5 +1,6 @@
+import { getTeamMatches, listStandings } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import type { Player, Team } from '@/lib/types';
+import type { License, Match, Player, PlayerSeasonStat, Standing, Team } from '@/lib/types';
 
 /**
  * Espace club délégué.
@@ -121,4 +122,79 @@ export async function removeClubDelegate(userId: string, teamId: string) {
     .eq('user_id', userId)
     .eq('team_id', teamId);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Tableau de bord : une vue d'ensemble du club à partir des données publiques
+// (matchs, classement, moyennes). Rien de sensible ici, juste un regroupement
+// pratique pour le dirigeant.
+
+// Un match sans date programmée passe en fin de liste plutôt qu'en tête.
+function matchTime(iso?: string | null) {
+  const n = iso ? new Date(iso).getTime() : NaN;
+  return Number.isNaN(n) ? -Infinity : n;
+}
+
+/** Meilleur marqueur du club à la moyenne (vue player_season_stats). */
+export async function getClubTopScorer(teamId: string): Promise<PlayerSeasonStat | null> {
+  const { data, error } = await supabase
+    .from('player_season_stats')
+    .select('*')
+    .eq('team_id', teamId)
+    .order('ppg', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as PlayerSeasonStat) ?? null;
+}
+
+export interface ClubDashboard {
+  nextMatch: Match | null;
+  lastMatch: Match | null;
+  standing: Standing | null;
+  rank: number | null; // place au classement général, 1 = premier
+  topScorer: PlayerSeasonStat | null;
+}
+
+export async function getClubDashboard(teamId: string): Promise<ClubDashboard> {
+  const [matches, standings, topScorer] = await Promise.all([
+    getTeamMatches(teamId),
+    listStandings(),
+    getClubTopScorer(teamId),
+  ]);
+
+  const now = Date.now();
+  const scheduled = matches
+    .filter((m) => m.status === 'scheduled')
+    .sort((a, b) => matchTime(a.scheduled_at) - matchTime(b.scheduled_at));
+  // Le prochain match à venir ; à défaut (tous passés/sans date) le premier programmé.
+  const nextMatch = scheduled.find((m) => matchTime(m.scheduled_at) >= now) ?? scheduled[0] ?? null;
+
+  const lastMatch =
+    matches
+      .filter((m) => m.status === 'finished')
+      .sort((a, b) => matchTime(b.scheduled_at) - matchTime(a.scheduled_at))[0] ?? null;
+
+  const idx = standings.findIndex((s) => s.team_id === teamId);
+  return {
+    nextMatch,
+    lastMatch,
+    standing: idx >= 0 ? standings[idx] : null,
+    rank: idx >= 0 ? idx + 1 : null,
+    topScorer,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Licences du club : lecture seule. La fédération reste seule à délivrer et
+// modifier les licences ; le dirigeant ne fait que suivre l'état et l'expiration
+// de celles de son effectif (policy licenses_club_read, migration 0020).
+
+export async function listClubLicenses(teamId: string): Promise<License[]> {
+  const { data, error } = await supabase
+    .from('licenses')
+    .select('*, player:players(*), season:seasons(*)')
+    .eq('team_id', teamId);
+  if (error) throw error;
+  return (data ?? []) as unknown as License[];
 }

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { ClubDashboard } from '@/components/club-dashboard';
 import { ImageField } from '@/components/image-field';
 import { Button, Card, Crest, Empty, Field, Header, Row, Screen, SectionTitle } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -150,6 +151,25 @@ export default function ClubSpace() {
             )}
           </Text>
         </Card>
+      </View>
+
+      <ClubDashboard teamId={club.id} />
+
+      <View style={{ paddingHorizontal: S.lg, marginTop: 9 }}>
+        <Pressable onPress={() => router.push(`/club/licences?team=${club.id}` as never)}>
+          <Card style={{ paddingVertical: 12 }}>
+            <Row style={{ gap: 12 }}>
+              <Ionicons name="ribbon-outline" size={20} color={C.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Licences de mes joueurs')}</Text>
+                <Text style={{ color: C.dim, fontSize: 12 }}>
+                  {t('Suivre l’état et l’expiration des licences délivrées par la fédération')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.dim} />
+            </Row>
+          </Card>
+        </Pressable>
       </View>
 
       <SectionTitle

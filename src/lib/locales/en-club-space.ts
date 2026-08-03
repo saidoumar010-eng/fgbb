@@ -56,4 +56,35 @@ export const EN_CLUB_SPACE: Record<string, string> = {
   'Ce compte ne pourra plus gérer {club}.': 'This account will no longer manage {club}.',
   'Retrait impossible.': 'Could not revoke.',
   'Club supprimé': 'Deleted club',
+
+  // Tableau de bord du club (Phase A).
+  'Tableau de bord': 'Dashboard',
+  'Meilleur marqueur': 'Top scorer',
+  'Prochain match': 'Next game',
+  'Dernier résultat': 'Latest result',
+  'Pas encore classé': 'Not ranked yet',
+  '1er': '1st',
+  '{n}e': '{n}th',
+  'pts/m': 'ppg',
+
+  // Accès aux licences depuis l'espace club.
+  'Licences de mes joueurs': 'My players’ licences',
+  'Suivre l’état et l’expiration des licences délivrées par la fédération':
+    'Track the status and expiry of licences issued by the federation',
+
+  // Écran licences côté club (lecture seule).
+  'Aucune licence': 'No licences',
+  'Les licences délivrées par la fédération pour ton effectif apparaîtront ici.':
+    'Licences issued by the federation for your roster will appear here.',
+  'Délivrées par la fédération. Consultation seule.': 'Issued by the federation. View only.',
+  Valide: 'Valid',
+  'En attente': 'Pending',
+  Suspendue: 'Suspended',
+  Expirée: 'Expired',
+  'N° {n}': 'No. {n}',
+  'Sans numéro': 'No number',
+  'Joueur inconnu': 'Unknown player',
+  'Délivrée le {date}': 'Issued {date}',
+  'Expire le {date}': 'Expires {date}',
+  bientôt: 'soon',
 };
