@@ -200,6 +200,21 @@ export default function ClubSpace() {
             </Row>
           </Card>
         </Pressable>
+
+        <Pressable onPress={() => router.push(`/club/discipline?team=${club.id}` as never)}>
+          <Card style={{ paddingVertical: 12 }}>
+            <Row style={{ gap: 12 }}>
+              <Ionicons name="warning-outline" size={20} color={C.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Discipline')}</Text>
+                <Text style={{ color: C.dim, fontSize: 12 }}>
+                  {t('Les sanctions et amendes de ton club')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.dim} />
+            </Row>
+          </Card>
+        </Pressable>
       </View>
 
       <SectionTitle

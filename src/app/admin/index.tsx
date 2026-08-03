@@ -41,6 +41,7 @@ const ADMINISTRATIF: Entry[] = [
 
 const CONTENUS: Entry[] = [
   { icon: 'newspaper-outline', title: 'Actualités', sub: 'Publier, modifier, supprimer', href: '/admin/news' },
+  { icon: 'trophy-outline', title: 'Récompenses', sub: 'Joueur du mois, MVP, meilleur cinq', href: '/admin/awards' },
   { icon: 'images-outline', title: 'Photos', sub: 'Galeries par match ou par album', href: '/admin/photos' },
   { icon: 'calendar-outline', title: 'Agenda', sub: 'Assemblées, stages, cérémonies', href: '/admin/events' },
   { icon: 'mic-outline', title: 'Médiathèque', sub: 'Interviews, podcasts, reportages', href: '/admin/media' },

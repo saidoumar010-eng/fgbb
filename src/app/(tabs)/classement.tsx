@@ -14,6 +14,7 @@ import { useFetch } from '@/lib/useFetch';
 const DATA_LINKS: { icon: keyof typeof Ionicons.glyphMap; label: string; href: string }[] = [
   { icon: 'flame-outline', label: 'Leaders', href: '/leaders' },
   { icon: 'trophy-outline', label: 'Records', href: '/records' },
+  { icon: 'medal-outline', label: 'Palmarès', href: '/palmares' },
   { icon: 'bar-chart-outline', label: 'Stats équipes', href: '/stats-equipes' },
   { icon: 'git-compare-outline', label: 'Comparer', href: '/compare' },
   { icon: 'people-outline', label: 'Comparer équipes', href: '/compare-equipes' },

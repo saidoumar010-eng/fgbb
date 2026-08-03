@@ -125,6 +125,22 @@ export interface NewsItem {
   created_at: string;
 }
 
+export type AwardKind = 'joueur_du_mois' | 'mvp_saison' | 'meilleur_cinq' | 'autre';
+
+export interface Award {
+  id: string;
+  kind: AwardKind;
+  season_id: string | null;
+  player_id: string | null;
+  team_id: string | null;
+  label: string | null;
+  note: string | null;
+  awarded_at: string | null;
+  created_at: string;
+  player?: Player;
+  team?: Team;
+}
+
 export interface ClubPost {
   id: string;
   team_id: string;
