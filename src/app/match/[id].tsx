@@ -159,6 +159,9 @@ export default function MatchDetail() {
     }
   }
 
+  // Dans le corps du composant : relu à chaque thème (cf. classement.tsx).
+  const qc = { width: 34, textAlign: 'center' as const, color: C.dim, fontSize: 12, fontWeight: '500' as const };
+
   return (
     <Screen>
       <Header
@@ -461,6 +464,9 @@ function SubTab({ label, active, onPress }: { label: string; active: boolean; on
 
 function BoxScore({ title, rows }: { title: string; rows: PlayerMatchStat[] }) {
   const { t } = useT();
+  // Dans le corps du composant : relu à chaque thème (cf. classement.tsx).
+  const bh = { width: 38, textAlign: 'center' as const, color: C.dim, fontSize: 11, fontWeight: '500' as const };
+  const bc = { width: 38, textAlign: 'center' as const, color: C.muted, fontSize: 12.5 };
   return (
     <View>
       <Text style={{ color: C.dim, fontSize: 11, marginBottom: 6 }}>{title}</Text>
@@ -534,6 +540,3 @@ function TeamCompare({
   );
 }
 
-const qc = { width: 34, textAlign: 'center' as const, color: C.dim, fontSize: 12, fontWeight: '500' as const };
-const bh = { width: 38, textAlign: 'center' as const, color: C.dim, fontSize: 11, fontWeight: '500' as const };
-const bc = { width: 38, textAlign: 'center' as const, color: C.muted, fontSize: 12.5 };

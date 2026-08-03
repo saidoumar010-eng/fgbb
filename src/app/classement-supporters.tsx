@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 
+import { BadgeShelf } from '@/components/badges';
 import { ChipSelect } from '@/components/chip-select';
 import { Card, Crest, Empty, Header, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -133,6 +134,12 @@ export default function FanLeaderboardScreen() {
               />
             </Row>
             {err ? <Text style={{ color: C.red, fontSize: 12, marginTop: 10 }}>{err}</Text> : null}
+          </Card>
+        ) : null}
+
+        {session ? (
+          <Card>
+            <BadgeShelf stats={me} />
           </Card>
         ) : (
           <Pressable onPress={() => router.push('/login')} style={({ pressed }) => [pressed && { opacity: 0.85 }]}>

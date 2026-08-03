@@ -6,21 +6,25 @@ import { Alert, Pressable, Switch, Text, View } from 'react-native';
 import { Button, Card, Crest, Header, Logo, Row, Screen, SectionTitle } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { cacheSize, clearCache } from '@/lib/cache';
-import { listFavoriteTeams } from '@/lib/db';
+import { listFavoriteTeams, listFollowedPlayers } from '@/lib/db';
 import { listMyClubs } from '@/lib/db-club-space';
 import { teamShort } from '@/lib/format';
 import { useT, type Lang } from '@/lib/i18n';
 import { registerForPush, unregisterPush } from '@/lib/notifications';
-import { C, S } from '@/lib/theme';
+import { C, S, type ThemeMode } from '@/lib/theme';
+import { useTheme } from '@/lib/theme-context';
 import { useFetch } from '@/lib/useFetch';
 
 export default function CompteScreen() {
   const { session, profile, isAdmin, isTableOfficial, signOut } = useAuth();
   const { lang, setLang, t } = useT();
+  const { mode, setMode } = useTheme();
   const [notif, setNotif] = useState(true);
   const [video, setVideo] = useState(true);
   const favsQ = useFetch(() => listFavoriteTeams(), []);
   const favorites = favsQ.data ?? [];
+  const followedQ = useFetch(() => (session ? listFollowedPlayers() : Promise.resolve([])), [session?.user.id]);
+  const followedPlayers = followedQ.data ?? [];
   // Délégation de club : la requête ne renvoie que les rattachements de ce
   // compte (RLS), inutile de filtrer côté client.
   const myClubsQ = useFetch(() => (session ? listMyClubs() : Promise.resolve([])), [session?.user.id]);
@@ -59,6 +63,13 @@ export default function CompteScreen() {
 
         {/* Le choix de la langue doit rester accessible sans compte :
             un visiteur anglophone doit pouvoir basculer avant de s'inscrire. */}
+        <SectionTitle title={t('Apparence')} />
+        <View style={{ paddingHorizontal: S.lg }}>
+          <Card>
+            <ThemeSwitch mode={mode} setMode={setMode} />
+          </Card>
+        </View>
+
         <SectionTitle title={t('Langue de l’application')} />
         <View style={{ paddingHorizontal: S.lg }}>
           <Card>
@@ -124,6 +135,38 @@ export default function CompteScreen() {
         )}
       </View>
 
+      <SectionTitle title={t('Mes joueurs suivis')} />
+      <View style={{ paddingHorizontal: S.lg }}>
+        {followedPlayers.length === 0 ? (
+          <Card>
+            <Text style={{ color: C.dim, fontSize: 13, lineHeight: 19 }}>
+              {t(
+                'Aucun joueur suivi pour le moment. Ouvre la fiche d’un joueur et touche ❤ Suivre pour le retrouver ici.',
+              )}
+            </Text>
+          </Card>
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
+            {followedPlayers.map((p) => (
+              <Pressable key={p.id} onPress={() => router.push(`/player/${p.id}`)} style={{ width: '31.5%' }}>
+                <Card style={{ alignItems: 'center', paddingVertical: 12 }}>
+                  <Crest
+                    label={p.full_name.slice(0, 2).toUpperCase()}
+                    color={C.surface2}
+                    size={34}
+                    round
+                    image={p.photo_url}
+                  />
+                  <Text style={{ color: C.muted, fontSize: 11, marginTop: 6 }} numberOfLines={1}>
+                    {p.full_name}
+                  </Text>
+                </Card>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+
       <SectionTitle title={t('Ma participation')} />
       <View style={{ paddingHorizontal: S.lg }}>
         <Card style={{ paddingVertical: 4 }}>
@@ -159,6 +202,13 @@ export default function CompteScreen() {
             onChange={onToggleNotif}
           />
           <SettingRow icon="play-outline" label={t('Alerte résumé vidéo')} value={video} onChange={setVideo} last />
+        </Card>
+      </View>
+
+      <SectionTitle title={t('Apparence')} />
+      <View style={{ paddingHorizontal: S.lg }}>
+        <Card>
+          <ThemeSwitch mode={mode} setMode={setMode} />
         </Card>
       </View>
 
@@ -249,6 +299,43 @@ export default function CompteScreen() {
         <Button title={t('Se déconnecter')} tone="alt" icon="log-out-outline" onPress={signOut} />
       </View>
     </Screen>
+  );
+}
+
+function ThemeSwitch({ mode, setMode }: { mode: ThemeMode; setMode: (m: ThemeMode) => void }) {
+  const { t } = useT();
+  const options: { id: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { id: 'dark', label: t('Sombre'), icon: 'moon' },
+    { id: 'light', label: t('Clair'), icon: 'sunny' },
+  ];
+  return (
+    <Row style={{ gap: 9 }}>
+      {options.map((o) => {
+        const on = mode === o.id;
+        return (
+          <Pressable
+            key={o.id}
+            onPress={() => setMode(o.id)}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              paddingVertical: 11,
+              borderRadius: 10,
+              backgroundColor: on ? C.accentSoft : 'transparent',
+              borderWidth: 1,
+              borderColor: on ? C.accent : C.border,
+            }}>
+            <Ionicons name={o.icon} size={15} color={on ? C.accent : C.muted} />
+            <Text style={{ color: on ? C.accent : C.muted, fontSize: 13.5, fontWeight: '600' }}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </Row>
   );
 }
 
