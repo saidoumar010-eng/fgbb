@@ -69,6 +69,9 @@ export interface Match {
   current_quarter: number | null;
   quarter_scores: QuarterScore[];
   video_url: string | null;
+  stream_url: string | null;   // diffusion en direct
+  officials_validated_at: string | null; // feuille validée par la table technique
+  officials_validated_by: string | null;
   season_id: string | null;
   round: number | null;        // journée du championnat
   group_name: string | null;   // poule

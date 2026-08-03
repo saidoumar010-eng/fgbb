@@ -4,10 +4,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ChipSelect } from '@/components/chip-select';
-import { Button, Card, Crest, Empty, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { Button, Card, Crest, Empty, Field, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
 import { getMatch } from '@/lib/db';
 import { errorMessage } from '@/lib/db-fan';
-import { getMatchLineups, type MatchLineupSide } from '@/lib/db-matchday';
+import {
+  getMatchLineups,
+  setMatchStream,
+  setSheetValidated,
+  type MatchLineupSide,
+} from '@/lib/db-matchday';
 import { listMatchOfficials, listReferees, OFFICIAL_ROLES, setMatchOfficials } from '@/lib/db-officials';
 import { fullDate, teamShort } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -42,6 +48,45 @@ export default function TableMatchScreen() {
       setDesignations(officialsQ.data.map((o) => ({ referee_id: o.referee_id, role: o.role })));
     }
   }, [officialsQ.data]);
+
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
+  const [stream, setStream] = useState('');
+  const [streamBusy, setStreamBusy] = useState(false);
+  const [sheetBusy, setSheetBusy] = useState(false);
+  useEffect(() => {
+    if (matchQ.data) setStream(matchQ.data.stream_url ?? '');
+  }, [matchQ.data]);
+  const validated = !!matchQ.data?.officials_validated_at;
+
+  async function saveStream() {
+    setStreamBusy(true);
+    setErr(null);
+    setFlash(null);
+    try {
+      await setMatchStream(id, stream.trim() || null);
+      setFlash(t('Lien de diffusion enregistré.'));
+      await matchQ.reload();
+    } catch (e) {
+      setErr(errorMessage(e, t('Enregistrement impossible.')));
+    } finally {
+      setStreamBusy(false);
+    }
+  }
+
+  async function toggleSheet() {
+    setSheetBusy(true);
+    setErr(null);
+    setFlash(null);
+    try {
+      await setSheetValidated(id, uid, !validated);
+      await matchQ.reload();
+    } catch (e) {
+      setErr(errorMessage(e, t('Validation impossible.')));
+    } finally {
+      setSheetBusy(false);
+    }
+  }
 
   const m = matchQ.data;
   const referees = refereesQ.data ?? [];
@@ -114,6 +159,40 @@ export default function TableMatchScreen() {
               {fullDate(m.scheduled_at)}
             </Text>
           ) : null}
+        </Card>
+      </View>
+
+      {/* Diffusion en direct & validation de la feuille */}
+      <SectionTitle title={t('Diffusion & feuille')} />
+      <View style={{ paddingHorizontal: S.lg, gap: 9 }}>
+        <Card>
+          <Field
+            label={t('Lien de diffusion en direct')}
+            value={stream}
+            onChangeText={setStream}
+            placeholder="https://…"
+            autoCapitalize="none"
+          />
+          <Button title={t('Enregistrer le lien')} onPress={saveStream} loading={streamBusy} tone="alt" icon="videocam-outline" />
+        </Card>
+        <Card style={{ borderColor: validated ? C.green : C.border, borderWidth: 1 }}>
+          <Row style={{ gap: 10, marginBottom: 4 }}>
+            <Ionicons
+              name={validated ? 'checkmark-circle' : 'document-text-outline'}
+              size={18}
+              color={validated ? C.green : C.muted}
+            />
+            <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>
+              {validated ? t('Feuille validée par les arbitres.') : t('Feuille de match non encore validée.')}
+            </Text>
+          </Row>
+          <Button
+            title={validated ? t('Annuler la validation') : t('Valider la feuille (arbitres)')}
+            onPress={toggleSheet}
+            loading={sheetBusy}
+            tone={validated ? 'alt' : 'accent'}
+            icon="checkmark-done-outline"
+          />
         </Card>
       </View>
 

@@ -104,6 +104,25 @@ export async function listTableMatches() {
 }
 
 // ---------------------------------------------------------------------------
+// Diffusion en direct & validation de la feuille (Phase H).
+
+export async function setMatchStream(matchId: string, url: string | null) {
+  const { error } = await supabase.from('matches').update({ stream_url: url }).eq('id', matchId);
+  if (error) throw error;
+}
+
+export async function setSheetValidated(matchId: string, userId: string | null, validated: boolean) {
+  const { error } = await supabase
+    .from('matches')
+    .update({
+      officials_validated_at: validated ? new Date().toISOString() : null,
+      officials_validated_by: validated ? userId : null,
+    })
+    .eq('id', matchId);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
 // Attribution du rôle table technique par la fédération.
 
 export async function setUserRole(userId: string, role: 'fan' | 'table_technique') {

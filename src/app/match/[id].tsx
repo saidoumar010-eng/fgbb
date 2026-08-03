@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Comments } from '@/components/comments';
 import { HeadToHead } from '@/components/head-to-head';
@@ -269,6 +269,40 @@ export default function MatchDetail() {
                     <Text style={{ color: C.dim, fontSize: 11.5, textAlign: 'center' }}>{reminderMsg}</Text>
                   ) : null}
                 </View>
+              ) : null}
+
+              {m.stream_url && dispStatus !== 'finished' ? (
+                <View style={{ alignItems: 'center', marginTop: 12 }}>
+                  <Pressable
+                    onPress={() => Linking.openURL(m.stream_url!).catch(() => {})}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        backgroundColor: C.red,
+                        borderRadius: 999,
+                        paddingHorizontal: 18,
+                        paddingVertical: 10,
+                      },
+                      pressed && { opacity: 0.85 },
+                    ]}>
+                    <Ionicons name="play-circle" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                      {t('Regarder en direct')}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {m.officials_validated_at ? (
+                <Row style={{ justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                  <Ionicons name="checkmark-circle" size={14} color={C.green} />
+                  <Text style={{ color: C.green, fontSize: 11.5 }}>
+                    {t('Feuille validée par les arbitres')}
+                  </Text>
+                </Row>
               ) : null}
 
               {dispStatus === 'live' && board ? (

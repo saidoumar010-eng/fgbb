@@ -25,6 +25,7 @@ const SPORT: Entry[] = [
   { icon: 'trophy-outline', title: 'Compétitions', sub: 'Championnats, coupes, formats', href: '/admin/competitions' },
   { icon: 'calendar-number-outline', title: 'Saisons', sub: 'Créer une saison, définir la saison en cours', href: '/admin/seasons' },
   { icon: 'clipboard-outline', title: 'Matchs & statistiques', sub: 'Scores, box score, vidéos, tirs', href: '/admin/matches' },
+  { icon: 'tv-outline', title: 'Jour de match (table technique)', sub: 'Diffusion, feuille de match, arbitres', href: '/table' },
   { icon: 'grid-outline', title: 'Générateur de calendrier', sub: 'Créer toutes les journées d’une poule', href: '/admin/calendar-gen' },
 ];
 

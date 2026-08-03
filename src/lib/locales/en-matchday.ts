@@ -53,4 +53,18 @@ export const EN_MATCHDAY: Record<string, string> = {
   'Compte sans nom': 'Unnamed account',
   'Ce compte': 'This account',
   'Arbitres et feuilles de match': 'Referees and game sheets',
+
+  // Phase H — diffusion en direct & validation de la feuille
+  'Diffusion & feuille': 'Stream & sheet',
+  'Lien de diffusion en direct': 'Live stream link',
+  'Enregistrer le lien': 'Save link',
+  'Lien de diffusion enregistré.': 'Stream link saved.',
+  'Feuille validée par les arbitres.': 'Sheet validated by the referees.',
+  'Feuille de match non encore validée.': 'Game sheet not validated yet.',
+  'Annuler la validation': 'Cancel validation',
+  'Valider la feuille (arbitres)': 'Validate sheet (referees)',
+  'Regarder en direct': 'Watch live',
+  'Feuille validée par les arbitres': 'Sheet validated by the referees',
+  'Jour de match (table technique)': 'Game day (scorer’s table)',
+  'Diffusion, feuille de match, arbitres': 'Stream, game sheet, referees',
 };
