@@ -506,6 +506,35 @@ export interface TeamSeasonStat {
   best_score: number;
 }
 
+export interface TeamAdvancedStat {
+  team_id: string;
+  team_name: string;
+  short_name: string | null;
+  color: string | null;
+  games: number;
+  efg_pct: number;
+  tov_pct: number;
+  orb_pct: number;
+  ft_rate: number;
+  ppg: number;
+}
+
+export interface FederationStats {
+  fans: number;
+  predictions: number;
+  mvp_votes: number;
+  poll_votes: number;
+  quiz_attempts: number;
+  club_posts: number;
+  follows: number;
+}
+
+export interface TopFollowedTeam {
+  team_id: string;
+  team_name: string;
+  followers: number;
+}
+
 export interface GameHigh {
   id: string;
   match_id: string;

@@ -2,10 +2,18 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 
+import { listLeaders, listStandings } from '@/lib/db';
 import { officialRoleLabel } from '@/lib/db-officials';
-import { getMatchSheetData } from '@/lib/db-stats';
+import { getMatchSheetData, listTeamSeasonStats } from '@/lib/db-stats';
 import { fullDate } from '@/lib/format';
-import type { MatchOfficial, PlayerMatchStat, Match } from '@/lib/types';
+import type {
+  Match,
+  MatchOfficial,
+  PlayerMatchStat,
+  PlayerSeasonStat,
+  Standing,
+  TeamSeasonStat,
+} from '@/lib/types';
 
 // La feuille de match est un document officiel de la fédération : elle reste
 // en français quelle que soit la langue de l'application.
@@ -29,6 +37,96 @@ export async function exportMatchSheetPdf(matchId: string) {
       dialogTitle: 'Feuille de match',
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Rapport de saison (PDF) : classement, meilleurs marqueurs, bilans d'équipe.
+
+export async function exportSeasonReportPdf(competition?: { id: string; name: string } | null) {
+  const [standings, leaders, teamStats] = await Promise.all([
+    listStandings(competition?.id),
+    listLeaders(),
+    listTeamSeasonStats(competition?.id ?? null),
+  ]);
+  const html = seasonReportHtml(competition?.name ?? null, standings, leaders, teamStats);
+
+  if (Platform.OS === 'web') {
+    await Print.printAsync({ html });
+    return;
+  }
+  const { uri } = await Print.printToFileAsync({ html });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: 'application/pdf',
+      UTI: 'com.adobe.pdf',
+      dialogTitle: 'Rapport de saison',
+    });
+  }
+}
+
+function seasonReportHtml(
+  competition: string | null,
+  standings: Standing[],
+  leaders: PlayerSeasonStat[],
+  teamStats: TeamSeasonStat[],
+) {
+  const standingsRows = standings
+    .map(
+      (s, i) =>
+        `<tr><td>${i + 1}</td><td class="name">${esc(s.team_name)}</td><td>${s.played}</td><td>${s.wins}</td><td>${s.losses}</td><td><b>${s.points}</b></td></tr>`,
+    )
+    .join('');
+  const leadersRows = leaders
+    .slice(0, 10)
+    .map(
+      (p, i) => `<tr><td>${i + 1}</td><td class="name">${esc(p.full_name)}</td><td><b>${p.ppg}</b></td></tr>`,
+    )
+    .join('');
+  const teamRows = teamStats
+    .map(
+      (t) =>
+        `<tr><td class="name">${esc(t.team_name)}</td><td>${t.pts_for}</td><td>${t.pts_against}</td><td>${t.diff > 0 ? '+' : ''}${t.diff}</td></tr>`,
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8" />
+<style>
+  @page { margin: 18mm 12mm; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #000; font-size: 11px; margin: 0; }
+  .fed { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 14px; }
+  .fed h1 { font-size: 15px; margin: 0; letter-spacing: 1px; text-transform: uppercase; }
+  .fed p { font-size: 10px; margin: 3px 0 0; letter-spacing: 3px; text-transform: uppercase; }
+  h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; margin: 18px 0 5px; border-bottom: 1px solid #000; padding-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #999; padding: 3px 5px; text-align: center; }
+  th { background: #eee; font-size: 9.5px; text-transform: uppercase; }
+  td.name, th.name { text-align: left; }
+</style></head>
+<body>
+  <div class="fed">
+    <h1>Fédération Guinéenne de Basketball</h1>
+    <p>Rapport de saison${competition ? ' · ' + esc(competition) : ''}</p>
+  </div>
+
+  <h2>Classement</h2>
+  <table>
+    <tr><th>#</th><th class="name">Équipe</th><th>J</th><th>V</th><th>D</th><th>Pts</th></tr>
+    ${standingsRows || '<tr><td colspan="6">Aucun match joué.</td></tr>'}
+  </table>
+
+  <h2>Meilleurs marqueurs</h2>
+  <table>
+    <tr><th>#</th><th class="name">Joueur</th><th>Pts/match</th></tr>
+    ${leadersRows || '<tr><td colspan="3">Aucune statistique.</td></tr>'}
+  </table>
+
+  <h2>Bilans d'équipe (par match)</h2>
+  <table>
+    <tr><th class="name">Équipe</th><th>Marqués</th><th>Encaissés</th><th>Diff.</th></tr>
+    ${teamRows || '<tr><td colspan="4">Aucun bilan.</td></tr>'}
+  </table>
+</body></html>`;
 }
 
 export async function exportCsv(filename: string, rows: (string | number)[][]) {

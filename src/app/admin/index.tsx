@@ -8,7 +8,7 @@ import { C, S } from '@/lib/theme';
 
 const QUICK: { icon: keyof typeof Ionicons.glyphMap; label: string; href: string; color: string }[] = [
   { icon: 'create-outline', label: 'Saisir un score', href: '/admin/matches', color: C.accent },
-  { icon: 'grid-outline', label: 'Générer le calendrier', href: '/admin/calendar-gen', color: C.accent },
+  { icon: 'analytics-outline', label: 'Tableau de bord', href: '/admin/dashboard-federation', color: C.accent },
   { icon: 'newspaper-outline', label: 'Actualité', href: '/admin/news-form', color: C.green },
 ];
 

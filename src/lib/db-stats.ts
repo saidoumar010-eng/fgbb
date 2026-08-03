@@ -2,7 +2,16 @@ import { MATCH_SELECT } from '@/lib/db';
 import { listMatchOfficials } from '@/lib/db-officials';
 import { teamShort } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
-import type { GameHigh, Match, MatchOfficial, PlayerMatchStat, TeamSeasonStat } from '@/lib/types';
+import type {
+  FederationStats,
+  GameHigh,
+  Match,
+  MatchOfficial,
+  PlayerMatchStat,
+  TeamAdvancedStat,
+  TeamSeasonStat,
+  TopFollowedTeam,
+} from '@/lib/types';
 
 // Colonnes de la vue `game_highs` sur lesquelles on peut établir un record.
 export type HighColumn = 'points' | 'rebounds' | 'assists' | 'steals' | 'blocks' | 'three_made';
@@ -91,6 +100,48 @@ function normalize(r: TeamSeasonStat): TeamSeasonStat {
 
 function round1(n: number) {
   return Math.round(n * 10) / 10;
+}
+
+// ---------------------------------------------------------------------------
+// Statistiques avancées (four factors) — Phase I.
+
+export async function listTeamAdvancedStats(): Promise<TeamAdvancedStat[]> {
+  const { data, error } = await supabase.from('team_advanced_stats').select('*');
+  if (error) throw error;
+  return ((data ?? []) as TeamAdvancedStat[]).map((r) => ({
+    ...r,
+    games: Number(r.games),
+    efg_pct: Number(r.efg_pct),
+    tov_pct: Number(r.tov_pct),
+    orb_pct: Number(r.orb_pct),
+    ft_rate: Number(r.ft_rate),
+    ppg: Number(r.ppg),
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Audience de la fédération (agrégats, réservé à l'admin) — Phase I.
+
+export async function getFederationStats(): Promise<FederationStats | null> {
+  const { data, error } = await supabase.rpc('federation_stats');
+  if (error) throw error;
+  const row = ((data ?? []) as FederationStats[])[0];
+  if (!row) return null;
+  return {
+    fans: Number(row.fans),
+    predictions: Number(row.predictions),
+    mvp_votes: Number(row.mvp_votes),
+    poll_votes: Number(row.poll_votes),
+    quiz_attempts: Number(row.quiz_attempts),
+    club_posts: Number(row.club_posts),
+    follows: Number(row.follows),
+  };
+}
+
+export async function getTopFollowedTeams(limit = 6): Promise<TopFollowedTeam[]> {
+  const { data, error } = await supabase.rpc('top_followed_teams', { p_limit: limit });
+  if (error) throw error;
+  return ((data ?? []) as TopFollowedTeam[]).map((r) => ({ ...r, followers: Number(r.followers) }));
 }
 
 // ---------------------------------------------------------------------------
