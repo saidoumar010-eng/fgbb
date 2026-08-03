@@ -15,7 +15,7 @@ import { C, S } from '@/lib/theme';
 import { useFetch } from '@/lib/useFetch';
 
 export default function CompteScreen() {
-  const { session, profile, isAdmin, signOut } = useAuth();
+  const { session, profile, isAdmin, isTableOfficial, signOut } = useAuth();
   const { lang, setLang, t } = useT();
   const [notif, setNotif] = useState(true);
   const [video, setVideo] = useState(true);
@@ -222,6 +222,21 @@ export default function CompteScreen() {
                   <Text style={{ color: C.dim, fontSize: 12 }}>
                     {myClubs.map((c) => c.name).join(' · ')}
                   </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.dim} />
+              </Row>
+            </Pressable>
+          ) : null}
+
+          {/* Officiel de table (hors admin, qui atteint déjà tout via l'espace
+              fédération) : accès direct à la préparation du jour de match. */}
+          {isTableOfficial && !isAdmin ? (
+            <Pressable onPress={() => router.push('/table' as never)}>
+              <Row style={{ paddingVertical: 13, gap: 13 }}>
+                <Ionicons name="clipboard-outline" size={20} color={C.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: C.text, fontSize: 14 }}>{t('Table technique')}</Text>
+                  <Text style={{ color: C.dim, fontSize: 12 }}>{t('Arbitres et feuilles de match')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.dim} />
               </Row>

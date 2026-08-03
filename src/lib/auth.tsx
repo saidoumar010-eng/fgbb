@@ -9,6 +9,7 @@ interface AuthValue {
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
+  isTableOfficial: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     isAdmin: profile?.role === 'admin',
+    isTableOfficial: profile?.role === 'admin' || profile?.role === 'table_technique',
     async signIn(email, password) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       return error ? { error: error.message } : {};

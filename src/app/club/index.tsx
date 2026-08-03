@@ -156,6 +156,21 @@ export default function ClubSpace() {
       <ClubDashboard teamId={club.id} />
 
       <View style={{ paddingHorizontal: S.lg, marginTop: 9, gap: 9 }}>
+        <Pressable onPress={() => router.push('/club/feuille' as never)}>
+          <Card style={{ paddingVertical: 12 }}>
+            <Row style={{ gap: 12 }}>
+              <Ionicons name="clipboard-outline" size={20} color={C.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Feuille de match')}</Text>
+                <Text style={{ color: C.dim, fontSize: 12 }}>
+                  {t('Composer et valider tes 12 pour un match à venir')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.dim} />
+            </Row>
+          </Card>
+        </Pressable>
+
         <Pressable onPress={() => router.push(`/club/publications?team=${club.id}` as never)}>
           <Card style={{ paddingVertical: 12 }}>
             <Row style={{ gap: 12 }}>

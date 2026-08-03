@@ -3,7 +3,7 @@
 export type CompetitionType = 'championnat' | 'coupe' | 'tournoi';
 export type Category = 'messieurs' | 'dames' | 'u18' | 'autre';
 export type MatchStatus = 'scheduled' | 'live' | 'finished';
-export type Role = 'fan' | 'admin';
+export type Role = 'fan' | 'admin' | 'table_technique';
 
 export interface Profile {
   id: string;
