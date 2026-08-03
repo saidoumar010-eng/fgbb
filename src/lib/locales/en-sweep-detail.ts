@@ -11,6 +11,16 @@ export const EN_SWEEP_DETAIL: Record<string, string> = {
     'Player-by-player stats will be entered by the federation.',
   Stat: 'Stat',
 
+  // Rappels de match — src/app/match/[id].tsx
+  'Me rappeler': 'Remind me',
+  'Rappel activé': 'Reminder on',
+  'Rappel annulé.': 'Reminder cancelled.',
+  'Rappel programmé {n} min avant le coup d’envoi.': 'Reminder set {n} min before tip-off.',
+  'Autorise les notifications pour recevoir le rappel.': 'Allow notifications to receive the reminder.',
+  'Ce match commence trop tôt pour programmer un rappel.': 'This game starts too soon to set a reminder.',
+  'L’heure du match n’est pas encore fixée.': 'The game time has not been set yet.',
+  'Impossible de programmer le rappel pour le moment.': 'Unable to set the reminder right now.',
+
   // Fiche joueur — src/app/player/[id].tsx
   '{n} ans': '{n} yrs',
   Passes: 'Assists',

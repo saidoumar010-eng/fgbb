@@ -32,4 +32,24 @@ export const EN_STATS: Record<string, string> = {
   '{n} matchs': '{n} games',
   '{v} V · {d} D': '{v} W · {d} L',
   'record {n} pts': 'best {n} pts',
+
+  // Comparateur d'équipes
+  'Comparateur d’équipes': 'Team comparison',
+  'Comparer équipes': 'Compare teams',
+  'Choisir l’équipe {slot}': 'Choose team {slot}',
+  'Rechercher une équipe…': 'Search for a team…',
+  'Aucune équipe trouvée.': 'No team found.',
+  'Choisir une équipe': 'Choose a team',
+  'Choisis deux équipes': 'Pick two teams',
+  'Sélectionne une équipe de chaque côté pour comparer leurs bilans de la saison.':
+    'Pick a team on each side to compare their season records.',
+  'Aucune statistique enregistrée pour ces équipes cette saison.':
+    'No statistics recorded for these teams this season.',
+  Victoires: 'Wins',
+  'Pourcentage de victoires': 'Win percentage',
+  'Points marqués / match': 'Points scored / game',
+  'Points encaissés / match': 'Points allowed / game',
+  'Différentiel / match': 'Point differential / game',
+  'Record de points': 'Points record',
+  'Matchs joués': 'Games played',
 };

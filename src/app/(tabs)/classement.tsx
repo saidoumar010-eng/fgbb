@@ -16,6 +16,7 @@ const DATA_LINKS: { icon: keyof typeof Ionicons.glyphMap; label: string; href: s
   { icon: 'trophy-outline', label: 'Records', href: '/records' },
   { icon: 'bar-chart-outline', label: 'Stats équipes', href: '/stats-equipes' },
   { icon: 'git-compare-outline', label: 'Comparer', href: '/compare' },
+  { icon: 'people-outline', label: 'Comparer équipes', href: '/compare-equipes' },
   { icon: 'warning-outline', label: 'Discipline', href: '/discipline' },
   { icon: 'people-circle-outline', label: 'Arbitres', href: '/arbitres' },
 ];

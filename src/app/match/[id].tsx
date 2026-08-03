@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Comments } from '@/components/comments';
 import { HeadToHead } from '@/components/head-to-head';
@@ -32,7 +32,8 @@ import { exportMatchSheetPdf } from '@/lib/export';
 import { fullDate, teamShort } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useMatchRealtime } from '@/lib/realtime';
-import { C, S } from '@/lib/theme';
+import { cancelReminder, getReminder, REMINDER_LEAD_MINUTES, remindersSupported, setReminder } from '@/lib/reminders';
+import { C, R, S } from '@/lib/theme';
 import type { MatchStatus, PlayerMatchStat, QuarterScore } from '@/lib/types';
 import { useFetch } from '@/lib/useFetch';
 
@@ -90,6 +91,52 @@ export default function MatchDetail() {
   // Le partage passe par un aperçu : le supporter envoie une image à ses
   // contacts, il doit voir ce qui partira avant de l'envoyer.
   const [sharing, setSharing] = useState(false);
+
+  // Rappel de match : notification locale programmée avant le coup d'envoi.
+  const [reminderOn, setReminderOn] = useState(false);
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderMsg, setReminderMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (!remindersSupported || !m?.id) return;
+    let alive = true;
+    getReminder(m.id).then((e) => {
+      if (alive) setReminderOn(!!e);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [m?.id]);
+
+  async function toggleReminder() {
+    if (!m || reminderBusy) return;
+    setReminderBusy(true);
+    setReminderMsg(null);
+    try {
+      if (reminderOn) {
+        await cancelReminder(m.id);
+        setReminderOn(false);
+        setReminderMsg(t('Rappel annulé.'));
+      } else {
+        const res = await setReminder(m);
+        if (res.ok) {
+          setReminderOn(true);
+          setReminderMsg(t('Rappel programmé {n} min avant le coup d’envoi.', { n: REMINDER_LEAD_MINUTES }));
+        } else {
+          setReminderMsg(
+            res.reason === 'denied'
+              ? t('Autorise les notifications pour recevoir le rappel.')
+              : res.reason === 'too_late'
+                ? t('Ce match commence trop tôt pour programmer un rappel.')
+                : res.reason === 'no_date'
+                  ? t('L’heure du match n’est pas encore fixée.')
+                  : t('Impossible de programmer le rappel pour le moment.'),
+          );
+        }
+      }
+    } finally {
+      setReminderBusy(false);
+    }
+  }
 
   const allStats = stats.data ?? [];
   const homeStats = allStats.filter((s) => s.team_id === m?.home_team_id);
@@ -184,6 +231,44 @@ export default function MatchDetail() {
                 <Text style={{ color: C.accent, fontSize: 12, textAlign: 'center', marginTop: 12 }}>
                   {fullDate(m.scheduled_at)}
                 </Text>
+              ) : null}
+
+              {dispStatus === 'scheduled' && remindersSupported && m.scheduled_at ? (
+                <View style={{ alignItems: 'center', marginTop: 12, gap: 6 }}>
+                  <Pressable
+                    onPress={reminderBusy ? undefined : toggleReminder}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 7,
+                        borderWidth: 1,
+                        borderRadius: R.pill,
+                        paddingHorizontal: 16,
+                        paddingVertical: 9,
+                        borderColor: reminderOn ? C.accent : C.borderStrong,
+                        backgroundColor: reminderOn ? C.accentSoft : 'transparent',
+                      },
+                      (pressed || reminderBusy) && { opacity: 0.7 },
+                    ]}>
+                    {reminderBusy ? (
+                      <ActivityIndicator size="small" color={C.accent} />
+                    ) : (
+                      <Ionicons
+                        name={reminderOn ? 'notifications' : 'notifications-outline'}
+                        size={16}
+                        color={reminderOn ? C.accent : C.muted}
+                      />
+                    )}
+                    <Text style={{ color: reminderOn ? C.accent : C.text, fontSize: 13, fontWeight: '600' }}>
+                      {reminderOn ? t('Rappel activé') : t('Me rappeler')}
+                    </Text>
+                  </Pressable>
+                  {reminderMsg ? (
+                    <Text style={{ color: C.dim, fontSize: 11.5, textAlign: 'center' }}>{reminderMsg}</Text>
+                  ) : null}
+                </View>
               ) : null}
 
               {dispStatus === 'live' && board ? (
