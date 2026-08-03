@@ -6,6 +6,7 @@ import { EN_GAPS } from '@/lib/locales/en-gaps';
 import { EN_FAN } from '@/lib/locales/en-fan';
 import { EN_AWARDS } from '@/lib/locales/en-awards';
 import { EN_MATCHDAY } from '@/lib/locales/en-matchday';
+import { EN_MESSAGES } from '@/lib/locales/en-messages';
 import { EN_FEDERATION } from '@/lib/locales/en-federation';
 import { EN_OFFICIALS } from '@/lib/locales/en-officials';
 import { EN_OFFLINE } from '@/lib/locales/en-offline';
@@ -39,6 +40,7 @@ export const EN: Record<string, string> = {
   ...EN_CLUB_SPACE,
   ...EN_MATCHDAY,
   ...EN_AWARDS,
+  ...EN_MESSAGES,
   ...EN_SWEEP_HOME,
   ...EN_SWEEP_DETAIL,
   ...EN_SWEEP_PUBLIC,

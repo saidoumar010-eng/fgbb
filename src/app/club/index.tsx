@@ -9,6 +9,7 @@ import { Button, Card, Crest, Empty, Field, Header, Row, Screen, SectionTitle } 
 import { useAuth } from '@/lib/auth';
 import { getClubRoster, listMyClubs, removeClubPlayer, updateMyClub } from '@/lib/db-club-space';
 import { errorMessage } from '@/lib/db-fan';
+import { countUnreadClubMessages } from '@/lib/db-messages';
 import { teamShort } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { C, S, TEAM_COLORS } from '@/lib/theme';
@@ -32,6 +33,7 @@ export default function ClubSpace() {
     () => (club ? getClubRoster(club.id) : Promise.resolve([] as Player[])),
     [club?.id],
   );
+  const unread = useFetch(() => (club ? countUnreadClubMessages(club.id) : Promise.resolve(0)), [club?.id]);
 
   const [coach, setCoach] = useState<string | null>(null);
   const [city, setCity] = useState<string | null>(null);
@@ -156,6 +158,25 @@ export default function ClubSpace() {
       <ClubDashboard teamId={club.id} />
 
       <View style={{ paddingHorizontal: S.lg, marginTop: 9, gap: 9 }}>
+        <Pressable onPress={() => router.push(`/club/messages?team=${club.id}` as never)}>
+          <Card style={{ paddingVertical: 12 }}>
+            <Row style={{ gap: 12 }}>
+              <Ionicons name="mail-outline" size={20} color={C.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Messages')}</Text>
+                <Text style={{ color: C.dim, fontSize: 12 }}>{t('Annonces de la fédération')}</Text>
+              </View>
+              {(unread.data ?? 0) > 0 ? (
+                <View style={{ backgroundColor: C.accent, borderRadius: 11, minWidth: 22, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' }}>
+                  <Text style={{ color: C.accentText, fontSize: 12, fontWeight: '700' }}>{unread.data}</Text>
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={C.dim} />
+              )}
+            </Row>
+          </Card>
+        </Pressable>
+
         <Pressable onPress={() => router.push('/club/feuille' as never)}>
           <Card style={{ paddingVertical: 12 }}>
             <Row style={{ gap: 12 }}>

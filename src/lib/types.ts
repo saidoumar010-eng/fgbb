@@ -125,6 +125,25 @@ export interface NewsItem {
   created_at: string;
 }
 
+export interface ClubMessage {
+  id: string;
+  title: string;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+// Côté club : le message reçu avec l'accusé de lecture de l'équipe.
+export interface ClubInboxMessage {
+  read_at: string | null;
+  message: ClubMessage | null;
+}
+
+// Côté fédération : un message envoyé avec l'état de lecture par destinataire.
+export interface SentClubMessage extends ClubMessage {
+  recipients: { team_id: string; read_at: string | null; team?: Team }[];
+}
+
 export type AwardKind = 'joueur_du_mois' | 'mvp_saison' | 'meilleur_cinq' | 'autre';
 
 export interface Award {
