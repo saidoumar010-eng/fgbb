@@ -125,6 +125,16 @@ export interface NewsItem {
   created_at: string;
 }
 
+export interface ClubPost {
+  id: string;
+  team_id: string;
+  author_id: string | null;
+  body: string;
+  image_url: string | null;
+  created_at: string;
+  team?: Team;
+}
+
 export interface Standing {
   competition_id: string | null;
   team_id: string;

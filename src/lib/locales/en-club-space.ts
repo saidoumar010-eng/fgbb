@@ -87,4 +87,27 @@ export const EN_CLUB_SPACE: Record<string, string> = {
   'Délivrée le {date}': 'Issued {date}',
   'Expire le {date}': 'Expires {date}',
   bientôt: 'soon',
+
+  // Phase B — abonnement à un joueur.
+  Suivre: 'Follow',
+  Abonné: 'Following',
+  '{n} abonné': '{n} follower',
+  '{n} abonnés': '{n} followers',
+
+  // Phase B — publications du club.
+  Publications: 'Posts',
+  'Publier pour tes abonnés et voir ton audience': 'Post to your followers and see your reach',
+  'Aucune publication pour le moment.': 'No posts yet.',
+  'Nouvelle publication': 'New post',
+  'Nouvelle publication de {club}': 'New post from {club}',
+  'Un message pour tes abonnés…': 'A message for your followers…',
+  'Photo (facultative)': 'Photo (optional)',
+  Publier: 'Post',
+  'Écris un message avant de publier.': 'Write a message before posting.',
+  'Publication envoyée.': 'Post published.',
+  'Publication impossible.': 'Could not publish.',
+  'Supprimer cette publication ?': 'Delete this post?',
+  'Cette action est définitive.': 'This cannot be undone.',
+  'Mes publications ({n})': 'My posts ({n})',
+  Abonnés: 'Followers',
 };

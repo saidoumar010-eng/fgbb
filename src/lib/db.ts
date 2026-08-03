@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type {
+  ClubPost,
   Competition,
   Match,
   MatchEvent,
@@ -227,6 +228,55 @@ export async function addFavorite(userId: string, teamId: string) {
 export async function removeFavorite(userId: string, teamId: string) {
   const { error } = await supabase.from('favorites').delete().eq('user_id', userId).eq('team_id', teamId);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Abonnements à un joueur (miroir des favoris d'équipe, migration 0021).
+
+export async function isFollowingPlayer(userId: string, playerId: string) {
+  const { data, error } = await supabase
+    .from('player_follows')
+    .select('player_id')
+    .eq('user_id', userId)
+    .eq('player_id', playerId)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
+}
+
+export async function followPlayer(userId: string, playerId: string) {
+  const { error } = await supabase.from('player_follows').insert({ user_id: userId, player_id: playerId });
+  if (error) throw error;
+}
+
+export async function unfollowPlayer(userId: string, playerId: string) {
+  const { error } = await supabase
+    .from('player_follows')
+    .delete()
+    .eq('user_id', userId)
+    .eq('player_id', playerId);
+  if (error) throw error;
+}
+
+/** Total d'abonnés d'un joueur (information publique, fonction security definer). */
+export async function getPlayerFollowerCount(playerId: string) {
+  const { data, error } = await supabase.rpc('player_follower_count', { p_player_id: playerId });
+  if (error) throw error;
+  return (data as number | null) ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Publications des clubs (fil d'actu public, migration 0021).
+
+export async function listTeamPosts(teamId: string, limit = 50) {
+  const { data, error } = await supabase
+    .from('club_posts')
+    .select('*')
+    .eq('team_id', teamId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as ClubPost[];
 }
 
 // ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { ClubPostCard } from '@/components/club-post-card';
 import { MatchRow } from '@/components/match-row';
 import { Card, Crest, Empty, Header, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -13,6 +14,7 @@ import {
   getTeamPlayers,
   getTeamStanding,
   listFavoriteTeams,
+  listTeamPosts,
   removeFavorite,
 } from '@/lib/db';
 import { getTeamSeasonStat } from '@/lib/db-stats';
@@ -29,7 +31,7 @@ export default function TeamDetail() {
   const season = useFetch(() => getTeamSeasonStat(id), [id], { cacheKey: `team-season:${id}` });
   const players = useFetch(() => getTeamPlayers(id), [id], { cacheKey: `team-players:${id}` });
   const matches = useFetch(() => getTeamMatches(id), [id], { cacheKey: `team-matches:${id}` });
-  const [tab, setTab] = useState<'roster' | 'cal'>('roster');
+  const [tab, setTab] = useState<'roster' | 'cal' | 'posts'>('roster');
 
   const { session } = useAuth();
   const favs = useFetch(() => listFavoriteTeams(), []);
@@ -111,9 +113,14 @@ export default function TeamDetail() {
           <Row style={{ marginHorizontal: S.lg, gap: 6 }}>
             <Tab label={t('Effectif')} active={tab === 'roster'} onPress={() => setTab('roster')} />
             <Tab label={t('Calendrier')} active={tab === 'cal'} onPress={() => setTab('cal')} />
+            <Tab label={t('Publications')} active={tab === 'posts'} onPress={() => setTab('posts')} />
           </Row>
 
-          {tab === 'roster' ? (
+          {tab === 'posts' ? (
+            <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
+              <TeamPosts teamId={id} />
+            </View>
+          ) : tab === 'roster' ? (
             <View style={{ paddingHorizontal: S.lg, paddingTop: 12 }}>
               {(players.data ?? []).length === 0 ? (
                 <Card>
@@ -161,6 +168,28 @@ function Stat({ label, value, color = '#fff' }: { label: string; value: number |
     <View style={{ alignItems: 'center' }}>
       <Text style={{ color, fontSize: 18, fontWeight: '600' }}>{value}</Text>
       <Text style={{ color: C.dim, fontSize: 11 }}>{label}</Text>
+    </View>
+  );
+}
+
+function TeamPosts({ teamId }: { teamId: string }) {
+  const { t } = useT();
+  const { data, loading } = useFetch(() => listTeamPosts(teamId), [teamId]);
+  const posts = data ?? [];
+  if (posts.length === 0) {
+    return (
+      <Card>
+        <Text style={{ color: C.dim, fontSize: 13 }}>
+          {loading ? t('Chargement…') : t('Aucune publication pour le moment.')}
+        </Text>
+      </Card>
+    );
+  }
+  return (
+    <View style={{ gap: 9 }}>
+      {posts.map((p) => (
+        <ClubPostCard key={p.id} post={p} />
+      ))}
     </View>
   );
 }

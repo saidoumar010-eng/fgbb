@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
+import { PlayerFollow } from '@/components/player-follow';
 import { ProgressionChart } from '@/components/progression-chart';
 import { Card, Crest, Empty, Header, Pill, Row, Screen, SectionTitle } from '@/components/ui';
 import { getPlayer, getPlayerGames, getPlayerSeason } from '@/lib/db';
@@ -84,6 +85,7 @@ export default function PlayerDetail() {
                   <Pill label="Syli National" tone="green" />
                 </View>
               ) : null}
+              <PlayerFollow playerId={id} />
             </Card>
           </View>
 

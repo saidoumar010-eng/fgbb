@@ -155,7 +155,22 @@ export default function ClubSpace() {
 
       <ClubDashboard teamId={club.id} />
 
-      <View style={{ paddingHorizontal: S.lg, marginTop: 9 }}>
+      <View style={{ paddingHorizontal: S.lg, marginTop: 9, gap: 9 }}>
+        <Pressable onPress={() => router.push(`/club/publications?team=${club.id}` as never)}>
+          <Card style={{ paddingVertical: 12 }}>
+            <Row style={{ gap: 12 }}>
+              <Ionicons name="megaphone-outline" size={20} color={C.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Publications')}</Text>
+                <Text style={{ color: C.dim, fontSize: 12 }}>
+                  {t('Publier pour tes abonnés et voir ton audience')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.dim} />
+            </Row>
+          </Card>
+        </Pressable>
+
         <Pressable onPress={() => router.push(`/club/licences?team=${club.id}` as never)}>
           <Card style={{ paddingVertical: 12 }}>
             <Row style={{ gap: 12 }}>

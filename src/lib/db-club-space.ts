@@ -198,3 +198,45 @@ export async function listClubLicenses(teamId: string): Promise<License[]> {
   if (error) throw error;
   return (data ?? []) as unknown as License[];
 }
+
+// ---------------------------------------------------------------------------
+// Publications du club (Phase B). L'écriture est bornée au club par la policy
+// club_posts_write (migration 0021) ; la lecture est publique (listTeamPosts).
+
+export async function createClubPost(input: {
+  team_id: string;
+  author_id: string | null;
+  body: string;
+  image_url: string | null;
+}) {
+  const { error } = await supabase.from('club_posts').insert({
+    team_id: input.team_id,
+    author_id: input.author_id,
+    body: input.body.trim(),
+    image_url: input.image_url,
+  });
+  if (error) throw error;
+}
+
+export async function deleteClubPost(id: string) {
+  const { error } = await supabase.from('club_posts').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Audience du club : nombre d'abonnés (favoris) et de publications. Le décompte
+// d'abonnés passe par une fonction security definer — le club voit le total sans
+// voir qui le suit (vie privée des supporters).
+export interface ClubAudience {
+  followers: number;
+  posts: number;
+}
+
+export async function getClubAudience(teamId: string): Promise<ClubAudience> {
+  const [followers, posts] = await Promise.all([
+    supabase.rpc('club_follower_count', { p_team_id: teamId }),
+    supabase.from('club_posts').select('id', { count: 'exact', head: true }).eq('team_id', teamId),
+  ]);
+  if (followers.error) throw followers.error;
+  if (posts.error) throw posts.error;
+  return { followers: (followers.data as number | null) ?? 0, posts: posts.count ?? 0 };
+}
