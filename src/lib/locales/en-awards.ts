@@ -30,4 +30,7 @@ export const EN_AWARDS: Record<string, string> = {
     'Your club has no recorded sanctions. Keep it up!',
   '{n} match(s)': '{n} game(s)',
   'Les sanctions et amendes de ton club': 'Your club’s sanctions and fines',
+
+  // Phase F — classement des pronostiqueurs par club
+  Général: 'Overall',
 };

@@ -221,6 +221,13 @@ export async function getLeaderboard(limit = 50) {
   return (data ?? []) as LeaderboardRow[];
 }
 
+/** Classement restreint aux supporters qui ont mis ce club en favori (Phase F). */
+export async function getLeaderboardByTeam(teamId: string, limit = 50) {
+  const { data, error } = await supabase.rpc('fan_leaderboard_by_team', { p_team_id: teamId, p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as LeaderboardRow[];
+}
+
 export async function getMyFanStats() {
   const { data, error } = await supabase.rpc('my_fan_stats');
   if (error) throw error;

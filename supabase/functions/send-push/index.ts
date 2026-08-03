@@ -57,9 +57,23 @@ Deno.serve(async (req: Request) => {
 
     let tokens: string[] = [];
     if (Array.isArray(team_ids) && team_ids.length > 0) {
+      // Abonnes de l'equipe (favoris)...
       const { data: favs } = await admin
         .from("favorites").select("user_id").in("team_id", team_ids);
-      const userIds = [...new Set((favs ?? []).map((f: any) => f.user_id))];
+      const favUserIds = (favs ?? []).map((f: any) => f.user_id);
+
+      // ...et abonnes des joueurs de ces equipes : suivre un joueur, c'est
+      // aussi etre alerte quand son equipe joue.
+      const { data: pl } = await admin.from("players").select("id").in("team_id", team_ids);
+      const playerIds = (pl ?? []).map((p: any) => p.id);
+      let followerUserIds: string[] = [];
+      if (playerIds.length > 0) {
+        const { data: pf } = await admin
+          .from("player_follows").select("user_id").in("player_id", playerIds);
+        followerUserIds = (pf ?? []).map((f: any) => f.user_id);
+      }
+
+      const userIds = [...new Set([...favUserIds, ...followerUserIds])];
       if (userIds.length > 0) {
         const { data: profs } = await admin
           .from("profiles").select("push_token").in("id", userIds).not("push_token", "is", null);

@@ -3,9 +3,17 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 
+import { ChipSelect } from '@/components/chip-select';
 import { Card, Crest, Empty, Header, Row, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { errorMessage, getLeaderboard, getMyFanStats, setLeaderboardVisibility } from '@/lib/db-fan';
+import { listTeams } from '@/lib/db';
+import {
+  errorMessage,
+  getLeaderboard,
+  getLeaderboardByTeam,
+  getMyFanStats,
+  setLeaderboardVisibility,
+} from '@/lib/db-fan';
 import { useT } from '@/lib/i18n';
 import { C, R, S } from '@/lib/theme';
 import type { LeaderboardRow } from '@/lib/types';
@@ -23,7 +31,12 @@ export default function FanLeaderboardScreen() {
   const { t } = useT();
   const { session, profile, refreshProfile } = useAuth();
   const uid = session?.user.id;
-  const board = useFetch(() => getLeaderboard(50));
+  const [clubId, setClubId] = useState<string | null>(null);
+  const teams = useFetch(() => listTeams());
+  const board = useFetch(
+    () => (clubId ? getLeaderboardByTeam(clubId, 50) : getLeaderboard(50)),
+    [clubId],
+  );
   const stats = useFetch(() => (uid ? getMyFanStats() : Promise.resolve(null)), [uid]);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -67,6 +80,16 @@ export default function FanLeaderboardScreen() {
       />
 
       <View style={{ padding: S.lg, gap: 12 }}>
+        <ChipSelect
+          options={[
+            { id: '__all__', label: t('Général') },
+            ...(teams.data ?? []).map((tm) => ({ id: tm.id, label: tm.name })),
+          ]}
+          value={clubId ?? '__all__'}
+          onChange={(v) => setClubId(v === '__all__' ? null : v)}
+          wrap
+        />
+
         {rows.length === 0 ? (
           <Empty
             icon="trophy-outline"
