@@ -110,4 +110,25 @@ export const EN_CLUB_SPACE: Record<string, string> = {
   'Cette action est définitive.': 'This cannot be undone.',
   'Mes publications ({n})': 'My posts ({n})',
   Abonnés: 'Followers',
+
+  // Phase D — création d'un compte club par la fédération.
+  'Créer un compte club': 'Create a club account',
+  'Générer les identifiants d’un club': 'Generate a club’s credentials',
+  'Renseigne un e-mail et choisis un club.': 'Enter an email and pick a club.',
+  'Création du compte impossible.': 'Could not create the account.',
+  'La fédération crée ici le compte d’un club et le rattache automatiquement. Le club pourra se connecter, gérer son effectif et publier. Transmets-lui les identifiants ci-dessous.':
+    'Here the federation creates a club’s account and links it automatically. The club will be able to sign in, manage its roster and post. Share the credentials below with them.',
+  'E-mail du club': 'Club email',
+  'Nom du responsable (facultatif)': 'Manager name (optional)',
+  'Nom du dirigeant': 'Manager name',
+  'Mot de passe (laisser vide pour en générer un)': 'Password (leave blank to generate one)',
+  'Généré automatiquement': 'Generated automatically',
+  'Créer le compte': 'Create account',
+  'Compte créé': 'Account created',
+  'Note ces identifiants : le mot de passe ne sera plus affiché.':
+    'Note these credentials: the password will not be shown again.',
+  'E-mail': 'Email',
+  'Mot de passe': 'Password',
+  'Demande au club de changer ce mot de passe à la première connexion.':
+    'Ask the club to change this password on first sign-in.',
 };

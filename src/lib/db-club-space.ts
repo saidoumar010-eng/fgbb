@@ -115,6 +115,41 @@ export async function addClubDelegate(userId: string, teamId: string) {
   if (error) throw error;
 }
 
+/**
+ * Crée un compte d'authentification pour un club et le rattache aussitôt
+ * (Phase D). Passe par une edge function admin : créer un utilisateur exige la
+ * clé de service, qui ne doit jamais atteindre le client. Renvoie les
+ * identifiants à transmettre au club (mot de passe généré si non fourni).
+ */
+export interface CreatedClubAccount {
+  user_id: string;
+  email: string;
+  password: string;
+  generated: boolean;
+}
+
+export async function createClubAccount(input: {
+  email: string;
+  full_name: string;
+  team_id: string;
+  password?: string;
+}): Promise<CreatedClubAccount> {
+  const { data, error } = await supabase.functions.invoke('create-club-account', { body: input });
+  if (error) {
+    // L'edge function renvoie le détail dans le corps de la réponse d'erreur.
+    let message = error.message;
+    try {
+      const body = await (error as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.();
+      if (body?.error) message = body.error;
+    } catch {
+      // corps illisible : on garde le message générique
+    }
+    throw new Error(message);
+  }
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+  return data as CreatedClubAccount;
+}
+
 export async function removeClubDelegate(userId: string, teamId: string) {
   const { error } = await supabase
     .from('club_members')
