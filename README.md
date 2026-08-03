@@ -154,10 +154,10 @@ les données.
 
 ## Reste à faire (prochaines itérations)
 
-- Terminer le **widget d'écran d'accueil** (prochain match / dernier score) :
-  la couche de données est prête ([`src/lib/widget.ts`](src/lib/widget.ts)), il
-  reste la couche native — voir [`WIDGET.md`](WIDGET.md). Ne se teste que sur un
-  build natif (EAS), pas en web ni en Expo Go.
+- **Widget d'écran d'accueil** (prochain match / dernier score) : entièrement
+  câblé côté Android (plugin, composant, task handler — voir
+  [`WIDGET.md`](WIDGET.md)). Il ne reste qu'à lancer le build EAS puis ajouter
+  le widget depuis l'écran d'accueil. (iOS/WidgetKit : non fait.)
 - Lancer le premier build Android et vérifier sur un vrai téléphone (ci-dessus).
 - Ajouter le secret `ANTHROPIC_API_KEY` pour activer la lecture IA de la feuille de match (ci-dessus).
 - Activer « Leaked password protection » dans Supabase → Auth (tableau de bord).

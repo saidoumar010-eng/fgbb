@@ -12,6 +12,7 @@ import { I18nProvider } from '@/lib/i18n';
 import { C } from '@/lib/theme';
 import { ThemeProvider, useTheme } from '@/lib/theme-context';
 import { refreshWidgetData } from '@/lib/widget';
+import { updateWidget } from '@/lib/widget-task';
 
 export default function RootLayout() {
   // ThemeProvider est volontairement SOUS Auth et I18n : sa bascule remonte le
@@ -39,9 +40,10 @@ function ThemedShell() {
   // à chaque retour au premier plan. Le widget natif (voir WIDGET.md) lit cet
   // instantané ; sans branchement natif l'appel est simplement inoffensif.
   useEffect(() => {
-    refreshWidgetData(new Date().toISOString());
+    const sync = () => refreshWidgetData(new Date().toISOString()).then(() => updateWidget());
+    sync();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshWidgetData(new Date().toISOString());
+      if (state === 'active') sync();
     });
     return () => sub.remove();
   }, []);

@@ -58,6 +58,23 @@
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#3BD61B"
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NextMatch",
+              "label": "FGBB — Prochain match",
+              "description": "Prochain match et dernier résultat",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "experiments": {
