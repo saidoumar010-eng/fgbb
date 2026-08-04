@@ -80,6 +80,13 @@
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1909ee25-1eed-479a-b752-c9a1135341f9"
+      }
+    },
+    "owner": "sod_dg"
   }
 }
