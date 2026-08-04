@@ -41,6 +41,11 @@ export default function ClassementScreen() {
   const top = leaders.data ?? [];
   const competitions = comps.data ?? [];
 
+  // Définis dans le corps du composant pour relire la palette au changement de
+  // thème (une constante de module resterait figée sur le thème de départ).
+  const hCell = { color: C.dim, fontSize: 11, fontWeight: '600' as const, width: 30, textAlign: 'center' as const };
+  const cell = { color: C.muted, fontSize: 12, width: 30, textAlign: 'center' as const };
+
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       <Header
@@ -160,6 +165,3 @@ export default function ClassementScreen() {
     </Screen>
   );
 }
-
-const hCell = { color: C.dim, fontSize: 11, fontWeight: '600' as const, width: 30, textAlign: 'center' as const };
-const cell = { color: C.muted, fontSize: 12, width: 30, textAlign: 'center' as const };

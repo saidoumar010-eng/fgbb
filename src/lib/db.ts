@@ -265,6 +265,20 @@ export async function getPlayerFollowerCount(playerId: string) {
   return (data as number | null) ?? 0;
 }
 
+/**
+ * Les joueurs suivis par le compte connecté (miroir de listFavoriteTeams). La
+ * RLS de player_follows ne laisse voir que ses propres lignes : inutile de
+ * filtrer par utilisateur ici. Ordonné du dernier suivi au premier.
+ */
+export async function listFollowedPlayers() {
+  const { data, error } = await supabase
+    .from('player_follows')
+    .select('created_at, player:players(*)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as { player: Player }[]).map((r) => r.player).filter(Boolean);
+}
+
 // ---------------------------------------------------------------------------
 // Publications des clubs (fil d'actu public, migration 0021).
 

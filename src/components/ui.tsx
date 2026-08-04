@@ -117,18 +117,20 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
 }
 
 type Tone = 'accent' | 'red' | 'green' | 'neutral';
-const toneBg: Record<Tone, string> = {
+const buildToneBg = (): Record<Tone, string> => ({
   accent: C.accentSoft,
   red: C.redSoft,
   green: C.greenSoft,
   neutral: 'rgba(255,255,255,0.07)',
-};
-const toneFg: Record<Tone, string> = {
+});
+const buildToneFg = (): Record<Tone, string> => ({
   accent: C.accent,
   red: C.red,
   green: C.green,
   neutral: C.muted,
-};
+});
+const toneBg = buildToneBg();
+const toneFg = buildToneFg();
 
 export function Pill({ label, tone = 'neutral', dot }: { label: string; tone?: Tone; dot?: boolean }) {
   return (
@@ -312,7 +314,8 @@ export function Row({ children, style }: { children: ReactNode; style?: ViewStyl
   return <View style={[{ flexDirection: 'row', alignItems: 'center' }, style]}>{children}</View>;
 }
 
-export const st = StyleSheet.create({
+const buildStyles = () =>
+  StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: 'row',
@@ -371,4 +374,15 @@ export const st = StyleSheet.create({
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
   emptyTitle: { color: C.text, fontSize: 15, fontWeight: '600' },
   emptySub: { color: C.dim, fontSize: 13, textAlign: 'center', paddingHorizontal: 32 },
-});
+  });
+
+// Styles partagés. Comme ils sont calculés une fois au chargement à partir de
+// la palette, un changement de thème doit les reconstruire sur place (les
+// consommateurs, dont comments.tsx, gardent la même référence `st`).
+export const st = buildStyles();
+
+export function refreshThemedStyles() {
+  Object.assign(st, buildStyles());
+  Object.assign(toneBg, buildToneBg());
+  Object.assign(toneFg, buildToneFg());
+}

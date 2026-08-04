@@ -45,6 +45,10 @@ export default function PlayerDetail() {
     [t('% 3 pts'), s ? `${s.three_pct}%` : '—'],
   ];
 
+  // Dans le corps du composant : relu à chaque thème (cf. classement.tsx).
+  const gh = { width: 40, textAlign: 'center' as const, color: C.dim, fontSize: 11 };
+  const gc = { width: 40, textAlign: 'center' as const, color: C.muted, fontSize: 12.5 };
+
   return (
     <Screen>
       <Header
@@ -153,6 +157,3 @@ export default function PlayerDetail() {
     </Screen>
   );
 }
-
-const gh = { width: 40, textAlign: 'center' as const, color: C.dim, fontSize: 11 };
-const gc = { width: 40, textAlign: 'center' as const, color: C.muted, fontSize: 12.5 };

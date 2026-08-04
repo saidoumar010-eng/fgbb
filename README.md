@@ -62,8 +62,11 @@ direct temps réel** (mise à jour instantanée sans rafraîchir), fiches joueur
 **Leaders** (marqueurs, rebondeurs, passeurs, interceptions, contres), **galerie
 Vidéos** (filtrable par compétition), **fan zone** (sondages de la fédération,
 **vote MVP** de chaque match, **pronostics** avant match), actualités, recherche,
-équipes favorites, comptes fans, **partage** (WhatsApp/Facebook…) des matchs et
-articles, tirer-pour-rafraîchir. Horaires affichés à l'heure de la Guinée (GMT).
+équipes favorites, **joueurs suivis** (retrouvés depuis l'écran Compte), comptes
+fans, **badges du supporter** (assiduité, pronostics réussis, quiz — sur le
+classement des supporters), **thème clair / sombre** au choix (écran Compte),
+**partage** (WhatsApp/Facebook…) des matchs et articles, tirer-pour-rafraîchir.
+Horaires affichés à l'heure de la Guinée (GMT).
 
 Espace fédération (admin) : CRUD complet joueurs / équipes / compétitions / actualités /
 **sondages** (ajouter, modifier, supprimer), gestion des matchs (statut, score,
@@ -151,6 +154,10 @@ les données.
 
 ## Reste à faire (prochaines itérations)
 
+- **Widget d'écran d'accueil** (prochain match / dernier score) : entièrement
+  câblé côté Android (plugin, composant, task handler — voir
+  [`WIDGET.md`](WIDGET.md)). Il ne reste qu'à lancer le build EAS puis ajouter
+  le widget depuis l'écran d'accueil. (iOS/WidgetKit : non fait.)
 - Lancer le premier build Android et vérifier sur un vrai téléphone (ci-dessus).
 - Ajouter le secret `ANTHROPIC_API_KEY` pour activer la lecture IA de la feuille de match (ci-dessus).
 - Activer « Leaked password protection » dans Supabase → Auth (tableau de bord).

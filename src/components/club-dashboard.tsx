@@ -29,6 +29,9 @@ export function ClubDashboard({ teamId }: { teamId: string }) {
       : t('Pas encore classé');
   const scorer = data?.topScorer;
 
+  // Dans le corps du composant : relu à chaque thème (cf. classement.tsx).
+  const label = { color: C.dim, fontSize: 11, fontWeight: '600' as const, marginTop: 2 };
+
   return (
     <>
       <SectionTitle title={t('Tableau de bord')} />
@@ -96,5 +99,3 @@ function Tile({
     </Pressable>
   );
 }
-
-const label = { color: C.dim, fontSize: 11, fontWeight: '600' as const, marginTop: 2 };

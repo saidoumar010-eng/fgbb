@@ -5,6 +5,7 @@ import { EN_CORE } from '@/lib/locales/en-core';
 import { EN_GAPS } from '@/lib/locales/en-gaps';
 import { EN_FAN } from '@/lib/locales/en-fan';
 import { EN_AWARDS } from '@/lib/locales/en-awards';
+import { EN_BADGES_FOLLOW } from '@/lib/locales/en-badges-follow';
 import { EN_DATA } from '@/lib/locales/en-data';
 import { EN_MATCHDAY } from '@/lib/locales/en-matchday';
 import { EN_MESSAGES } from '@/lib/locales/en-messages';
@@ -41,6 +42,7 @@ export const EN: Record<string, string> = {
   ...EN_CLUB_SPACE,
   ...EN_MATCHDAY,
   ...EN_AWARDS,
+  ...EN_BADGES_FOLLOW,
   ...EN_MESSAGES,
   ...EN_DATA,
   ...EN_SWEEP_HOME,
