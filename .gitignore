@@ -41,3 +41,7 @@ example
 # generated native folders
 /ios
 /android
+
+# Clé de compte de service Google Play (eas submit) — SECRET, ne jamais committer
+credentials/*.json
+google-play-service-account.json
