@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import { Ellipse } from 'react-native-svg';
@@ -359,7 +360,7 @@ function Head({ title }: { title: string }) {
     <Header
       title={title}
       left={
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => goBack()}>
           <Ionicons name="chevron-back" size={24} color={C.muted} />
         </Pressable>
       }

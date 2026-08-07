@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -28,7 +29,7 @@ export default function AdminMedia() {
       <Header
         title={t('Médiathèque')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

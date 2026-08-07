@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from 'react-native';
 
@@ -83,7 +84,7 @@ export default function AdminRegistrations() {
       <Header
         title={t('Inscriptions des clubs')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

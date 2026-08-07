@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Share, Text, View } from 'react-native';
@@ -51,7 +52,7 @@ export default function QuizPlayScreen() {
   }
 
   const back = (
-    <Pressable onPress={() => router.back()}>
+    <Pressable onPress={() => goBack()}>
       <Ionicons name="chevron-back" size={24} color={C.muted} />
     </Pressable>
   );

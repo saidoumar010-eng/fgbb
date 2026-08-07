@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -40,7 +41,7 @@ export default function ClubMessagesScreen() {
       <Header
         title={t('Messages')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -43,7 +44,7 @@ export default function AdminSponsors() {
       <Header
         title={t('Partenaires')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

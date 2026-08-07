@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -59,7 +60,7 @@ export default function TeamDetail() {
       <Header
         title={t('Club')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

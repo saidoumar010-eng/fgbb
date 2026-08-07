@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Pressable, Share, Text, View } from 'react-native';
 
 import { Comments } from '@/components/comments';
@@ -28,7 +29,7 @@ export default function ArticleDetail() {
       <Header
         title={t('Article')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

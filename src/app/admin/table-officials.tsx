@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
@@ -74,7 +74,7 @@ export default function AdminTableOfficials() {
       <Header
         title={t('Table technique')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

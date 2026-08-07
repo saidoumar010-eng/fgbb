@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -49,7 +50,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
       <Row style={{ paddingHorizontal: S.lg, paddingVertical: S.md, gap: 10 }}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => goBack()}>
           <Ionicons name="chevron-back" size={24} color={C.muted} />
         </Pressable>
         <View style={{ flex: 1, position: 'relative', justifyContent: 'center' }}>

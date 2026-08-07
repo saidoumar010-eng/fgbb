@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
@@ -78,7 +79,7 @@ export default function SeasonForm() {
           if (!id) return;
           try {
             await deleteSeason(id);
-            router.back();
+            goBack();
           } catch (e) {
             setError(e instanceof Error ? e.message : t('Erreur de chargement'));
           }

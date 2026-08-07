@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { ReactNode } from 'react';
 import { Pressable, Text } from 'react-native';
 
@@ -36,7 +36,7 @@ export function AdminForm({
       <Header
         title={title}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

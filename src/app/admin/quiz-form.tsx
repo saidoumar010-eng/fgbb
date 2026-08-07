@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Switch, Text, View } from 'react-native';
 
@@ -183,7 +184,7 @@ export default function QuizForm() {
           if (!quizId) return;
           try {
             await deleteQuiz(quizId);
-            router.back();
+            goBack();
           } catch (e) {
             setError(errorMessage(e, t('Impossible de supprimer ce quiz.')));
           }

@@ -1,4 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Text } from 'react-native';
 
@@ -140,7 +141,7 @@ export default function SanctionForm() {
           if (!id) return;
           try {
             await deleteSanction(id);
-            router.back();
+            goBack();
           } catch (e) {
             setError(e instanceof Error ? e.message : t('Erreur de chargement'));
           }

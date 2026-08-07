@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from 'react-native';
 
@@ -160,7 +161,7 @@ export default function LicenseForm() {
           if (!id) return;
           try {
             await deleteLicense(id);
-            router.back();
+            goBack();
           } catch (e) {
             setError(e instanceof Error ? e.message : t('Erreur de chargement'));
           }

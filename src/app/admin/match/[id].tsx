@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
@@ -94,7 +95,7 @@ export default function AdminMatchEdit() {
         style: 'destructive',
         onPress: async () => {
           await supabase.from('matches').delete().eq('id', id);
-          router.back();
+          goBack();
         },
       },
     ]);

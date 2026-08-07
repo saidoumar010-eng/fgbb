@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
@@ -55,7 +56,7 @@ export default function PlayerDetail() {
         title={t('Joueur')}
         left={
           <View>
-            <Ionicons name="chevron-back" size={24} color={C.muted} onPress={() => router.back()} />
+            <Ionicons name="chevron-back" size={24} color={C.muted} onPress={() => goBack()} />
           </View>
         }
         right={

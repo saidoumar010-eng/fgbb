@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -29,7 +29,7 @@ export default function RefereesDirectory() {
       <Header
         title={t('Arbitres')}
         left={
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack()}>
             <Ionicons name="chevron-back" size={24} color={C.muted} />
           </Pressable>
         }

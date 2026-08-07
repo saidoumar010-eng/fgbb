@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { goBack } from '@/lib/nav';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
@@ -25,7 +26,7 @@ export default function LoginScreen() {
       mode === 'in' ? await signIn(email.trim(), password) : await signUp(email.trim(), password, fullName.trim());
     setLoading(false);
     if (res.error) setError(res.error);
-    else if (router.canGoBack()) router.back();
+    else if (router.canGoBack()) goBack();
     else router.replace('/(tabs)/compte');
   }
 
@@ -33,7 +34,7 @@ export default function LoginScreen() {
     <Screen scroll>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Row style={{ paddingHorizontal: S.lg, paddingVertical: S.md }}>
-          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}>
+          <Pressable onPress={() => (router.canGoBack() ? goBack() : router.replace('/(tabs)'))}>
             <Ionicons name="close" size={24} color={C.muted} />
           </Pressable>
         </Row>

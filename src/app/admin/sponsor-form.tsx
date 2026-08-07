@@ -1,4 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Switch, Text, View } from 'react-native';
 
@@ -99,7 +100,7 @@ export default function SponsorForm() {
         onPress: async () => {
           try {
             await deleteSponsor(id);
-            router.back();
+            goBack();
           } catch (e) {
             setError(errorMessage(e, t('Suppression impossible.')));
           }

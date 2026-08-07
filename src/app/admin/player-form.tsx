@@ -1,4 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/lib/nav';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -94,7 +95,7 @@ export default function PlayerForm() {
         style: 'destructive',
         onPress: async () => {
           await supabase.from('players').delete().eq('id', id);
-          router.back();
+          goBack();
         },
       },
     ]);
