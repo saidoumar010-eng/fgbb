@@ -3,7 +3,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
-import { Button, Card, Crest, Field, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { AccountPicker } from '@/components/account-picker';
+import { Button, Card, Crest, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { type AccountSearchResult } from '@/lib/db-accounts';
 import { errorMessage } from '@/lib/db-fan';
 import { listTableOfficials, setUserRole } from '@/lib/db-matchday';
 import { useT } from '@/lib/i18n';
@@ -22,23 +24,22 @@ export default function AdminTableOfficials() {
   const { t } = useT();
   const officials = useFetch(() => listTableOfficials(), []);
 
-  const [userId, setUserId] = useState('');
+  const [account, setAccount] = useState<AccountSearchResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
   async function grant() {
-    const uid = userId.trim();
-    if (!uid) {
-      setErr(t('Renseigne l’identifiant du compte.'));
+    if (!account) {
+      setErr(t('Choisis un compte à promouvoir.'));
       return;
     }
     setErr(null);
     setFlash(null);
     setBusy(true);
     try {
-      await setUserRole(uid, 'table_technique');
-      setUserId('');
+      await setUserRole(account.id, 'table_technique');
+      setAccount(null);
       setFlash(t('Rôle accordé.'));
       await officials.reload();
     } catch (e) {
@@ -86,13 +87,7 @@ export default function AdminTableOfficials() {
               'Un officiel de table peut désigner les arbitres, gérer la feuille de match et programmer les rencontres. Il n’a pas accès aux licences, transferts ni contenus.',
             )}
           </Text>
-          <Field
-            label={t('Identifiant du compte (UUID)')}
-            value={userId}
-            onChangeText={setUserId}
-            placeholder="00000000-0000-0000-0000-000000000000"
-            autoCapitalize="none"
-          />
+          <AccountPicker selected={account} onPick={setAccount} excludeIds={rows.map((r) => r.id)} />
           {err ? <Text style={{ color: C.red, fontSize: 12, marginTop: 10 }}>{err}</Text> : null}
           {flash ? <Text style={{ color: C.green, fontSize: 12, marginTop: 10 }}>{flash}</Text> : null}
           <Button title={t('Accorder le rôle')} onPress={grant} loading={busy} icon="key-outline" />

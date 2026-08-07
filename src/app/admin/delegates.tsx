@@ -3,8 +3,10 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { AccountPicker } from '@/components/account-picker';
 import { ChipSelect } from '@/components/chip-select';
-import { Button, Card, Crest, Field, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { Button, Card, Crest, Header, Row, Screen, SectionTitle } from '@/components/ui';
+import { type AccountSearchResult } from '@/lib/db-accounts';
 import {
   addClubDelegate,
   listClubDelegates,
@@ -29,24 +31,23 @@ export default function AdminDelegates() {
   const delegates = useFetch(() => listClubDelegates(), []);
   const teams = useFetch(() => listTeams(), []);
 
-  const [userId, setUserId] = useState('');
+  const [account, setAccount] = useState<AccountSearchResult | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
   async function grant() {
-    const uid = userId.trim();
-    if (!uid || !teamId) {
-      setErr(t('Renseigne l’identifiant du compte et choisis un club.'));
+    if (!account || !teamId) {
+      setErr(t('Choisis un compte et un club.'));
       return;
     }
     setErr(null);
     setFlash(null);
     setBusy(true);
     try {
-      await addClubDelegate(uid, teamId);
-      setUserId('');
+      await addClubDelegate(account.id, teamId);
+      setAccount(null);
       setFlash(t('Délégation accordée.'));
       await delegates.reload();
     } catch (e) {
@@ -94,16 +95,10 @@ export default function AdminDelegates() {
               'Un compte rattaché à un club peut gérer l’effectif de ce club et sa présentation. Il ne peut ni créer de match, ni saisir de score, ni délivrer de licence.',
             )}
           </Text>
-          {/* L'identifiant se lit dans Supabase (Authentication > Users) : on ne
-              cherche pas les comptes par e-mail depuis l'app, la table auth
-              n'est pas exposée au client. */}
-          <Field
-            label={t('Identifiant du compte (UUID)')}
-            value={userId}
-            onChangeText={setUserId}
-            placeholder="00000000-0000-0000-0000-000000000000"
-            autoCapitalize="none"
-          />
+          {/* Recherche par nom ou e-mail via search_accounts (migration 0028),
+              réservée aux admins en base : plus besoin de copier un UUID depuis
+              le dashboard Supabase. */}
+          <AccountPicker selected={account} onPick={setAccount} />
           <Text style={{ color: C.muted, fontSize: 12, marginTop: 12, marginBottom: 6 }}>{t('Club')}</Text>
           <ChipSelect
             options={(teams.data ?? []).map((tm) => ({ id: tm.id, label: tm.name }))}
