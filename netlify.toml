@@ -1,0 +1,30 @@
+# =====================================================================
+# Déploiement Netlify — site FGBB (Fédération Guinéenne de Basket-Ball).
+#
+# Le site vit dans le sous-dossier website/ ; on le publie tel quel
+# (fichiers statiques, aucun build nécessaire). Avec ce fichier, aucun
+# réglage manuel n'est requis dans l'interface Netlify.
+#
+# Mise en ligne : Netlify -> "Add new site" -> "Import an existing project"
+# -> connectez ce dépôt GitHub -> Deploy. C'est tout.
+# =====================================================================
+
+[build]
+  publish = "website"
+  command = "echo 'FGBB — site statique, aucun build.'"
+
+# En-têtes de sécurité de base. Volontairement SANS Content-Security-Policy,
+# pour ne pas bloquer le client Supabase (chargé depuis le CDN jsDelivr) ni
+# les appels à l'API Supabase depuis app.html.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+# Les images ont un nom stable : on peut les mettre en cache longtemps.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

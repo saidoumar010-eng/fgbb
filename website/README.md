@@ -60,9 +60,20 @@ npx serve .
 2. Dépôt → **Settings → Pages** → source = branche + dossier `/website` (ou placez le contenu à la racine d'une branche `gh-pages`).
 3. L'URL publique sera de la forme `https://<compte>.github.io/<repo>/`.
 
-### Netlify / Vercel / Cloudflare Pages
-- Glissez-déposez le dossier `website/` (Netlify Drop), ou reliez le dépôt.
-- **Publish directory** : `website` · **Build command** : *(aucune)*.
+### Netlify (recommandé — config déjà prête)
+Un fichier [`netlify.toml`](../netlify.toml) est présent à la racine du dépôt :
+il publie automatiquement le dossier `website/`. Aucun réglage manuel.
+1. Sur [Netlify](https://app.netlify.com) → **Add new site → Import an existing project**.
+2. Connectez ce dépôt GitHub → **Deploy**. C'est tout.
+   *(Ou, sans Git : glissez-déposez le dossier `website/` sur Netlify Drop.)*
+
+### Vercel (config déjà prête)
+Un fichier [`vercel.json`](../vercel.json) à la racine sert le dossier `website/`.
+1. Sur [Vercel](https://vercel.com) → **Add New → Project** → importez ce dépôt.
+2. Laissez les réglages par défaut → **Deploy** (le `vercel.json` s'occupe du reste).
+
+### Cloudflare Pages
+- Reliez le dépôt · **Build output directory** : `website` · **Build command** : *(aucune)*.
 
 ### Nom de domaine
 Idéalement un domaine propre, ex. `fgbb.gn` ou `app.fgbb.gn`, à faire pointer
