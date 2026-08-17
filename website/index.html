@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FGBB — Fédération Guinéenne de Basket-Ball</title>
+  <meta name="description" content="L'application officielle de la Fédération Guinéenne de Basket-Ball : scores en direct, box score, classements, leaders, vidéos, actualités et Fan Zone. Bientôt sur Google Play." />
+  <meta name="theme-color" content="#06201C" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="FGBB — Fédération Guinéenne de Basket-Ball" />
+  <meta property="og:description" content="Scores en direct, classements, leaders, vidéos et Fan Zone du basket guinéen. Bientôt sur Google Play." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/logo-card.png" />
+</head>
+<body>
+
+  <!-- ======================================================= NAV -->
+  <header class="nav" id="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html" aria-label="Accueil FGBB">
+        <img src="assets/icon.png" alt="Logo FGBB" />
+        <span class="brand-txt">
+          <b>FGBB</b>
+          <small>Basket-Ball · Guinée</small>
+        </span>
+      </a>
+
+      <nav class="nav-links" aria-label="Navigation principale">
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#pour-qui">Pour qui</a>
+        <a href="#apercu">Aperçu</a>
+        <a href="#federation">La fédération</a>
+        <a href="support.html">Support</a>
+        <a href="app.html#connexion" class="m-only">Se connecter</a>
+        <a href="app.html" class="m-only">Ouvrir l'app</a>
+      </nav>
+
+      <div class="nav-cta">
+        <a class="btn ghost sm" href="app.html#connexion">Se connecter</a>
+        <a class="btn sm" href="app.html">
+          Ouvrir l'app
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ======================================================= HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <svg class="hero-court" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g fill="none" stroke="#3BD61B" stroke-opacity="0.16" stroke-width="2">
+        <rect x="410" y="60" width="360" height="480" />
+        <circle cx="590" cy="300" r="70" />
+        <path d="M410 190 h150 v220 h-150" />
+        <circle cx="560" cy="300" r="46" />
+        <path d="M410 300 h0" />
+        <circle cx="590" cy="60" r="120" stroke-opacity="0.1" />
+      </g>
+    </svg>
+
+    <div class="container hero-grid">
+      <div class="hero-copy reveal">
+        <span class="eyebrow">Application officielle</span>
+        <h1>Tout le basket guinéen, <span class="hl">en direct</span> dans votre poche.</h1>
+        <p class="hero-lead">
+          Scores minute par minute, box score complet, classements, leaders,
+          vidéos et Fan Zone. L'application de la Fédération Guinéenne de
+          Basket-Ball réunit supporters, clubs et officiels autour du même écran.
+        </p>
+
+        <div class="hero-slogan">
+          <span class="bar"></span>
+          Fédérer la passion, inspirer la nation.
+        </div>
+
+        <div class="hero-actions" id="telecharger">
+          <a class="btn" href="app.html">
+            Ouvrir l'application web
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="store-badge" href="#telecharger" aria-label="Bientôt disponible sur Google Play">
+            <svg class="glyph" viewBox="0 0 512 512" aria-hidden="true">
+              <path fill="#3BD61B" d="M47 24C40 28 36 35 36 45v422c0 10 4 17 11 21l224-233L47 24z"/>
+              <path fill="#FCD116" d="M355 190L61 18c-4-3-8-4-12-4l223 233 83-57z"/>
+              <path fill="#E23B3B" d="M470 232l-93-53-77 68 77 68 93-53c16-9 16-21 0-30z"/>
+              <path fill="#009460" d="M49 494c8 1 15-1 21-5l287-165-83-57-225 227z"/>
+            </svg>
+            <span class="txt"><small>Bientôt sur</small><b>Google Play</b></span>
+            <span class="soon">Bientôt</span>
+          </a>
+        </div>
+
+        <p class="hero-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          Utilisable dès maintenant depuis votre navigateur · <a href="app.html#inscription" style="color:var(--accent);font-weight:600">Créer un compte supporter</a>
+        </p>
+      </div>
+
+      <!-- Maquette de l'application -->
+      <div class="phone-wrap reveal">
+        <div class="phone-glow"></div>
+
+        <div class="float-pill one">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Score en temps réel
+        </div>
+        <div class="float-pill two">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/><circle cx="12" cy="4" r="2"/></svg>
+          Vote MVP du match
+        </div>
+
+        <div class="phone" role="img" aria-label="Aperçu de l'application FGBB montrant un match en direct et le classement">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="status-bar">
+              <span>9:41</span>
+              <span class="icons"><span></span><span></span><span class="batt"></span></span>
+            </div>
+
+            <div class="app-scroll">
+              <div class="app-topbar">
+                <span class="t">Accueil</span>
+                <span class="av"></span>
+              </div>
+
+              <!-- Carte match à la une -->
+              <div class="feat-card">
+                <span class="live">En direct</span>
+                <div class="comp">Championnat D1 · Journée 8</div>
+                <div class="score-row">
+                  <div class="score-team">
+                    <span class="badge" style="background:#1C3F8F">JOR</span>
+                    <span class="nm">JORFOF</span>
+                  </div>
+                  <div style="text-align:center">
+                    <div class="score-num">64 <span class="score-sep">:</span> 61</div>
+                  </div>
+                  <div class="score-team right">
+                    <span class="badge" style="background:#9A2A2A">HOR</span>
+                    <span class="nm">HOROYA</span>
+                  </div>
+                </div>
+                <div class="qt">
+                  <span>18–15</span><span>16–14</span><span>15–17</span><span>Q4 · 3:12</span>
+                </div>
+              </div>
+
+              <!-- Raccourcis -->
+              <div class="chips">
+                <div class="chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18"/></svg>
+                  Matchs
+                </div>
+                <div class="chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
+                  Classement
+                </div>
+                <div class="chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>
+                  Leaders
+                </div>
+                <div class="chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>
+                  Vidéos
+                </div>
+              </div>
+
+              <!-- Classement -->
+              <div class="mini-title">Classement · D1</div>
+              <div class="rank">
+                <div class="rank-row head"><span class="pos">#</span><span class="dot" style="background:transparent"></span><span class="team">Équipe</span><span class="pts">Pts</span></div>
+                <div class="rank-row"><span class="pos">1</span><span class="dot" style="background:#1C3F8F"></span><span class="team">JORFOF</span><span class="pts">14</span></div>
+                <div class="rank-row"><span class="pos">2</span><span class="dot" style="background:#B5891F"></span><span class="team">NABAYA</span><span class="pts">13</span></div>
+                <div class="rank-row"><span class="pos">3</span><span class="dot" style="background:#1F7A8C"></span><span class="team">TSK</span><span class="pts">11</span></div>
+                <div class="rank-row"><span class="pos">4</span><span class="dot" style="background:#9A2A2A"></span><span class="team">HOROYA</span><span class="pts">10</span></div>
+              </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div class="phone-tabbar">
+              <div class="tab active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
+                Accueil
+              </div>
+              <div class="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18"/></svg>
+                Matchs
+              </div>
+              <div class="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v12H4zM4 21h16"/></svg>
+                Actus
+              </div>
+              <div class="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8"/></svg>
+                Classement
+              </div>
+              <div class="tab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+                Compte
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================== STRIP -->
+  <div class="strip">
+    <div class="container strip-inner">
+      <div class="strip-item"><b>5</b> espaces&nbsp;: fans, clubs, officiels</div>
+      <div class="strip-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Scores en direct
+      </div>
+      <div class="strip-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/></svg>
+        Fan Zone &amp; badges
+      </div>
+      <div class="strip-item"><b>100%</b> gratuit, sans pub</div>
+    </div>
+  </div>
+
+  <!-- ============================================== FONCTIONNALITÉS -->
+  <section class="section" id="fonctionnalites">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow">Fonctionnalités</span>
+        <h2>Le championnat, action par action.</h2>
+        <p>Du coup d'envoi au buzzer final, chaque panier compte. L'app suit la
+          saison en temps réel et donne vie aux statistiques.</p>
+      </div>
+
+      <div class="feature-grid">
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <h3>Score en direct</h3>
+          <p>La table de marque saisit chaque panier ; le score et le fil du match
+            se mettent à jour instantanément sur tous les téléphones, sans rafraîchir.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM4 9h16M9 5v14"/></svg></div>
+          <h3>Box score détaillé</h3>
+          <p>Points, rebonds, passes, interceptions, contres et évaluation, joueur
+            par joueur et quart-temps par quart-temps.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></div>
+          <h3>Classements &amp; Leaders</h3>
+          <p>Classement de chaque compétition en direct, et le palmarès des
+            meilleurs marqueurs, rebondeurs, passeurs, intercepteurs et contreurs.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg></div>
+          <h3>Vidéos &amp; résumés</h3>
+          <p>Galerie de résumés et de temps forts, filtrable par compétition, pour
+            revivre les meilleurs moments de la saison.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/></svg></div>
+          <h3>Fan Zone</h3>
+          <p>Sondages de la fédération, vote du MVP de chaque match, pronostics
+            avant match et quiz : les supporters au cœur du jeu.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 19a6 6 0 0112 0M14 19a5 5 0 017-4.6"/></svg></div>
+          <h3>Fiches &amp; comparateur</h3>
+          <p>Fiches détaillées des joueurs et des clubs, avec un comparateur pour
+            mettre deux joueurs ou deux équipes côte à côte.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+          <h3>Notifications de match</h3>
+          <p>Recevez une alerte à la publication d'un nouveau match ou d'une
+            actualité, pour ne rien manquer de votre équipe.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+          <h3>Actualités &amp; agenda</h3>
+          <p>Le fil éditorial de la fédération, l'agenda des rencontres et le
+            calendrier de la saison, toujours à jour.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+          <h3>À l'heure de Conakry</h3>
+          <p>Tous les horaires affichés à l'heure de la Guinée (GMT). Thème clair
+            ou sombre, français ou anglais, au choix.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== POUR QUI -->
+  <section class="section" id="pour-qui" style="background:linear-gradient(180deg,transparent,rgba(14,95,88,0.12),transparent)">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow">Pour qui</span>
+        <h2>Un écran pour toute la famille du basket.</h2>
+        <p>Supporters, clubs et officiels : chacun dispose de son espace, du
+          simple suivi des scores à la gestion complète de la compétition.</p>
+      </div>
+
+      <div class="audience">
+        <article class="aud-card reveal">
+          <span class="tag">Supporters</span>
+          <h3>Vibrez avec votre équipe</h3>
+          <p>Suivez la saison où que vous soyez et devenez un vrai douzième homme.</p>
+          <ul class="aud-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Scores en direct et notifications de match</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Équipes favorites et joueurs suivis</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Votes MVP, pronostics, quiz et badges</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Partage des matchs et articles</li>
+          </ul>
+        </article>
+
+        <article class="aud-card reveal">
+          <span class="tag">Clubs</span>
+          <h3>Gérez votre club</h3>
+          <p>Un espace dédié pour l'administration sportive de votre équipe.</p>
+          <ul class="aud-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Licences et effectif des joueurs</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Feuilles de match et discipline</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Publications et messages de la fédération</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Inscription des équipes à la compétition</li>
+          </ul>
+        </article>
+
+        <article class="aud-card reveal">
+          <span class="tag">Fédération</span>
+          <h3>Pilotez la compétition</h3>
+          <p>L'espace fédération orchestre toute la saison, du calendrier au titre.</p>
+          <ul class="aud-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Clubs, joueurs, compétitions et calendrier</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Contrôleur de score en direct à la table</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Feuille de match lue par l'IA (photo → stats)</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Officiels, arbitres, sanctions et sondages</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== APERÇU / SPLIT -->
+  <section class="section" id="apercu">
+    <div class="container split">
+      <div class="split-media reveal">
+        <div class="showcase-tiles">
+          <div class="tile tall">
+            <div>
+              <div class="lbl" style="margin-top:0">Mise à jour</div>
+              <div class="big">Temps<br>réel</div>
+            </div>
+            <div class="lbl">Chaque panier saisi à la table apparaît aussitôt sur l'app des supporters.</div>
+          </div>
+          <div class="tile">
+            <div class="big">8</div>
+            <div class="lbl">stats suivies par joueur</div>
+          </div>
+          <div class="tile">
+            <div class="big">FR·EN</div>
+            <div class="lbl">application bilingue</div>
+          </div>
+          <div class="tile">
+            <div class="big">MVP</div>
+            <div class="lbl">élu par les supporters</div>
+          </div>
+          <div class="tile">
+            <div class="big">0€</div>
+            <div class="lbl">gratuit, sans publicité</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="split-copy reveal">
+        <span class="eyebrow">L'expérience</span>
+        <h2>Conçue pour le basket guinéen, de A à Z.</h2>
+        <p>Interface sombre « vert canard » inspirée des affiches officielles de la
+          D1, aux couleurs de la nation. Rapide, lisible et pensée pour être suivie
+          depuis un stade, un maquis ou son canapé.</p>
+        <ul class="checklist">
+          <li>
+            <span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span><b>Fil du match en direct</b><span>Chaque action commentée, panier après panier.</span></span>
+          </li>
+          <li>
+            <span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span><b>Face-à-face historique</b><span>Le bilan des confrontations entre deux clubs.</span></span>
+          </li>
+          <li>
+            <span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span><b>Recherche &amp; favoris</b><span>Retrouvez un joueur, un club ou un match en un geste.</span></span>
+          </li>
+          <li>
+            <span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span><b>Tirer pour rafraîchir</b><span>Un simple geste et tout se met à jour.</span></span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== ÉTAPES -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head center reveal">
+        <span class="eyebrow">En trois temps</span>
+        <h2>Prêt en moins d'une minute.</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="n">1</div>
+          <h3>Installez l'application</h3>
+          <p>Téléchargez FGBB depuis Google Play (bientôt disponible). L'iOS suivra.</p>
+        </div>
+        <div class="step reveal">
+          <div class="n">2</div>
+          <h3>Créez votre compte fan</h3>
+          <p>Un compte supporter gratuit en quelques secondes, directement depuis l'écran Compte.</p>
+        </div>
+        <div class="step reveal">
+          <div class="n">3</div>
+          <h3>Suivez vos équipes</h3>
+          <p>Ajoutez vos clubs favoris, activez les notifications et vivez la saison.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== LA FÉDÉRATION -->
+  <section class="section about" id="federation" style="background:linear-gradient(180deg,transparent,rgba(14,95,88,0.14))">
+    <div class="container about-grid">
+      <div class="about-logo reveal">
+        <div class="halo"></div>
+        <img src="assets/logo-card.png" alt="Logo officiel de la Fédération Guinéenne de Basket-Ball" />
+      </div>
+      <div class="about-copy reveal">
+        <span class="eyebrow">La fédération</span>
+        <h2>Fédération Guinéenne de Basket-Ball</h2>
+        <p>Sous l'emblème de l'éléphant et du ballon tricolore, la FGBB œuvre au
+          développement du basket-ball en Guinée : organiser les compétitions
+          nationales, structurer les clubs et faire rayonner nos talents.</p>
+        <p>Cette application est l'outil officiel de la fédération pour rapprocher
+          le championnat de ses supporters, partout dans le pays et dans la diaspora.</p>
+        <p class="mission">« Fédérer la passion, inspirer la nation. »</p>
+        <div class="tricolor" style="margin-top:24px"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== CTA -->
+  <section class="section cta">
+    <div class="container">
+      <div class="cta-box reveal">
+        <div class="tricolor"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+        <h2>Soyez prêt pour le coup d'envoi.</h2>
+        <p>L'application web est déjà disponible : créez votre compte et suivez la
+          saison dès maintenant. La version Google Play arrive très bientôt.</p>
+        <div class="cta-actions">
+          <a class="btn" href="app.html">
+            Ouvrir l'application web
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="store-badge" href="#telecharger">
+            <svg class="glyph" viewBox="0 0 512 512" aria-hidden="true">
+              <path fill="#3BD61B" d="M47 24C40 28 36 35 36 45v422c0 10 4 17 11 21l224-233L47 24z"/>
+              <path fill="#FCD116" d="M355 190L61 18c-4-3-8-4-12-4l223 233 83-57z"/>
+              <path fill="#E23B3B" d="M470 232l-93-53-77 68 77 68 93-53c16-9 16-21 0-30z"/>
+              <path fill="#009460" d="M49 494c8 1 15-1 21-5l287-165-83-57-225 227z"/>
+            </svg>
+            <span class="txt"><small>Bientôt sur</small><b>Google Play</b></span>
+            <span class="soon">Bientôt</span>
+          </a>
+          <a class="btn ghost" href="support.html">Nous contacter</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="index.html">
+            <img src="assets/icon.png" alt="Logo FGBB" />
+            <span class="brand-txt"><b>FGBB</b><small>Basket-Ball · Guinée</small></span>
+          </a>
+          <p>L'application officielle de la Fédération Guinéenne de Basket-Ball.
+            Fédérer la passion, inspirer la nation.</p>
+          <div class="socials">
+            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.8-1.6 1.6V12h2.7l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg></a>
+            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.2-.4-4.7a2.5 2.5 0 00-1.7-1.7C19.4 5.2 12 5.2 12 5.2s-7.4 0-8.9.4A2.5 2.5 0 001.4 7.3C1 8.8 1 12 1 12s0 3.2.4 4.7a2.5 2.5 0 001.7 1.7c1.5.4 8.9.4 8.9.4s7.4 0 8.9-.4a2.5 2.5 0 001.7-1.7C23 15.2 23 12 23 12zM9.8 15.3V8.7l5.7 3.3-5.7 3.3z"/></svg></a>
+            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Application</h4>
+          <ul>
+            <li><a href="#fonctionnalites">Fonctionnalités</a></li>
+            <li><a href="#pour-qui">Pour qui</a></li>
+            <li><a href="#apercu">Aperçu</a></li>
+            <li><a href="#telecharger">Télécharger</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Fédération</h4>
+          <ul>
+            <li><a href="#federation">À propos</a></li>
+            <li><a href="support.html">Support &amp; contact</a></li>
+            <li><a href="support.html#faq">Questions fréquentes</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Légal</h4>
+          <ul>
+            <li><a href="confidentialite.html">Confidentialité</a></li>
+            <li><a href="suppression-compte.html">Suppression de compte</a></li>
+            <li><a href="confidentialite.html#contact">Nous écrire</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© <span id="year">2026</span> Fédération Guinéenne de Basket-Ball. Tous droits réservés.</span>
+        <span class="made">
+          <span>Conçu à Conakry</span>
+          <span class="tricolor"><span class="r"></span><span class="y"></span><span class="g"></span></span>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Année dynamique
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Menu mobile
+    var nav = document.getElementById('nav');
+    var toggle = document.getElementById('navToggle');
+    toggle.addEventListener('click', function () {
+      var open = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    nav.querySelectorAll('.nav-links a').forEach(function (a) {
+      a.addEventListener('click', function () { nav.classList.remove('open'); });
+    });
+
+    // Révélation au défilement
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+      // Filet de sécurité : rien ne doit rester invisible si l'observateur ne se déclenche pas.
+      setTimeout(function () {
+        document.querySelectorAll('.reveal:not(.in)').forEach(function (el) { el.classList.add('in'); });
+      }, 2500);
+    } else {
+      document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+    }
+  </script>
+</body>
+</html>

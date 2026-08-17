@@ -6,6 +6,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "npx expo start --web --port 8081"],
       "port": 8081
+    },
+    {
+      "name": "site-fgbb",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npx --yes serve website -l 5599"],
+      "port": 5599
     }
   ]
 }

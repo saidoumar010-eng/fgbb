@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FGBB — L'application</title>
+  <meta name="description" content="Suivez le basket guinéen en direct : matchs, classements, leaders et actualités. Connectez-vous ou créez votre compte supporter." />
+  <meta name="theme-color" content="#06201C" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body class="app-body">
+
+  <!-- ============================================== EN-TÊTE -->
+  <header class="app-header">
+    <div class="container app-header-row">
+      <a class="brand" href="index.html" aria-label="Retour au site FGBB">
+        <img src="assets/icon.png" alt="Logo FGBB" />
+        <span class="brand-txt"><b>FGBB</b><small>Basket-Ball · Guinée</small></span>
+      </a>
+
+      <div class="app-auth" id="authArea">
+        <!-- rempli par app.js selon l'état de connexion -->
+        <button class="btn ghost sm" id="btnLoginHeader">Se connecter</button>
+        <button class="btn sm" id="btnSignupHeader">Créer un compte</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================== ONGLETS -->
+  <nav class="app-tabs" aria-label="Sections de l'application">
+    <div class="container app-tabs-row" id="tabs">
+      <button class="app-tab active" data-route="accueil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
+        <span class="lbl">Accueil</span>
+      </button>
+      <button class="app-tab" data-route="matchs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18"/></svg>
+        <span class="lbl">Matchs</span>
+      </button>
+      <button class="app-tab" data-route="classement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
+        <span class="lbl">Classement</span>
+      </button>
+      <button class="app-tab" data-route="actus">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v14H4zM4 9h16M9 5v14"/></svg>
+        <span class="lbl">Actus</span>
+      </button>
+      <button class="app-tab" data-route="leaders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>
+        <span class="lbl">Leaders</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================== VUE -->
+  <main class="container view" id="view" aria-live="polite">
+    <div class="loading"><div class="spinner"></div>Chargement…</div>
+  </main>
+
+  <!-- ============================================== MODALE AUTH -->
+  <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal">
+      <div class="modal-top">
+        <span class="logo-mini">
+          <img src="assets/icon.png" alt="" />
+          <b id="authTitle">Bienvenue</b>
+        </span>
+        <button class="modal-close" id="authClose" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" type="button">Se connecter</button>
+        <button class="auth-tab" id="tabSignup" type="button">Créer un compte</button>
+      </div>
+
+      <form class="auth-form" id="authForm" autocomplete="on">
+        <div class="auth-error" id="authError"></div>
+        <div class="auth-ok" id="authOk"></div>
+
+        <div class="field" id="nameField" style="display:none">
+          <label for="fullName">Nom / pseudo</label>
+          <input type="text" id="fullName" name="name" placeholder="Ex. Mamadou Diallo" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="email">Adresse e-mail</label>
+          <input type="email" id="email" name="email" placeholder="vous@exemple.com" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required minlength="6" />
+        </div>
+
+        <button class="btn" type="submit" id="authSubmit">Se connecter</button>
+
+        <p class="auth-hint" id="authHint">
+          En continuant, vous acceptez notre
+          <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
