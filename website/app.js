@@ -423,6 +423,75 @@ async function listMyAttempts() {
   if (error) throw error;
   return data ?? [];
 }
+
+// -- commentaires (match & actus)
+async function listComments(targetType, targetId) {
+  const { data, error } = await sb.from('comments').select('*').eq('target_type', targetType).eq('target_id', targetId).order('created_at', { ascending: false }).limit(200);
+  if (error) throw error;
+  return data ?? [];
+}
+async function addComment(targetType, targetId, userId, body) {
+  const { data, error } = await sb.from('comments').insert({ target_type: targetType, target_id: targetId, user_id: userId, body }).select('*').single();
+  if (error) throw error;
+  return data;
+}
+// -- chat en direct
+async function listChatMessages(matchId, limit = 60) {
+  const { data, error } = await sb.from('chat_messages').select('*').eq('match_id', matchId).order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+async function sendChatMessage(matchId, userId, body) {
+  const { error } = await sb.from('chat_messages').insert({ match_id: matchId, user_id: userId, body: body.trim() });
+  if (error) throw error;
+}
+// -- photos
+async function listPhotos({ matchId, album } = {}) {
+  let q = sb.from('photos').select('*');
+  if (matchId) q = q.eq('match_id', matchId);
+  if (album) q = q.eq('album', album);
+  const { data, error } = await q.order('position').order('created_at');
+  if (error) throw error;
+  return data ?? [];
+}
+async function listAlbums() {
+  const { data, error } = await sb.from('photos').select('id, match_id, album, url, created_at').order('position').order('created_at');
+  if (error) throw error;
+  const groups = new Map();
+  for (const p of data ?? []) {
+    if (!p.match_id && !p.album) continue;
+    const key = p.match_id ? 'match:' + p.match_id : 'album:' + p.album;
+    const found = groups.get(key);
+    if (found) { found.count++; if (p.created_at > found.lastAt) found.lastAt = p.created_at; continue; }
+    groups.set(key, { key, kind: p.match_id ? 'match' : 'album', album: p.match_id ? null : p.album, matchId: p.match_id, match: null, cover: p.url, count: 1, lastAt: p.created_at });
+  }
+  const list = [...groups.values()];
+  const matchIds = list.map((g) => g.matchId).filter(Boolean);
+  if (matchIds.length) {
+    const { data: matches } = await sb.from('matches').select(MATCH_SELECT).in('id', matchIds);
+    const byId = new Map((matches ?? []).map((m) => [m.id, m]));
+    list.forEach((g) => { if (g.matchId) g.match = byId.get(g.matchId) ?? null; });
+  }
+  list.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  return list;
+}
+// -- officiels d'un match
+const OFFICIAL_ROLE_LABELS = { principal: 'Arbitre principal', assistant: 'Arbitre assistant', table: 'Table de marque', commissaire: 'Commissaire' };
+async function listMatchOfficials(matchId) {
+  const { data, error } = await sb.from('match_officials').select('*, referee:referees(*)').eq('match_id', matchId);
+  if (error) throw error;
+  const rank = (r) => ['principal', 'assistant', 'table', 'commissaire'].indexOf(r);
+  return (data ?? []).sort((a, b) => rank(a.role) - rank(b.role));
+}
+function errMsg(e) { return e && typeof e === 'object' && 'message' in e && e.message ? e.message : 'Action impossible'; }
+function timeAgoShort(iso) {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "à l'instant";
+  const m = Math.floor(s / 60); if (m < 60) return `il y a ${m} min`;
+  const hr = Math.floor(m / 60); if (hr < 24) return `il y a ${hr} h`;
+  const d = Math.floor(hr / 24); if (d < 31) return `il y a ${d} j`;
+  return fmtDate(iso);
+}
 function fetchTeamsMap() {
   if (!teamsPromise) {
     teamsPromise = sb
@@ -805,12 +874,16 @@ async function renderMatchDetail(id) {
   if (!stats.length && !events.length) {
     html += emptyHtml('Détails à venir', done ? 'La feuille de match sera publiée prochainement.' : 'Les statistiques apparaîtront pendant et après la rencontre.', 'ball');
   }
-  html += `<div id="fanSlot"></div><div id="h2hSlot"></div>`;
+  html += `<div id="officialsSlot"></div><div id="fanSlot"></div><div id="photosSlot"></div><div id="chatSlot"></div><div id="h2hSlot"></div><div id="commentsSlot"></div>`;
 
   view.innerHTML = html;
   wireBack();
+  fillOfficials(m.id);
   fillMatchFan(m, stats);
+  fillMatchPhotos(m.id);
+  fillChat(m.id);
   fillHeadToHead(m);
+  fillComments('match', m.id, '#commentsSlot');
 
   clearTimeout(detailTimer);
   if (live) {
@@ -913,8 +986,9 @@ async function renderNewsDetail(id) {
     <h1 class="article-title">${esc(n.title)}</h1>
     <div class="article-meta">${d}${n.author ? ' · ' + esc(n.author) : ''}</div>
     <div class="article-body">${body}</div>
-  </article>`;
+  </article><div id="commentsSlot"></div>`;
   view.innerHTML = html; wireBack();
+  fillComments('news', id, '#commentsSlot');
 }
 
 // ------------------------------------------------------- vidéos
@@ -992,6 +1066,7 @@ function renderPlus() {
     { r: 'quiz', label: 'Quiz', ic: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01"/>' },
     { r: 'palmares', label: 'Palmarès', ic: '<circle cx="12" cy="8" r="5"/><path d="M8.2 12.5L7 22l5-3 5 3-1.2-9.5"/>' },
     { r: 'medias', label: 'Médias', ic: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' },
+    { r: 'photos', label: 'Photos', ic: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>' },
     { r: 'agenda', label: 'Agenda', ic: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
     { r: 'arbitres', label: 'Arbitres', ic: '<path d="M6 9l6-6 6 6M6 9v11h12V9M9 13h6"/>' },
     { r: 'discipline', label: 'Discipline', ic: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>' },
@@ -1315,6 +1390,111 @@ async function renderQuizDetail(id) {
   });
 }
 
+// -- officiels du match (remplit #officialsSlot)
+async function fillOfficials(matchId) {
+  const slot = $('#officialsSlot');
+  if (!slot) return;
+  const offs = await safe(listMatchOfficials(matchId), []);
+  if ($('#officialsSlot') !== slot || !offs.length) return;
+  slot.innerHTML = `<div class="block"><div class="block-head"><h2>Officiels</h2></div><div class="roster">${offs.map((o) => `<div class="roster-row"><span class="rr-name">${esc(o.referee?.full_name || '—')}</span><span class="rr-pos">${OFFICIAL_ROLE_LABELS[o.role] || ''}</span></div>`).join('')}</div></div>`;
+}
+// -- photos du match (remplit #photosSlot)
+async function fillMatchPhotos(matchId) {
+  const slot = $('#photosSlot');
+  if (!slot) return;
+  const photos = await safe(listPhotos({ matchId }), []);
+  if ($('#photosSlot') !== slot || !photos.length) return;
+  const urls = photos.map((p) => p.url);
+  slot.innerHTML = `<div class="block"><div class="block-head"><h2>Photos</h2></div><div class="photo-grid">${photos.map((p, i) => `<button class="photo-thumb" data-i="${i}"><img src="${esc(p.url)}" alt="${esc(p.caption || '')}" loading="lazy"></button>`).join('')}</div></div>`;
+  slot.querySelectorAll('.photo-thumb').forEach((b) => b.addEventListener('click', () => openLightbox(urls, Number(b.dataset.i))));
+}
+// -- lightbox photos
+function openLightbox(urls, start) {
+  let i = start;
+  let ov = document.getElementById('lightbox');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'lightbox'; ov.className = 'lightbox'; document.body.appendChild(ov); }
+  const draw = () => {
+    ov.innerHTML = `<button class="lb-close" aria-label="Fermer">✕</button><button class="lb-nav lb-prev" aria-label="Précédent">‹</button><img src="${esc(urls[i])}" alt=""><button class="lb-nav lb-next" aria-label="Suivant">›</button>`;
+    ov.querySelector('.lb-close').onclick = () => ov.classList.remove('open');
+    ov.querySelector('.lb-prev').onclick = (e) => { e.stopPropagation(); i = (i - 1 + urls.length) % urls.length; draw(); };
+    ov.querySelector('.lb-next').onclick = (e) => { e.stopPropagation(); i = (i + 1) % urls.length; draw(); };
+  };
+  draw();
+  ov.classList.add('open');
+  ov.onclick = (e) => { if (e.target === ov) ov.classList.remove('open'); };
+}
+// -- commentaires (match & actus) — remplit un slot donné
+async function fillComments(targetType, targetId, slotSel) {
+  const slot = document.querySelector(slotSel);
+  if (!slot) return;
+  const comments = (await safe(listComments(targetType, targetId), [])).filter((c) => c.status === 'visible');
+  if (document.querySelector(slotSel) !== slot) return;
+  const uid = session?.user?.id;
+  let html = `<div class="block"><div class="block-head"><h2>Commentaires${comments.length ? ` (${comments.length})` : ''}</h2></div>`;
+  if (uid) html += `<div class="comment-form"><textarea id="cmtInput" maxlength="1000" rows="2" placeholder="Votre commentaire…"></textarea><button class="btn sm" id="cmtSend">Publier</button></div>`;
+  else html += `<button class="btn ghost sm" id="cmtLogin" style="margin-bottom:14px">Connectez-vous pour commenter</button>`;
+  html += comments.length ? `<div class="comments">${comments.map((c) => `<div class="comment"><div class="comment-head"><b>${esc(c.author_name || 'Supporter')}</b><span>${timeAgoShort(c.created_at)}</span></div><div class="comment-body">${esc(c.body)}</div></div>`).join('')}</div>` : `<p class="view-sub" style="padding-top:4px">Soyez le premier à commenter.</p>`;
+  html += `</div>`;
+  slot.innerHTML = html;
+  if (uid) {
+    $('#cmtSend')?.addEventListener('click', async () => {
+      const t = $('#cmtInput'); const body = t.value.trim(); if (!body) return;
+      $('#cmtSend').disabled = true;
+      try { await addComment(targetType, targetId, uid, body); t.value = ''; toast('Commentaire publié'); fillComments(targetType, targetId, slotSel); }
+      catch (e) { toast(errMsg(e)); $('#cmtSend').disabled = false; }
+    });
+  } else $('#cmtLogin')?.addEventListener('click', () => openAuth('login'));
+}
+// -- chat en direct (match) — remplit #chatSlot + temps réel
+let chatChannel = null;
+function teardownChat() { if (chatChannel) { try { sb.removeChannel(chatChannel); } catch {} chatChannel = null; } }
+function chatMsgHtml(m) { return `<div class="chat-msg"><b>${esc(m.author_name || 'Supporter')}</b> ${esc(m.body)}</div>`; }
+async function fillChat(matchId) {
+  const slot = $('#chatSlot');
+  if (!slot) return;
+  const msgs = (await safe(listChatMessages(matchId, 60), [])).filter((m) => m.status === 'visible');
+  if ($('#chatSlot') !== slot) return;
+  const uid = session?.user?.id;
+  const list = msgs.slice().reverse();
+  slot.innerHTML = `<div class="block"><div class="block-head"><h2>Chat en direct</h2></div>
+    <div class="chat" id="chatList">${list.map(chatMsgHtml).join('') || '<p class="view-sub" style="padding:8px 2px">Aucun message. Lancez la discussion !</p>'}</div>
+    ${uid ? `<div class="comment-form"><input id="chatInput" maxlength="300" placeholder="Votre message…" /><button class="btn sm" id="chatSend">Envoyer</button></div>` : `<button class="btn ghost sm" id="chatLogin" style="margin-top:10px">Connectez-vous pour discuter</button>`}
+  </div>`;
+  const listEl = $('#chatList'); if (listEl) listEl.scrollTop = listEl.scrollHeight;
+  if (uid) {
+    const send = async () => { const inp = $('#chatInput'); const body = inp.value.trim(); if (!body) return; inp.value = ''; try { await sendChatMessage(matchId, uid, body); } catch (e) { toast(errMsg(e)); } };
+    $('#chatSend')?.addEventListener('click', send);
+    $('#chatInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  } else $('#chatLogin')?.addEventListener('click', () => openAuth('login'));
+  teardownChat();
+  try {
+    chatChannel = sb.channel('chat-' + matchId + '-' + Date.now())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'match_id=eq.' + matchId }, (payload) => {
+        const el = $('#chatList'); if (!el) return;
+        const m = payload.new; if (m.status && m.status !== 'visible') return;
+        const ph = el.querySelector('.view-sub'); if (ph) el.innerHTML = '';
+        el.insertAdjacentHTML('beforeend', chatMsgHtml(m)); el.scrollTop = el.scrollHeight;
+      }).subscribe();
+  } catch {}
+}
+// -- photos (galeries)
+async function renderPhotos() {
+  view.innerHTML = `<h1 class="view-title">Photos</h1><p class="view-sub">Galeries de la fédération.</p><div id="phBody">${loadingHtml()}</div>`;
+  const albums = await safe(listAlbums(), null);
+  const el = $('#phBody');
+  if (albums === null) return void (el.innerHTML = errorHtml());
+  if (!albums.length) return void (el.innerHTML = emptyHtml('Pas encore de photo', 'Les galeries apparaîtront ici.', 'news'));
+  el.innerHTML = `<div class="news-grid">${albums.map((g, i) => {
+    const title = g.kind === 'match' && g.match ? `${g.match.home_team?.name || ''} — ${g.match.away_team?.name || ''}` : (g.album || 'Album');
+    return `<button class="news-card gallery-card" data-i="${i}"><div class="news-cover">${g.cover ? `<img src="${esc(g.cover)}" alt="">` : ''}</div><div class="news-body"><h3>${esc(title)}</h3><span class="date">${g.count} photo${g.count > 1 ? 's' : ''}</span></div></button>`;
+  }).join('')}</div>`;
+  el.querySelectorAll('.gallery-card').forEach((b) => b.addEventListener('click', async () => {
+    const g = albums[Number(b.dataset.i)];
+    const photos = await safe(listPhotos(g.matchId ? { matchId: g.matchId } : { album: g.album }), []);
+    if (photos.length) openLightbox(photos.map((p) => p.url), 0);
+  }));
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   matchs: renderMatchs,
@@ -1336,6 +1516,7 @@ const RENDERERS = {
   agenda: renderAgenda,
   supporters: renderSupporters,
   quiz: renderQuiz,
+  photos: renderPhotos,
 };
 
 function scheduleLiveRefresh(hasLive) {
@@ -1348,7 +1529,7 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz'];
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz', 'photos'];
 function setActiveTab(route) {
   const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
@@ -1364,6 +1545,7 @@ function render(route) {
   (RENDERERS[route] || renderAccueil)();
 }
 function handleHash() {
+  teardownChat();
   const h = location.hash.replace('#', '');
   if (h === 'connexion' || h === 'inscription') {
     if (!viewRendered) render('accueil');
