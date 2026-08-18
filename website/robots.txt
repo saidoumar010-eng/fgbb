@@ -1,0 +1,6 @@
+# FGBB — Fédération Guinéenne de Basket-Ball
+# Autorise tous les moteurs de recherche à indexer l'ensemble du site.
+User-agent: *
+Allow: /
+
+Sitemap: https://fgbb.gn/sitemap.xml

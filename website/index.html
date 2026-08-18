@@ -4,17 +4,62 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FGBB — Fédération Guinéenne de Basket-Ball</title>
-  <meta name="description" content="L'application officielle de la Fédération Guinéenne de Basket-Ball : scores en direct, box score, classements, leaders, vidéos, actualités et Fan Zone. Bientôt sur Google Play." />
+  <meta name="description" content="Site et application officiels de la Fédération Guinéenne de Basket-Ball (FGBB) : scores en direct, classements, leaders, actualités et Fan Zone du championnat de basket de Guinée." />
+  <meta name="keywords" content="FGBB, Fédération Guinéenne de Basket-Ball, fédération guinéenne de basket, basket Guinée, basketball Guinée, championnat basket Guinée, basket Conakry" />
+  <meta name="author" content="Fédération Guinéenne de Basket-Ball" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://fgbb.gn/" />
   <meta name="theme-color" content="#06201C" />
   <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="apple-touch-icon" href="assets/icon.png" />
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- Open Graph -->
+  <!-- Open Graph / réseaux sociaux -->
+  <meta property="og:site_name" content="FGBB — Fédération Guinéenne de Basket-Ball" />
   <meta property="og:title" content="FGBB — Fédération Guinéenne de Basket-Ball" />
-  <meta property="og:description" content="Scores en direct, classements, leaders, vidéos et Fan Zone du basket guinéen. Bientôt sur Google Play." />
+  <meta property="og:description" content="Scores en direct, classements, leaders et actualités du basket guinéen." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="assets/logo-card.png" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:url" content="https://fgbb.gn/" />
+  <meta property="og:image" content="https://fgbb.gn/assets/logo-card.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FGBB — Fédération Guinéenne de Basket-Ball" />
+  <meta name="twitter:description" content="Scores en direct, classements, leaders et actualités du basket guinéen." />
+  <meta name="twitter:image" content="https://fgbb.gn/assets/logo-card.png" />
+
+  <!-- Données structurées : identité de la fédération pour Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SportsOrganization",
+        "@id": "https://fgbb.gn/#organisation",
+        "name": "Fédération Guinéenne de Basket-Ball",
+        "alternateName": "FGBB",
+        "sport": "Basketball",
+        "url": "https://fgbb.gn/",
+        "logo": "https://fgbb.gn/assets/logo-card.png",
+        "image": "https://fgbb.gn/assets/logo-card.png",
+        "description": "Fédération officielle du basket-ball en Guinée : championnats, clubs, scores en direct, classements et actualités.",
+        "areaServed": "GN",
+        "location": {
+          "@type": "Place",
+          "address": { "@type": "PostalAddress", "addressLocality": "Conakry", "addressCountry": "GN" }
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://fgbb.gn/#site",
+        "name": "FGBB — Fédération Guinéenne de Basket-Ball",
+        "alternateName": "FGBB",
+        "url": "https://fgbb.gn/",
+        "inLanguage": "fr",
+        "publisher": { "@id": "https://fgbb.gn/#organisation" }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
