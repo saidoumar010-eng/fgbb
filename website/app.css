@@ -1173,3 +1173,85 @@ a.featured:hover {
     display: none;
   }
 }
+
+/* ============================ vues ajoutées (joueur, club, actu, plus, fan zone) */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+.profile-ava {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  overflow: hidden;
+  flex: none;
+  border: 1px solid var(--border);
+}
+.profile-ava img { width: 100%; height: 100%; object-fit: cover; }
+.profile-info h1 { font-size: clamp(24px, 4vw, 34px); }
+.profile-sub { color: var(--muted); font-size: 15px; margin-top: 6px; }
+.chip-link { display: inline-block; margin-top: 10px; color: var(--accent); font-weight: 600; font-size: 14px; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+.stat-tile b { display: block; font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; }
+.stat-tile span { color: var(--muted); font-size: 12.5px; }
+
+.roster { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.roster-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; }
+.roster-row:last-child { border-bottom: 0; }
+.roster-row:hover { background: var(--surface-2); }
+.rr-name { flex: 1; font-weight: 600; }
+.rr-pos { color: var(--dim); font-size: 13px; }
+
+.club-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.club-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 14px; color: inherit; text-decoration: none; transition: transform 0.18s ease, border-color 0.18s ease; }
+.club-card:hover { transform: translateY(-3px); border-color: var(--border-strong); }
+.club-card .mlogo { width: 52px; height: 52px; border-radius: 14px; font-size: 16px; }
+.cc-name { font-weight: 700; font-size: 14.5px; }
+.cc-city { color: var(--dim); font-size: 12px; }
+
+.article { max-width: 760px; margin-inline: auto; }
+.article-cover { border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border); }
+.article-cover img { width: 100%; display: block; }
+.article-title { font-size: clamp(26px, 4.4vw, 40px); margin: 12px 0; }
+.article-meta { color: var(--dim); font-size: 13.5px; margin-bottom: 22px; }
+.article-body p { color: var(--text); font-size: 16.5px; line-height: 1.7; margin-bottom: 16px; }
+
+.plus-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+.plus-card { display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 16px; color: inherit; text-decoration: none; font-weight: 700; transition: transform 0.18s ease, border-color 0.18s ease; }
+.plus-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.plus-ic { width: 52px; height: 52px; border-radius: 15px; background: var(--accent-soft); display: grid; place-items: center; }
+.plus-ic svg { width: 26px; height: 26px; color: var(--accent); }
+
+.poll { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
+.poll h3 { font-size: 17px; margin-bottom: 14px; }
+.poll-opts { display: flex; flex-direction: column; gap: 9px; }
+.poll-opt { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; background: var(--bg-deep); border: 1px solid var(--border-strong); border-radius: 12px; padding: 13px 15px; color: var(--text); font-family: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+.poll-opt:not([disabled]):hover { border-color: var(--accent); }
+.poll-opt[disabled] { cursor: default; }
+.poll-opt.mine { border-color: var(--accent); }
+.po-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-soft); transition: width 0.5s ease; z-index: 0; }
+.po-label, .po-pct { position: relative; z-index: 1; }
+.po-pct { color: var(--accent); font-weight: 800; }
+.poll-foot { color: var(--dim); font-size: 12.5px; margin-top: 12px; }
+
+/* liens intégrés dans listes/tableaux */
+a.leader, a.news-card, a.md-team { text-decoration: none; color: inherit; }
+.bx-plink { color: inherit; text-decoration: none; font-weight: 600; }
+.bx-plink:hover { color: var(--accent); }
+.standings a { color: inherit; text-decoration: none; }
+.standings a:hover { color: var(--accent); }
+
+@media (max-width: 560px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .profile-ava { width: 68px; height: 68px; font-size: 22px; }
+}

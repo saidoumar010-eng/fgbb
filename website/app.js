@@ -151,6 +151,85 @@ async function listMatchEvents(matchId) {
   if (error) throw error;
   return data ?? [];
 }
+
+// -- joueurs
+async function getPlayer(id) {
+  const { data, error } = await sb.from('players').select('*, team:teams(*)').eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+async function getPlayerSeason(id) {
+  const { data } = await sb.from('player_season_stats').select('*').eq('player_id', id).maybeSingle();
+  return data ?? null;
+}
+function tOf(iso) { const n = iso ? Date.parse(iso) : NaN; return Number.isNaN(n) ? -Infinity : n; }
+async function getPlayerGames(id, count = 8) {
+  const { data, error } = await sb
+    .from('player_match_stats')
+    .select('*, match:matches!match_id(id, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_team:teams!home_team_id(name,short_name), away_team:teams!away_team_id(name,short_name))')
+    .eq('player_id', id)
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []).sort((a, b) => tOf(b.match?.scheduled_at) - tOf(a.match?.scheduled_at)).slice(0, count);
+}
+
+// -- clubs
+async function getTeam(id) {
+  const { data, error } = await sb.from('teams').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+async function getTeamPlayers(teamId) {
+  const { data, error } = await sb.from('players').select('*').eq('team_id', teamId).order('number', { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function getTeamStanding(teamId) {
+  const { data } = await sb.from('team_standings').select('*').eq('team_id', teamId).maybeSingle();
+  return data ?? null;
+}
+async function getTeamMatches(teamId) {
+  const { data, error } = await sb.from('matches').select(MATCH_SELECT).or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`).order('scheduled_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+async function listTeams() {
+  const { data, error } = await sb.from('teams').select('*').order('name');
+  if (error) throw error;
+  return data ?? [];
+}
+
+// -- contenus
+async function getNewsItem(id) {
+  const { data, error } = await sb.from('news').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+async function listVideos() {
+  const { data, error } = await sb.from('matches').select(MATCH_SELECT).not('video_url', 'is', null).neq('video_url', '').order('scheduled_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// -- fan zone (sondages)
+async function listPolls() {
+  const { data, error } = await sb.from('polls').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function pollResults(pollId) {
+  const { data, error } = await sb.rpc('poll_results', { p_poll_id: pollId });
+  if (error) throw error;
+  return data ?? [];
+}
+async function myPollVote(pollId, userId) {
+  const { data } = await sb.from('poll_votes').select('option_index').eq('poll_id', pollId).eq('user_id', userId).maybeSingle();
+  return data ? data.option_index : null;
+}
+async function votePoll(pollId, userId, optionIndex) {
+  const { error } = await sb.from('poll_votes').upsert({ poll_id: pollId, user_id: userId, option_index: optionIndex }, { onConflict: 'poll_id,user_id' });
+  if (error) throw error;
+}
 function fetchTeamsMap() {
   if (!teamsPromise) {
     teamsPromise = sb
@@ -224,7 +303,7 @@ function standingsHtml(rows) {
       const team = { name: r.team_name, short_name: r.short_name, color: r.color };
       return `<tr class="${i === 0 ? 'top' : ''}">
         <td class="rk">${i + 1}</td>
-        <td class="team"><div class="team-cell">${logoHtml(team)}<span>${esc(r.team_name)}</span></div></td>
+        <td class="team"><div class="team-cell">${logoHtml(team)}<a href="#team/${r.team_id}">${esc(r.team_name)}</a></div></td>
         <td class="hide-sm">${r.played}</td>
         <td>${r.wins}</td>
         <td class="hide-sm">${r.losses}</td>
@@ -243,7 +322,7 @@ function newsCardHtml(n) {
     : `<span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v14H4zM4 9h16M9 5v14"/></svg></span>`;
   const excerpt = n.body ? esc(n.body).slice(0, 150) + (n.body.length > 150 ? '…' : '') : '';
   const d = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(n.published_at));
-  return `<article class="news-card">
+  return `<a class="news-card" href="#news/${n.id}">
     <div class="news-cover">${cover}</div>
     <div class="news-body">
       ${n.category ? `<span class="news-cat">${esc(n.category)}</span>` : ''}
@@ -251,18 +330,18 @@ function newsCardHtml(n) {
       ${excerpt ? `<p class="excerpt">${excerpt}</p>` : '<p class="excerpt"></p>'}
       <span class="date">${d}</span>
     </div>
-  </article>`;
+  </a>`;
 }
 
 function leaderRowHtml(p, i, unit, teamsMap) {
   const team = p.team_id ? teamsMap[p.team_id] : null;
   const val = Number(p[unit.col] ?? 0).toFixed(1);
-  return `<div class="leader">
+  return `<a class="leader" href="#player/${p.player_id}">
     <span class="lrank">${i + 1}</span>
     <span class="lava">${initials(p.full_name)}</span>
     <span class="linfo"><span class="ln">${esc(p.full_name)}</span><span class="lt">${esc(team?.name || '—')} · ${p.games} match${p.games > 1 ? 's' : ''}</span></span>
     <span class="lval"><b>${val}</b><span>${unit.label}</span></span>
-  </div>`;
+  </a>`;
 }
 
 // --------------------------------------------------------------- vues
@@ -458,7 +537,7 @@ function boxTableHtml(team, rows) {
   const body = rows.map((s) => {
     const p = s.player;
     return `<tr>
-      <td class="bx-p"><span class="bx-num">${p?.number ?? ''}</span>${esc(p?.full_name || '—')}</td>
+      <td class="bx-p"><span class="bx-num">${p?.number ?? ''}</span>${p?.id ? `<a class="bx-plink" href="#player/${p.id}">${esc(p.full_name)}</a>` : esc(p?.full_name || '—')}</td>
       <td class="bx-pts">${s.points}</td><td>${s.rebounds}</td><td>${s.assists}</td><td>${s.steals}</td><td>${s.blocks}</td><td class="hide-sm">${s.fouls}</td>
     </tr>`;
   }).join('');
@@ -509,14 +588,14 @@ async function renderMatchDetail(id) {
   html += `<div class="md-board">
     <div class="md-meta">${esc(meta)}</div>
     <div class="md-teams">
-      <div class="md-team">${logoHtml(m.home_team, 'mlogo')}<span class="md-tn ${awayWin ? 'loser' : ''}">${esc(m.home_team?.name || '')}</span></div>
+      <a class="md-team" href="#team/${m.home_team_id}">${logoHtml(m.home_team, 'mlogo')}<span class="md-tn ${awayWin ? 'loser' : ''}">${esc(m.home_team?.name || '')}</span></a>
       <div class="md-center">
         ${scoreShown
           ? `<div class="md-score"><span class="${awayWin ? 'loser' : ''}">${m.home_score ?? 0}</span><span class="sep">:</span><span class="${homeWin ? 'loser' : ''}">${m.away_score ?? 0}</span></div>`
           : `<div class="md-vs">VS</div>`}
         <div class="md-status">${statusPill}</div>
       </div>
-      <div class="md-team">${logoHtml(m.away_team, 'mlogo')}<span class="md-tn ${homeWin ? 'loser' : ''}">${esc(m.away_team?.name || '')}</span></div>
+      <a class="md-team" href="#team/${m.away_team_id}">${logoHtml(m.away_team, 'mlogo')}<span class="md-tn ${homeWin ? 'loser' : ''}">${esc(m.away_team?.name || '')}</span></a>
     </div>
     ${qs}
     ${m.video_url ? `<a class="btn sm" style="margin-top:16px" href="${esc(m.video_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>Voir la vidéo</a>` : ''}
@@ -545,12 +624,173 @@ async function renderMatchDetail(id) {
   }
 }
 
+// ------------------------------------------------------- fiche joueur
+function statTile(v, label, isInt) {
+  const val = isInt ? (v ?? 0) : Number(v ?? 0).toFixed(1);
+  return `<div class="stat-tile"><b>${val}</b><span>${label}</span></div>`;
+}
+async function renderPlayer(id) {
+  view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
+  const [p, season, games] = await Promise.all([safe(getPlayer(id), null), safe(getPlayerSeason(id), null), safe(getPlayerGames(id, 8), [])]);
+  if (!p) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+  const team = p.team;
+  let html = backBtnHtml();
+  html += `<div class="profile">
+    <div class="profile-ava">${p.photo_url ? `<img src="${esc(p.photo_url)}" alt="">` : initials(p.full_name)}</div>
+    <div class="profile-info">
+      <h1>${esc(p.full_name)}</h1>
+      <div class="profile-sub">${[p.number ? '#' + p.number : null, p.position, team ? esc(team.name) : null].filter(Boolean).join(' · ')}</div>
+      ${team ? `<a class="chip-link" href="#team/${team.id}">Voir le club →</a>` : ''}
+    </div>
+  </div>`;
+  if (season) {
+    html += `<div class="block"><div class="block-head"><h2>Moyennes de la saison</h2></div>
+      <div class="stat-grid">
+        ${statTile(season.ppg, 'Points')}${statTile(season.rpg, 'Rebonds')}${statTile(season.apg, 'Passes')}
+        ${statTile(season.spg, 'Interceptions')}${statTile(season.bpg, 'Contres')}${statTile(season.games, 'Matchs', true)}
+      </div></div>`;
+  }
+  if (games.length) {
+    const rows = games.map((g) => {
+      const m = g.match;
+      const opp = m ? (m.home_team_id === p.team_id ? m.away_team : m.home_team) : null;
+      const oppName = opp?.short_name || opp?.name || '—';
+      return `<tr><td class="bx-p">${esc(oppName)}<span style="color:var(--dim);font-size:11px"> · ${fmtDate(m?.scheduled_at)}</span></td><td class="bx-pts">${g.points}</td><td>${g.rebounds}</td><td>${g.assists}</td><td>${g.steals}</td><td>${g.blocks}</td></tr>`;
+    }).join('');
+    html += `<div class="block"><div class="block-head"><h2>Derniers matchs</h2></div>
+      <div style="overflow-x:auto"><table class="bx"><thead><tr><th class="bx-p">Adversaire</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Int</th><th>Ct</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+  if (!season && !games.length) html += emptyHtml('Pas encore de statistiques', "Ce joueur n'a pas encore de match enregistré.", 'trophy');
+  view.innerHTML = html; wireBack();
+}
+
+// ------------------------------------------------------- fiche club
+async function renderTeam(id) {
+  view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
+  const [t, players, standing, matches] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), [])]);
+  if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+  let html = backBtnHtml();
+  html += `<div class="profile">
+    <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div></div>
+  </div>`;
+  if (standing) {
+    html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
+  }
+  if (players.length) {
+    const rows = players.map((pl) => `<a class="roster-row" href="#player/${pl.id}"><span class="bx-num">${pl.number ?? ''}</span><span class="rr-name">${esc(pl.full_name)}</span><span class="rr-pos">${esc(pl.position || '')}</span></a>`).join('');
+    html += `<div class="block"><div class="block-head"><h2>Effectif</h2></div><div class="roster">${rows}</div></div>`;
+  }
+  const live = matches.filter((m) => m.status === 'live');
+  const upcoming = matches.filter((m) => m.status === 'scheduled');
+  const done = matches.filter((m) => m.status === 'finished');
+  const show = [...live, ...upcoming.slice(0, 5), ...done.slice(-5).reverse()];
+  if (show.length) html += `<div class="block"><div class="block-head"><h2>Matchs</h2></div>${show.map(matchCardHtml).join('')}</div>`;
+  if (!players.length && !matches.length && !standing) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
+  view.innerHTML = html; wireBack();
+}
+
+// ------------------------------------------------------- détail actualité
+async function renderNewsDetail(id) {
+  view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
+  const n = await safe(getNewsItem(id), null);
+  if (!n) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+  const d = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(n.published_at));
+  const body = (n.body || '').split(/\n+/).filter(Boolean).map((par) => `<p>${esc(par)}</p>`).join('') || '<p></p>';
+  let html = backBtnHtml();
+  html += `<article class="article">
+    ${n.cover_url ? `<div class="article-cover"><img src="${esc(n.cover_url)}" alt=""></div>` : ''}
+    ${n.category ? `<span class="news-cat">${esc(n.category)}</span>` : ''}
+    <h1 class="article-title">${esc(n.title)}</h1>
+    <div class="article-meta">${d}${n.author ? ' · ' + esc(n.author) : ''}</div>
+    <div class="article-body">${body}</div>
+  </article>`;
+  view.innerHTML = html; wireBack();
+}
+
+// ------------------------------------------------------- vidéos
+async function renderVideos() {
+  view.innerHTML = `<h1 class="view-title">Vidéos</h1><p class="view-sub">Résumés et temps forts des rencontres.</p><div id="vidBody">${loadingHtml()}</div>`;
+  const vids = await safe(listVideos(), null);
+  const el = $('#vidBody');
+  if (vids === null) { el.innerHTML = errorHtml(); return; }
+  if (!vids.length) { el.innerHTML = emptyHtml('Pas encore de vidéo', 'Les résumés vidéo apparaîtront ici.', 'news'); return; }
+  el.innerHTML = `<div class="news-grid">${vids.map((m) => `<a class="news-card" href="${esc(m.video_url)}" target="_blank" rel="noopener">
+    <div class="news-cover"><span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg></span></div>
+    <div class="news-body"><h3>${esc(m.home_team?.name || '')} — ${esc(m.away_team?.name || '')}</h3><span class="date">${fmtDate(m.scheduled_at)}${m.competition?.name ? ' · ' + esc(m.competition.name) : ''}</span></div>
+  </a>`).join('')}</div>`;
+}
+
+// ------------------------------------------------------- clubs (liste)
+async function renderClubs() {
+  view.innerHTML = `<h1 class="view-title">Clubs</h1><p class="view-sub">Les équipes engagées.</p><div id="clubBody">${loadingHtml()}</div>`;
+  const teams = await safe(listTeams(), null);
+  const el = $('#clubBody');
+  if (teams === null) { el.innerHTML = errorHtml(); return; }
+  if (!teams.length) { el.innerHTML = emptyHtml('Aucun club', 'Les clubs apparaîtront ici.', 'ball'); return; }
+  el.innerHTML = `<div class="club-grid">${teams.map((t) => `<a class="club-card" href="#team/${t.id}">${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${t.city ? `<span class="cc-city">${esc(t.city)}</span>` : ''}</a>`).join('')}</div>`;
+}
+
+// ------------------------------------------------------- fan zone (sondages)
+async function renderFanzone() {
+  view.innerHTML = `<h1 class="view-title">Fan Zone</h1><p class="view-sub">Donnez votre avis aux sondages de la fédération.</p><div id="fzBody">${loadingHtml()}</div>`;
+  const polls = await safe(listPolls(), null);
+  const el = $('#fzBody');
+  if (polls === null) { el.innerHTML = errorHtml(); return; }
+  const active = polls.filter((p) => p.is_active);
+  if (!active.length) { el.innerHTML = emptyHtml('Aucun sondage', 'Les sondages de la fédération apparaîtront ici.', 'news'); return; }
+  el.innerHTML = '';
+  for (const p of active) el.appendChild(await pollCardEl(p));
+}
+async function pollCardEl(p) {
+  const uid = session?.user?.id;
+  const [results, mine] = await Promise.all([safe(pollResults(p.id), []), uid ? safe(myPollVote(p.id, uid), null) : Promise.resolve(null)]);
+  const total = results.reduce((s, r) => s + Number(r.votes || 0), 0);
+  const voted = mine != null;
+  const opts = (p.options || []).map((opt, i) => {
+    const votes = Number(results.find((r) => r.option_index === i)?.votes || 0);
+    const pct = total ? Math.round((votes / total) * 100) : 0;
+    return `<button class="poll-opt${mine === i ? ' mine' : ''}" data-i="${i}" ${voted ? 'disabled' : ''}>
+      <span class="po-fill" style="width:${voted ? pct : 0}%"></span>
+      <span class="po-label">${esc(opt)}</span>
+      ${voted ? `<span class="po-pct">${pct}%</span>` : ''}
+    </button>`;
+  }).join('');
+  const foot = voted ? `${total} vote${total > 1 ? 's' : ''}` : uid ? 'Touchez une option pour voter' : 'Connectez-vous pour voter';
+  const wrap = document.createElement('div');
+  wrap.className = 'poll';
+  wrap.innerHTML = `<h3>${esc(p.question)}</h3><div class="poll-opts">${opts}</div><div class="poll-foot">${foot}</div>`;
+  if (!voted) {
+    wrap.querySelectorAll('.poll-opt').forEach((b) => b.addEventListener('click', async () => {
+      if (!uid) return openAuth('login');
+      try { await votePoll(p.id, uid, Number(b.dataset.i)); toast('Vote enregistré'); renderFanzone(); }
+      catch { toast('Vote impossible'); }
+    }));
+  }
+  return wrap;
+}
+
+// ------------------------------------------------------- hub « Plus »
+function renderPlus() {
+  const items = [
+    { r: 'videos', label: 'Vidéos', ic: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>' },
+    { r: 'clubs', label: 'Clubs', ic: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
+    { r: 'fanzone', label: 'Fan Zone', ic: '<path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/>' },
+  ];
+  view.innerHTML = `<h1 class="view-title">Plus</h1><p class="view-sub">Explorez tout le basket guinéen.</p>
+    <div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   matchs: renderMatchs,
   classement: renderClassement,
   actus: renderActus,
   leaders: renderLeaders,
+  plus: renderPlus,
+  videos: renderVideos,
+  clubs: renderClubs,
+  fanzone: renderFanzone,
 };
 
 function scheduleLiveRefresh(hasLive) {
@@ -563,8 +803,10 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone'];
 function setActiveTab(route) {
-  document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === route));
+  const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
+  document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
 }
 function render(route) {
   clearTimeout(liveTimer);
@@ -583,13 +825,22 @@ function handleHash() {
     openAuth(h === 'inscription' ? 'signup' : 'login');
     return;
   }
-  if (h.startsWith('match/')) {
-    viewRendered = true;
-    currentRoute = h;
-    clearTimeout(liveTimer);
-    setActiveTab('');
-    renderMatchDetail(h.slice(6));
-    return;
+  const DETAILS = [
+    ['match/', renderMatchDetail],
+    ['player/', renderPlayer],
+    ['team/', renderTeam],
+    ['news/', renderNewsDetail],
+  ];
+  for (const [prefix, fn] of DETAILS) {
+    if (h.startsWith(prefix)) {
+      viewRendered = true;
+      currentRoute = h;
+      clearTimeout(liveTimer);
+      clearTimeout(detailTimer);
+      setActiveTab('');
+      fn(h.slice(prefix.length));
+      return;
+    }
   }
   render(ROUTES.includes(h) ? h : 'accueil');
 }
