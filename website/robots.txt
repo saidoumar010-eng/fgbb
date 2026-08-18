@@ -3,4 +3,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fgbb.gn/sitemap.xml
+Sitemap: https://saidoumar010-eng.github.io/fgbb/sitemap.xml
