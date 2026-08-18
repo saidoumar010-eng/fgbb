@@ -319,6 +319,28 @@ async function searchAll(term) {
   ]);
   return { players, teams, news };
 }
+
+// -- institutionnel & comparateur
+async function getFederationInfo() {
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'federation').maybeSingle();
+  if (error) throw error;
+  return data?.value ?? {};
+}
+async function listSponsors() {
+  const { data, error } = await sb.from('sponsors').select('*').eq('is_active', true).order('position', { ascending: true }).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+async function listPlayersLite() {
+  const { data, error } = await sb.from('players').select('id, full_name').order('full_name');
+  if (error) throw error;
+  return data ?? [];
+}
+function externalUrl(raw) {
+  const v = (raw ?? '').trim();
+  if (!v) return null;
+  return /^https?:\/\//i.test(v) ? v : 'https://' + v;
+}
 function fetchTeamsMap() {
   if (!teamsPromise) {
     teamsPromise = sb
@@ -883,6 +905,8 @@ function renderPlus() {
     { r: 'fanzone', label: 'Fan Zone', ic: '<path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/>' },
     { r: 'recherche', label: 'Recherche', ic: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>' },
     { r: 'favoris', label: 'Mes favoris', ic: '<path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8 14.4 7c1.3-1.7 3.6-2.3 5.6-1.3 2.6 1.3 3.1 4.7 1.5 7C19 16.4 12 21 12 21z"/>' },
+    { r: 'comparateur', label: 'Comparateur', ic: '<path d="M18 20V10M12 20V4M6 20v-6"/>' },
+    { r: 'apropos', label: 'La fédération', ic: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>' },
   ];
   view.innerHTML = `<h1 class="view-title">Plus</h1><p class="view-sub">Explorez tout le basket guinéen.</p>
     <div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
@@ -1016,6 +1040,65 @@ function followBtnHtml(active, label, labelActive) {
   </button>`;
 }
 
+// -- à propos (fédération + partenaires)
+const TIER_ORDER = ['principal', 'officiel', 'media', 'partenaire'];
+const TIER_LABELS = { principal: 'Partenaire principal', officiel: 'Partenaires officiels', media: 'Partenaires médias', partenaire: 'Partenaires' };
+async function renderApropos() {
+  view.innerHTML = `<h1 class="view-title">La fédération</h1><div id="apBody">${loadingHtml()}</div>`;
+  const [info, sponsors] = await Promise.all([safe(getFederationInfo(), {}), safe(listSponsors(), [])]);
+  let html = `<div class="ap-card"><img src="assets/logo-card.png" alt="Logo FGBB"><h2>Fédération Guinéenne de Basket-Ball</h2>${info.president ? `<p class="ap-pres">Président : ${esc(info.president)}</p>` : ''}<div class="tricolor" style="justify-content:center;margin-top:14px"><span class="r"></span><span class="y"></span><span class="g"></span></div></div>`;
+  if (info.about) html += `<div class="block"><div class="block-head"><h2>Présentation</h2></div><p class="ap-about">${esc(info.about)}</p></div>`;
+  const contacts = [];
+  if (info.address) contacts.push(['Adresse', esc(info.address), null]);
+  if (info.phone) contacts.push(['Téléphone', esc(info.phone), 'tel:' + info.phone.replace(/[\s.]/g, '')]);
+  if (info.email) contacts.push(['E-mail', esc(info.email), 'mailto:' + info.email.trim()]);
+  if (info.website) contacts.push(['Site web', esc(info.website), externalUrl(info.website)]);
+  if (info.facebook) contacts.push(['Facebook', esc(info.facebook), externalUrl(info.facebook)]);
+  if (info.youtube) contacts.push(['YouTube', esc(info.youtube), externalUrl(info.youtube)]);
+  if (contacts.length) {
+    html += `<div class="block"><div class="block-head"><h2>Contact</h2></div><div class="roster">${contacts.map(([l, v, href]) => {
+      const inner = `<span class="rr-name"><b style="color:var(--muted);font-weight:600">${l} : </b>${v}</span>`;
+      return href ? `<a class="roster-row" href="${href}" target="_blank" rel="noopener">${inner}</a>` : `<div class="roster-row">${inner}</div>`;
+    }).join('')}</div></div>`;
+  }
+  const groups = TIER_ORDER.map((tier) => ({ tier, items: sponsors.filter((s) => s.tier === tier) })).filter((g) => g.items.length);
+  if (groups.length) {
+    html += `<div class="block"><div class="block-head"><h2>Partenaires</h2></div>${groups.map((g) => `<div class="sponsor-tier"><h3>${TIER_LABELS[g.tier]}</h3><div class="sponsor-grid">${g.items.map((s) => {
+      const href = externalUrl(s.url);
+      const body = s.logo_url ? `<img src="${esc(s.logo_url)}" alt="${esc(s.name)}">` : `<span>${esc(s.name)}</span>`;
+      return href ? `<a class="sponsor" href="${href}" target="_blank" rel="noopener">${body}</a>` : `<div class="sponsor">${body}</div>`;
+    }).join('')}</div></div>`).join('')}</div>`;
+  }
+  if (!info.about && !contacts.length && !groups.length) html += emptyHtml('Informations à venir', 'Les coordonnées de la fédération seront publiées prochainement.', 'inbox');
+  $('#apBody').innerHTML = html;
+}
+
+// -- comparateur de joueurs
+async function renderCompare() {
+  view.innerHTML = `<h1 class="view-title">Comparateur</h1><p class="view-sub">Comparez deux joueurs sur leurs moyennes de la saison.</p><div id="cmpPickers">${loadingHtml()}</div><div id="cmpBody"></div>`;
+  const players = await safe(listPlayersLite(), []);
+  const opts = ['<option value="">— Choisir un joueur —</option>'].concat(players.map((p) => `<option value="${p.id}">${esc(p.full_name)}</option>`)).join('');
+  $('#cmpPickers').innerHTML = `<div class="cmp-pickers"><select id="cmpA" class="cmp-select">${opts}</select><span class="cmp-vs">VS</span><select id="cmpB" class="cmp-select">${opts}</select></div>`;
+  const run = async () => {
+    const a = $('#cmpA').value, b = $('#cmpB').value;
+    if (!a || !b) { $('#cmpBody').innerHTML = ''; return; }
+    $('#cmpBody').innerHTML = loadingHtml();
+    const [pa, pb, sa, sb2] = await Promise.all([safe(getPlayer(a), null), safe(getPlayer(b), null), safe(getPlayerSeason(a), null), safe(getPlayerSeason(b), null)]);
+    $('#cmpBody').innerHTML = compareHtml(pa, pb, sa, sb2);
+  };
+  $('#cmpA').addEventListener('change', run);
+  $('#cmpB').addEventListener('change', run);
+}
+function compareHtml(pa, pb, sa, sb) {
+  if (!pa || !pb) return '';
+  const defs = [['ppg', 'Points'], ['rpg', 'Rebonds'], ['apg', 'Passes'], ['spg', 'Interceptions'], ['bpg', 'Contres'], ['games', 'Matchs']];
+  const disp = (s, k) => (s ? (k === 'games' ? (s[k] ?? 0) : Number(s[k] ?? 0).toFixed(1)) : '—');
+  const num = (s, k) => (s ? Number(s[k] ?? 0) : 0);
+  const rows = defs.map(([k, label]) => `<tr><td class="${num(sa, k) >= num(sb, k) && sa ? 'cmp-win' : ''}">${disp(sa, k)}</td><td class="cmp-lbl">${label}</td><td class="${num(sb, k) >= num(sa, k) && sb ? 'cmp-win' : ''}">${disp(sb, k)}</td></tr>`).join('');
+  return `<div class="cmp-head"><div class="cmp-name"><span class="lava">${initials(pa.full_name)}</span><span>${esc(pa.full_name)}</span></div><div class="cmp-name right"><span>${esc(pb.full_name)}</span><span class="lava">${initials(pb.full_name)}</span></div></div>
+    <table class="cmp-table"><tbody>${rows}</tbody></table>`;
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   matchs: renderMatchs,
@@ -1028,6 +1111,8 @@ const RENDERERS = {
   fanzone: renderFanzone,
   recherche: renderSearch,
   favoris: renderFavoris,
+  apropos: renderApropos,
+  comparateur: renderCompare,
 };
 
 function scheduleLiveRefresh(hasLive) {
@@ -1040,7 +1125,7 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris'];
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur'];
 function setActiveTab(route) {
   const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
@@ -1222,7 +1307,27 @@ function renderAuthArea() {
 }
 
 // --------------------------------------------------------------- init
+// -- thème clair / sombre (mémorisé)
+const SUN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const MOON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>';
+function applyTheme(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  try { localStorage.setItem('fgbb-theme', mode); } catch {}
+  const b = $('#themeToggle');
+  if (b) b.innerHTML = mode === 'light' ? MOON_SVG : SUN_SVG;
+}
+function initTheme() {
+  let mode = 'dark';
+  try { mode = localStorage.getItem('fgbb-theme') || 'dark'; } catch {}
+  applyTheme(mode);
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+}
+
 function wireStaticEvents() {
+  initTheme();
+  $('#themeToggle')?.addEventListener('click', toggleTheme);
   // onglets
   document.querySelectorAll('.app-tab').forEach((t) =>
     t.addEventListener('click', () => { location.hash = t.dataset.route; }),

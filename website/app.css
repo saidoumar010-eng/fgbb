@@ -1339,3 +1339,47 @@ a.leader, a.news-card, a.md-team { text-decoration: none; color: inherit; }
   padding: 15px 0;
 }
 .search-box input::placeholder { color: var(--dim); }
+
+/* base avatar réutilisable (leaders, recherche, comparateur) */
+.lava { border-radius: 999px; background: var(--surface-2); overflow: hidden; display: grid; place-items: center; color: var(--muted); font-weight: 800; flex: none; }
+.lava img { width: 100%; height: 100%; object-fit: cover; }
+
+/* en-tête : bouton thème */
+.header-right { display: flex; align-items: center; gap: 10px; }
+.theme-toggle {
+  width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); display: grid; place-items: center;
+  cursor: pointer; flex: none; transition: color 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.theme-toggle svg { width: 19px; height: 19px; }
+
+/* thème clair : fonds d'app codés en dur -> versions claires */
+:root[data-theme="light"] .app-header { background: rgba(255, 255, 255, 0.85); }
+:root[data-theme="light"] .app-tabs { background: rgba(255, 255, 255, 0.6); }
+
+/* à propos */
+.ap-card { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 20px; margin-bottom: 26px; }
+.ap-card img { width: 130px; border-radius: var(--radius); margin: 0 auto 16px; border: 1px solid var(--border); }
+.ap-card h2 { font-size: 20px; }
+.ap-pres { color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+.ap-about { color: var(--muted); font-size: 16px; line-height: 1.7; }
+.sponsor-tier { margin-bottom: 18px; }
+.sponsor-tier h3 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); font-weight: 700; margin-bottom: 12px; }
+.sponsor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+.sponsor { display: grid; place-items: center; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-height: 70px; color: #0b2e29; font-weight: 700; font-size: 13px; text-decoration: none; text-align: center; }
+.sponsor img { max-width: 100%; max-height: 44px; object-fit: contain; }
+
+/* comparateur */
+.cmp-pickers { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.cmp-select { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 13px 12px; color: var(--text); font-family: inherit; font-size: 14.5px; }
+.cmp-vs { color: var(--dim); font-weight: 800; font-size: 13px; }
+.cmp-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cmp-name { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; flex: 1; min-width: 0; }
+.cmp-name.right { flex-direction: row-reverse; text-align: right; }
+.cmp-name .lava { width: 38px; height: 38px; }
+.cmp-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cmp-table td { padding: 13px 10px; text-align: center; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 16px; }
+.cmp-table tr:last-child td { border-bottom: 0; }
+.cmp-table .cmp-lbl { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; width: 40%; }
+.cmp-table .cmp-win { color: var(--accent); }

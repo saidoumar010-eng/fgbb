@@ -48,6 +48,27 @@
   --font-display: "Segoe UI", "Helvetica Neue", var(--font);
 }
 
+/* Thème clair (activé uniquement dans l'app web via data-theme="light") */
+:root[data-theme="light"] {
+  --bg: #eef3f0;
+  --bg-deep: #e2eae6;
+  --surface: #ffffff;
+  --surface-2: #e2eae6;
+  --border: rgba(6, 32, 28, 0.1);
+  --border-strong: rgba(6, 32, 28, 0.2);
+  --text: #08231e;
+  --muted: #42584f;
+  --dim: #6a7f77;
+  --accent: #0f8a3c;
+  --accent-2: #12a24a;
+  --accent-soft: rgba(15, 138, 60, 0.14);
+  --accent-text: #ffffff;
+  --red: #d12f2f;
+  --green: #159c6e;
+  --shadow: 0 24px 60px -20px rgba(6, 32, 28, 0.25);
+  --shadow-soft: 0 12px 34px -18px rgba(6, 32, 28, 0.2);
+}
+
 /* ----------------------------------------------------------------- reset */
 *,
 *::before,
