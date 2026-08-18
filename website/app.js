@@ -341,6 +341,88 @@ function externalUrl(raw) {
   if (!v) return null;
   return /^https?:\/\//i.test(v) ? v : 'https://' + v;
 }
+
+// -- palmarès
+const AWARD_LABELS = { joueur_du_mois: 'Joueur du mois', mvp_saison: 'MVP de la saison', meilleur_cinq: 'Meilleur cinq', autre: 'Distinction' };
+async function listAwards() {
+  const { data, error } = await sb.from('awards').select('*, player:players(*), team:teams(*)').order('awarded_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+// -- arbitres
+const REFEREE_LEVEL_LABELS = { regional: 'Régional', national: 'National', fiba: 'FIBA' };
+async function listReferees() {
+  const { data, error } = await sb.from('referees').select('*').eq('is_active', true).order('full_name');
+  if (error) throw error;
+  return data ?? [];
+}
+// -- discipline
+const SANCTION_LABELS = { avertissement: 'Avertissement', suspension: 'Suspension', amende: 'Amende', exclusion: 'Exclusion' };
+const SANCTION_STATUS_LABELS = { active: 'En cours', served: 'Purgée', cancelled: 'Annulée' };
+const SANCTION_SELECT = '*, player:players(id, full_name, photo_url, team_id), team:teams(id, name, short_name, color, logo_url)';
+async function listSanctions() {
+  const { data, error } = await sb.from('sanctions').select(SANCTION_SELECT).order('decided_at', { ascending: false }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+function formatGnf(amount) {
+  const digits = Math.round(Math.abs(amount)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return (amount < 0 ? '-' : '') + digits + ' GNF';
+}
+// -- médias
+const MEDIA_KINDS = [{ id: 'interview', label: 'Interviews', one: 'Interview' }, { id: 'podcast', label: 'Podcasts', one: 'Podcast' }, { id: 'reportage', label: 'Reportages', one: 'Reportage' }, { id: 'video', label: 'Vidéos', one: 'Vidéo' }];
+function mediaOne(k) { return MEDIA_KINDS.find((x) => x.id === k)?.one || 'Média'; }
+async function listMedia(kind) {
+  let q = sb.from('media_items').select('*').order('published_at', { ascending: false });
+  if (kind) q = q.eq('kind', kind);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+// -- agenda
+const EVENT_CAT_LABELS = { federation: 'Fédération', competition: 'Compétition', formation: 'Formation', ceremonie: 'Cérémonie', autre: 'Autre' };
+async function listEvents() {
+  const { data, error } = await sb.from('events').select('*').order('starts_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+// -- classement des supporters
+async function getLeaderboard(limit = 50) {
+  const { data, error } = await sb.rpc('fan_leaderboard', { p_limit: limit });
+  if (error) throw error;
+  return data ?? [];
+}
+async function getMyFanStats() {
+  const { data, error } = await sb.rpc('my_fan_stats');
+  if (error) throw error;
+  return (data ?? [])[0] ?? null;
+}
+// -- quiz
+async function listQuizzes() {
+  const { data, error } = await sb.from('quizzes').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function getQuiz(id) {
+  const { data, error } = await sb.from('quizzes').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+async function listQuizQuestionsPublic(quizId) {
+  const { data, error } = await sb.rpc('quiz_questions_public', { p_quiz_id: quizId });
+  if (error) throw error;
+  return data ?? [];
+}
+async function submitQuiz(quizId, answers) {
+  const { data, error } = await sb.rpc('submit_quiz', { p_quiz_id: quizId, p_answers: answers });
+  if (error) throw error;
+  return (data ?? [])[0] ?? null;
+}
+async function listMyAttempts() {
+  const { data, error } = await sb.from('quiz_attempts').select('*');
+  if (error) throw error;
+  return data ?? [];
+}
 function fetchTeamsMap() {
   if (!teamsPromise) {
     teamsPromise = sb
@@ -906,6 +988,13 @@ function renderPlus() {
     { r: 'recherche', label: 'Recherche', ic: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>' },
     { r: 'favoris', label: 'Mes favoris', ic: '<path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8 14.4 7c1.3-1.7 3.6-2.3 5.6-1.3 2.6 1.3 3.1 4.7 1.5 7C19 16.4 12 21 12 21z"/>' },
     { r: 'comparateur', label: 'Comparateur', ic: '<path d="M18 20V10M12 20V4M6 20v-6"/>' },
+    { r: 'supporters', label: 'Classement fans', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
+    { r: 'quiz', label: 'Quiz', ic: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01"/>' },
+    { r: 'palmares', label: 'Palmarès', ic: '<circle cx="12" cy="8" r="5"/><path d="M8.2 12.5L7 22l5-3 5 3-1.2-9.5"/>' },
+    { r: 'medias', label: 'Médias', ic: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' },
+    { r: 'agenda', label: 'Agenda', ic: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
+    { r: 'arbitres', label: 'Arbitres', ic: '<path d="M6 9l6-6 6 6M6 9v11h12V9M9 13h6"/>' },
+    { r: 'discipline', label: 'Discipline', ic: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>' },
     { r: 'apropos', label: 'La fédération', ic: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>' },
   ];
   view.innerHTML = `<h1 class="view-title">Plus</h1><p class="view-sub">Explorez tout le basket guinéen.</p>
@@ -1099,6 +1188,133 @@ function compareHtml(pa, pb, sa, sb) {
     <table class="cmp-table"><tbody>${rows}</tbody></table>`;
 }
 
+// -- palmarès
+async function renderPalmares() {
+  view.innerHTML = `<h1 class="view-title">Palmarès</h1><p class="view-sub">Les distinctions de la fédération.</p><div id="pmBody">${loadingHtml()}</div>`;
+  const awards = await safe(listAwards(), null);
+  const el = $('#pmBody');
+  if (awards === null) return void (el.innerHTML = errorHtml());
+  if (!awards.length) return void (el.innerHTML = emptyHtml('Pas encore de distinction', 'Les récompenses apparaîtront ici.', 'trophy'));
+  el.innerHTML = `<div class="roster">${awards.map((a) => {
+    const who = a.player ? `<a href="#player/${a.player.id}">${esc(a.player.full_name)}</a>` : a.team ? `<a href="#team/${a.team.id}">${esc(a.team.name)}</a>` : (a.label ? esc(a.label) : '—');
+    return `<div class="roster-row"><span class="award-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/></svg></span><span class="rr-name"><b>${esc(AWARD_LABELS[a.kind] || 'Distinction')}</b> — ${who}${a.note ? `<span style="display:block;color:var(--dim);font-size:12.5px">${esc(a.note)}</span>` : ''}</span><span class="rr-pos">${a.awarded_at ? fmtDate(a.awarded_at) : ''}</span></div>`;
+  }).join('')}</div>`;
+}
+// -- arbitres
+async function renderArbitres() {
+  view.innerHTML = `<h1 class="view-title">Arbitres</h1><p class="view-sub">Le corps arbitral de la fédération.</p><div id="arbBody">${loadingHtml()}</div>`;
+  const refs = await safe(listReferees(), null);
+  const el = $('#arbBody');
+  if (refs === null) return void (el.innerHTML = errorHtml());
+  if (!refs.length) return void (el.innerHTML = emptyHtml('Aucun arbitre', 'La liste des arbitres apparaîtra ici.', 'inbox'));
+  el.innerHTML = `<div class="roster">${refs.map((r) => `<div class="roster-row"><span class="lava" style="width:38px;height:38px;font-size:13px">${r.photo_url ? `<img src="${esc(r.photo_url)}" alt="">` : initials(r.full_name)}</span><span class="rr-name">${esc(r.full_name)}${r.city ? `<span style="color:var(--dim);font-size:12.5px"> · ${esc(r.city)}</span>` : ''}</span><span class="rr-pos">${REFEREE_LEVEL_LABELS[r.level] || ''}</span></div>`).join('')}</div>`;
+}
+// -- discipline
+async function renderDiscipline() {
+  view.innerHTML = `<h1 class="view-title">Discipline</h1><p class="view-sub">Décisions de la commission de discipline.</p><div id="disBody">${loadingHtml()}</div>`;
+  const sanctions = await safe(listSanctions(), null);
+  const el = $('#disBody');
+  if (sanctions === null) return void (el.innerHTML = errorHtml());
+  if (!sanctions.length) return void (el.innerHTML = emptyHtml('Aucune sanction', 'Les décisions disciplinaires apparaîtront ici.', 'inbox'));
+  el.innerHTML = sanctions.map((s) => {
+    const who = s.player ? `<a href="#player/${s.player.id}">${esc(s.player.full_name)}</a>` : s.team ? `<a href="#team/${s.team.id}">${esc(s.team.name)}</a>` : '—';
+    const details = [];
+    if (s.games) details.push(`${s.games} match${s.games > 1 ? 's' : ''}`);
+    if (s.amount_gnf) details.push(formatGnf(s.amount_gnf));
+    details.push(SANCTION_STATUS_LABELS[s.status] || '');
+    return `<div class="sanction"><div class="sanction-top"><b>${SANCTION_LABELS[s.kind] || ''}</b><span class="sanction-date">${fmtDate(s.decided_at)}</span></div><div class="sanction-who">${who} · ${details.filter(Boolean).join(' · ')}</div>${s.reason ? `<div class="sanction-reason">${esc(s.reason)}</div>` : ''}</div>`;
+  }).join('');
+}
+// -- médias
+let mediaFilter = '';
+async function renderMedias() {
+  view.innerHTML = `<h1 class="view-title">Médias</h1><div class="segmented" id="medSeg">${[['', 'Tout'], ...MEDIA_KINDS.map((k) => [k.id, k.label])].map(([v, l]) => `<button class="seg ${mediaFilter === v ? 'active' : ''}" data-k="${v}">${l}</button>`).join('')}</div><div id="medBody">${loadingHtml()}</div>`;
+  $('#medSeg').querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { mediaFilter = b.dataset.k; renderMedias(); }));
+  const media = await safe(listMedia(mediaFilter || null), null);
+  const el = $('#medBody');
+  if (media === null) return void (el.innerHTML = errorHtml());
+  if (!media.length) return void (el.innerHTML = emptyHtml('Pas encore de média', 'Interviews, podcasts et reportages apparaîtront ici.', 'news'));
+  el.innerHTML = `<div class="news-grid">${media.map((m) => `<a class="news-card" href="${esc(externalUrl(m.url) || '#')}" target="_blank" rel="noopener"><div class="news-cover">${m.cover_url ? `<img src="${esc(m.cover_url)}" alt="">` : `<span class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>`}</div><div class="news-body"><span class="news-cat">${mediaOne(m.kind)}</span><h3>${esc(m.title)}</h3>${m.description ? `<p class="excerpt">${esc(m.description).slice(0, 120)}</p>` : ''}<span class="date">${fmtDate(m.published_at)}${m.duration_min ? ` · ${m.duration_min} min` : ''}</span></div></a>`).join('')}</div>`;
+}
+// -- agenda
+async function renderAgenda() {
+  view.innerHTML = `<h1 class="view-title">Agenda</h1><p class="view-sub">Les rendez-vous de la fédération.</p><div id="agBody">${loadingHtml()}</div>`;
+  const events = await safe(listEvents(), null);
+  const el = $('#agBody');
+  if (events === null) return void (el.innerHTML = errorHtml());
+  if (!events.length) return void (el.innerHTML = emptyHtml('Aucun événement', "L'agenda de la fédération apparaîtra ici.", 'inbox'));
+  el.innerHTML = events.map((e) => {
+    const dd = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, day: '2-digit' }).format(new Date(e.starts_at));
+    const mm = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, month: 'short' }).format(new Date(e.starts_at));
+    return `<div class="event"><div class="event-date"><b>${dd}</b><span>${mm}</span></div><div class="event-info"><span class="news-cat">${EVENT_CAT_LABELS[e.category] || 'Autre'}</span><h3>${esc(e.title)}</h3>${e.location ? `<div class="event-loc">📍 ${esc(e.location)}</div>` : ''}${e.description ? `<p class="excerpt">${esc(e.description).slice(0, 140)}</p>` : ''}</div></div>`;
+  }).join('');
+}
+// -- classement des supporters
+async function renderSupporters() {
+  view.innerHTML = `<h1 class="view-title">Classement des supporters</h1><p class="view-sub">Gagnez des points avec les pronostics, le vote MVP et les quiz.</p><div id="ldbBody">${loadingHtml()}</div>`;
+  const [rows, mine] = await Promise.all([safe(getLeaderboard(50), null), session ? safe(getMyFanStats(), null) : Promise.resolve(null)]);
+  const el = $('#ldbBody');
+  if (rows === null) return void (el.innerHTML = errorHtml());
+  let html = '';
+  if (mine) html += `<div class="stat-grid" style="margin-bottom:22px">${statTile(mine.points, 'Mes points', true)}${statTile(mine.correct, 'Pronostics réussis', true)}${statTile(mine.position_no, 'Mon rang', true)}</div>`;
+  if (!rows.length) return void (el.innerHTML = html + emptyHtml('Classement vide', 'Participez pour apparaître au classement.', 'trophy'));
+  html += `<div class="roster">${rows.map((r) => `<div class="roster-row${r.is_me ? ' me' : ''}"><span class="lrank" style="width:28px">${r.position_no}</span><span class="rr-name">${esc(r.name)}${r.is_me ? ' <b style="color:var(--accent)">(vous)</b>' : ''}</span><span class="rr-pos"><b style="color:var(--accent)">${r.points}</b> pts</span></div>`).join('')}</div>`;
+  el.innerHTML = html;
+}
+// -- quiz (liste + jeu)
+async function renderQuiz() {
+  view.innerHTML = `<h1 class="view-title">Quiz</h1><p class="view-sub">Testez vos connaissances sur le basket guinéen.</p><div id="qzBody">${loadingHtml()}</div>`;
+  const [quizzes, attempts] = await Promise.all([safe(listQuizzes(), null), session ? safe(listMyAttempts(), []) : Promise.resolve([])]);
+  const el = $('#qzBody');
+  if (quizzes === null) return void (el.innerHTML = errorHtml());
+  const active = quizzes.filter((q) => q.is_active);
+  if (!active.length) return void (el.innerHTML = emptyHtml('Aucun quiz', 'Les quiz de la fédération apparaîtront ici.', 'news'));
+  const done = {};
+  attempts.forEach((a) => { done[a.quiz_id] = a; });
+  el.innerHTML = `<div class="roster">${active.map((q) => {
+    const a = done[q.id];
+    return `<a class="roster-row" href="#quiz/${q.id}"><span class="plus-ic" style="width:40px;height:40px;border-radius:11px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01"/></svg></span><span class="rr-name">${esc(q.title)}${q.description ? `<span style="display:block;color:var(--dim);font-size:12.5px">${esc(q.description)}</span>` : ''}</span><span class="rr-pos">${a ? `${a.score}/${a.total}` : 'Jouer →'}</span></a>`;
+  }).join('')}</div>`;
+}
+async function renderQuizDetail(id) {
+  view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
+  const [quiz, questions] = await Promise.all([safe(getQuiz(id), null), safe(listQuizQuestionsPublic(id), [])]);
+  if (!quiz) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+  if (!session) {
+    view.innerHTML = backBtnHtml() + `<div class="login-prompt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01"/></svg></div><h3>${esc(quiz.title)}</h3><p>Connectez-vous pour jouer et gagner des points.</p><button class="btn" id="qzLogin">Se connecter</button></div>`;
+    wireBack(); $('#qzLogin').addEventListener('click', () => openAuth('login')); return;
+  }
+  if (!questions.length) { view.innerHTML = backBtnHtml() + emptyHtml('Quiz vide', "Ce quiz n'a pas encore de questions.", 'news'); wireBack(); return; }
+  const answers = {};
+  let html = backBtnHtml() + `<h1 class="view-title">${esc(quiz.title)}</h1>`;
+  html += questions.map((q, qi) => `<div class="quiz-q"><h3>${qi + 1}. ${esc(q.question)}</h3><div class="quiz-opts">${q.options.map((opt, oi) => `<button class="quiz-opt" data-qid="${q.id}" data-oi="${oi}">${esc(opt)}</button>`).join('')}</div></div>`).join('');
+  html += `<button class="btn" id="qzSubmit" style="margin-top:10px" disabled>Valider mes réponses</button><div id="qzResult"></div>`;
+  view.innerHTML = html; wireBack();
+  const total = questions.length;
+  view.querySelectorAll('.quiz-opt').forEach((b) => b.addEventListener('click', () => {
+    const qid = b.dataset.qid;
+    view.querySelectorAll(`.quiz-opt[data-qid="${qid}"]`).forEach((x) => x.classList.remove('sel'));
+    b.classList.add('sel'); answers[qid] = Number(b.dataset.oi);
+    $('#qzSubmit').disabled = Object.keys(answers).length < total;
+  }));
+  $('#qzSubmit').addEventListener('click', async () => {
+    $('#qzSubmit').disabled = true; $('#qzSubmit').textContent = 'Correction…';
+    const res = await safe(submitQuiz(id, answers), null);
+    if (!res) { toast('Correction impossible'); $('#qzSubmit').textContent = 'Valider mes réponses'; $('#qzSubmit').disabled = false; return; }
+    (res.corrections || []).forEach((c) => {
+      view.querySelectorAll(`.quiz-opt[data-qid="${c.question_id}"]`).forEach((x) => {
+        const oi = Number(x.dataset.oi);
+        if (oi === c.correct_index) x.classList.add('correct');
+        else if (oi === c.chosen) x.classList.add('wrong');
+        x.disabled = true;
+      });
+    });
+    $('#qzResult').innerHTML = `<div class="quiz-score">Votre score : <b>${res.score}/${res.total}</b></div>`;
+    $('#qzSubmit').style.display = 'none';
+    toast(`Score : ${res.score}/${res.total}`);
+  });
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   matchs: renderMatchs,
@@ -1113,6 +1329,13 @@ const RENDERERS = {
   favoris: renderFavoris,
   apropos: renderApropos,
   comparateur: renderCompare,
+  palmares: renderPalmares,
+  arbitres: renderArbitres,
+  discipline: renderDiscipline,
+  medias: renderMedias,
+  agenda: renderAgenda,
+  supporters: renderSupporters,
+  quiz: renderQuiz,
 };
 
 function scheduleLiveRefresh(hasLive) {
@@ -1125,7 +1348,7 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur'];
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz'];
 function setActiveTab(route) {
   const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
@@ -1152,6 +1375,7 @@ function handleHash() {
     ['player/', renderPlayer],
     ['team/', renderTeam],
     ['news/', renderNewsDetail],
+    ['quiz/', renderQuizDetail],
   ];
   for (const [prefix, fn] of DETAILS) {
     if (h.startsWith(prefix)) {
