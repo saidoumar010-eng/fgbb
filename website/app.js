@@ -230,6 +230,95 @@ async function votePoll(pollId, userId, optionIndex) {
   const { error } = await sb.from('poll_votes').upsert({ poll_id: pollId, user_id: userId, option_index: optionIndex }, { onConflict: 'poll_id,user_id' });
   if (error) throw error;
 }
+
+// -- face-à-face
+async function getHeadToHead(teamA, teamB) {
+  const { data, error } = await sb
+    .from('matches')
+    .select(MATCH_SELECT)
+    .eq('status', 'finished')
+    .or(`and(home_team_id.eq.${teamA},away_team_id.eq.${teamB}),and(home_team_id.eq.${teamB},away_team_id.eq.${teamA})`)
+    .order('scheduled_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// -- vote MVP
+async function mvpResults(matchId) {
+  const { data, error } = await sb.rpc('mvp_results', { p_match_id: matchId });
+  if (error) throw error;
+  return data ?? [];
+}
+async function myMvpVote(matchId, userId) {
+  const { data } = await sb.from('mvp_votes').select('player_id').eq('match_id', matchId).eq('user_id', userId).maybeSingle();
+  return data ? data.player_id : null;
+}
+async function voteMvp(matchId, userId, playerId) {
+  const { error } = await sb.from('mvp_votes').upsert({ match_id: matchId, user_id: userId, player_id: playerId }, { onConflict: 'match_id,user_id' });
+  if (error) throw error;
+}
+
+// -- pronostics
+async function predictionResults(matchId) {
+  const { data, error } = await sb.rpc('prediction_results', { p_match_id: matchId });
+  if (error) throw error;
+  return data ?? [];
+}
+async function myPrediction(matchId, userId) {
+  const { data } = await sb.from('predictions').select('team_id').eq('match_id', matchId).eq('user_id', userId).maybeSingle();
+  return data ? data.team_id : null;
+}
+async function votePrediction(matchId, userId, teamId) {
+  const { error } = await sb.from('predictions').upsert({ match_id: matchId, user_id: userId, team_id: teamId }, { onConflict: 'match_id,user_id' });
+  if (error) throw error;
+}
+
+// -- favoris (clubs) & abonnements (joueurs)
+async function isFavoriteTeam(userId, teamId) {
+  const { data } = await sb.from('favorites').select('team_id').eq('user_id', userId).eq('team_id', teamId).maybeSingle();
+  return !!data;
+}
+async function addFavorite(userId, teamId) {
+  const { error } = await sb.from('favorites').insert({ user_id: userId, team_id: teamId });
+  if (error) throw error;
+}
+async function removeFavorite(userId, teamId) {
+  const { error } = await sb.from('favorites').delete().eq('user_id', userId).eq('team_id', teamId);
+  if (error) throw error;
+}
+async function listFavoriteTeams() {
+  const { data, error } = await sb.from('favorites').select('team:teams(*)');
+  if (error) throw error;
+  return (data ?? []).map((r) => r.team).filter(Boolean);
+}
+async function isFollowingPlayer(userId, playerId) {
+  const { data } = await sb.from('player_follows').select('player_id').eq('user_id', userId).eq('player_id', playerId).maybeSingle();
+  return !!data;
+}
+async function followPlayer(userId, playerId) {
+  const { error } = await sb.from('player_follows').insert({ user_id: userId, player_id: playerId });
+  if (error) throw error;
+}
+async function unfollowPlayer(userId, playerId) {
+  const { error } = await sb.from('player_follows').delete().eq('user_id', userId).eq('player_id', playerId);
+  if (error) throw error;
+}
+async function listFollowedPlayers() {
+  const { data, error } = await sb.from('player_follows').select('created_at, player:players(*)').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r) => r.player).filter(Boolean);
+}
+
+// -- recherche
+async function searchAll(term) {
+  const like = `%${term}%`;
+  const [players, teams, news] = await Promise.all([
+    sb.from('players').select('id, full_name, team_id').ilike('full_name', like).limit(12).then((r) => r.data ?? []),
+    sb.from('teams').select('id, name, short_name, color, logo_url').ilike('name', like).limit(12).then((r) => r.data ?? []),
+    sb.from('news').select('id, title, published_at').ilike('title', like).limit(12).then((r) => r.data ?? []),
+  ]);
+  return { players, teams, news };
+}
 function fetchTeamsMap() {
   if (!teamsPromise) {
     teamsPromise = sb
@@ -612,9 +701,12 @@ async function renderMatchDetail(id) {
   if (!stats.length && !events.length) {
     html += emptyHtml('Détails à venir', done ? 'La feuille de match sera publiée prochainement.' : 'Les statistiques apparaîtront pendant et après la rencontre.', 'ball');
   }
+  html += `<div id="fanSlot"></div><div id="h2hSlot"></div>`;
 
   view.innerHTML = html;
   wireBack();
+  fillMatchFan(m, stats);
+  fillHeadToHead(m);
 
   clearTimeout(detailTimer);
   if (live) {
@@ -631,7 +723,8 @@ function statTile(v, label, isInt) {
 }
 async function renderPlayer(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
-  const [p, season, games] = await Promise.all([safe(getPlayer(id), null), safe(getPlayerSeason(id), null), safe(getPlayerGames(id, 8), [])]);
+  const uid = session?.user?.id;
+  const [p, season, games, following] = await Promise.all([safe(getPlayer(id), null), safe(getPlayerSeason(id), null), safe(getPlayerGames(id, 8), []), uid ? safe(isFollowingPlayer(uid, id), false) : Promise.resolve(false)]);
   if (!p) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   const team = p.team;
   let html = backBtnHtml();
@@ -641,6 +734,7 @@ async function renderPlayer(id) {
       <h1>${esc(p.full_name)}</h1>
       <div class="profile-sub">${[p.number ? '#' + p.number : null, p.position, team ? esc(team.name) : null].filter(Boolean).join(' · ')}</div>
       ${team ? `<a class="chip-link" href="#team/${team.id}">Voir le club →</a>` : ''}
+      ${followBtnHtml(following, 'Suivre', 'Suivi ✓')}
     </div>
   </div>`;
   if (season) {
@@ -662,17 +756,23 @@ async function renderPlayer(id) {
   }
   if (!season && !games.length) html += emptyHtml('Pas encore de statistiques', "Ce joueur n'a pas encore de match enregistré.", 'trophy');
   view.innerHTML = html; wireBack();
+  const fb = $('#followBtn');
+  if (fb) fb.addEventListener('click', async () => {
+    if (!uid) return openAuth('login');
+    try { if (following) await unfollowPlayer(uid, id); else await followPlayer(uid, id); toast(following ? 'Vous ne suivez plus' : 'Joueur suivi'); renderPlayer(id); } catch { toast('Action impossible'); }
+  });
 }
 
 // ------------------------------------------------------- fiche club
 async function renderTeam(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
-  const [t, players, standing, matches] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), [])]);
+  const uid = session?.user?.id;
+  const [t, players, standing, matches, isFav] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false)]);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   let html = backBtnHtml();
   html += `<div class="profile">
     <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div></div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Favori ✓')}</div>
   </div>`;
   if (standing) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
@@ -688,6 +788,11 @@ async function renderTeam(id) {
   if (show.length) html += `<div class="block"><div class="block-head"><h2>Matchs</h2></div>${show.map(matchCardHtml).join('')}</div>`;
   if (!players.length && !matches.length && !standing) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
   view.innerHTML = html; wireBack();
+  const fb = $('#followBtn');
+  if (fb) fb.addEventListener('click', async () => {
+    if (!uid) return openAuth('login');
+    try { if (isFav) await removeFavorite(uid, id); else await addFavorite(uid, id); toast(isFav ? 'Retiré des favoris' : 'Ajouté aux favoris'); renderTeam(id); } catch { toast('Action impossible'); }
+  });
 }
 
 // ------------------------------------------------------- détail actualité
@@ -776,9 +881,139 @@ function renderPlus() {
     { r: 'videos', label: 'Vidéos', ic: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>' },
     { r: 'clubs', label: 'Clubs', ic: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
     { r: 'fanzone', label: 'Fan Zone', ic: '<path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/>' },
+    { r: 'recherche', label: 'Recherche', ic: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>' },
+    { r: 'favoris', label: 'Mes favoris', ic: '<path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8 14.4 7c1.3-1.7 3.6-2.3 5.6-1.3 2.6 1.3 3.1 4.7 1.5 7C19 16.4 12 21 12 21z"/>' },
   ];
   view.innerHTML = `<h1 class="view-title">Plus</h1><p class="view-sub">Explorez tout le basket guinéen.</p>
     <div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
+}
+
+// -- fan zone d'un match : pronostic + vote MVP (remplit #fanSlot)
+async function fillMatchFan(m, stats) {
+  const slot = $('#fanSlot');
+  if (!slot) return;
+  const uid = session?.user?.id;
+  const [predRes, myPred, mvpRes, myMvp] = await Promise.all([
+    safe(predictionResults(m.id), []),
+    uid ? safe(myPrediction(m.id, uid), null) : Promise.resolve(null),
+    safe(mvpResults(m.id), []),
+    uid ? safe(myMvpVote(m.id, uid), null) : Promise.resolve(null),
+  ]);
+  if ($('#fanSlot') !== slot) return; // l'utilisateur a changé de page
+  let html = `<div class="block"><div class="block-head"><h2>Fan Zone</h2></div>`;
+  html += pronosticHtml(m, predRes, myPred, uid);
+  if (stats.length) html += mvpHtml(stats, mvpRes, myMvp, uid);
+  html += `</div>`;
+  slot.innerHTML = html;
+  slot.querySelectorAll('.pred-opt:not([disabled])').forEach((b) => b.addEventListener('click', async () => {
+    if (!uid) return openAuth('login');
+    try { await votePrediction(m.id, uid, b.dataset.team); toast('Pronostic enregistré'); renderMatchDetail(m.id); } catch { toast('Impossible'); }
+  }));
+  slot.querySelectorAll('.poll-opt[data-player]:not([disabled])').forEach((b) => b.addEventListener('click', async () => {
+    if (!uid) return openAuth('login');
+    try { await voteMvp(m.id, uid, b.dataset.player); toast('Vote MVP enregistré'); renderMatchDetail(m.id); } catch { toast('Impossible'); }
+  }));
+}
+function pronosticHtml(m, res, myPred, uid) {
+  const total = res.reduce((s, r) => s + Number(r.votes || 0), 0);
+  const opt = (team, tid) => {
+    const votes = Number(res.find((r) => r.team_id === tid)?.votes || 0);
+    const pct = total ? Math.round((votes / total) * 100) : 0;
+    return `<button class="pred-opt${myPred === tid ? ' mine' : ''}" data-team="${tid}" ${myPred != null ? 'disabled' : ''}>
+      <span class="po-fill" style="width:${myPred != null ? pct : 0}%"></span>
+      <span class="po-label">${logoHtml(team, 'mlogo')}<span>${esc(team?.name || '')}</span></span>
+      ${myPred != null ? `<span class="po-pct">${pct}%</span>` : ''}
+    </button>`;
+  };
+  const foot = myPred != null ? `${total} pronostic${total > 1 ? 's' : ''}` : uid ? 'Qui va gagner ? Touchez pour pronostiquer' : 'Connectez-vous pour pronostiquer';
+  return `<div class="poll"><h3>Pronostic</h3><div class="poll-opts pred-opts">${opt(m.home_team, m.home_team_id)}${opt(m.away_team, m.away_team_id)}</div><div class="poll-foot">${foot}</div></div>`;
+}
+function mvpHtml(stats, res, myMvp, uid) {
+  const total = res.reduce((s, r) => s + Number(r.votes || 0), 0);
+  const rows = stats.map((s) => {
+    const p = s.player;
+    if (!p) return '';
+    const votes = Number(res.find((r) => r.player_id === p.id)?.votes || 0);
+    const pct = total ? Math.round((votes / total) * 100) : 0;
+    return `<button class="poll-opt${myMvp === p.id ? ' mine' : ''}" data-player="${p.id}" ${myMvp != null ? 'disabled' : ''}>
+      <span class="po-fill" style="width:${myMvp != null ? pct : 0}%"></span>
+      <span class="po-label">${esc(p.full_name)} · ${s.points} pts</span>
+      ${myMvp != null ? `<span class="po-pct">${pct}%</span>` : ''}
+    </button>`;
+  }).join('');
+  const foot = myMvp != null ? `${total} vote${total > 1 ? 's' : ''}` : uid ? 'Élisez le MVP du match' : 'Connectez-vous pour voter le MVP';
+  return `<div class="poll"><h3>Vote MVP</h3><div class="poll-opts">${rows}</div><div class="poll-foot">${foot}</div></div>`;
+}
+
+// -- face-à-face (remplit #h2hSlot)
+async function fillHeadToHead(m) {
+  const slot = $('#h2hSlot');
+  if (!slot) return;
+  const h2h = await safe(getHeadToHead(m.home_team_id, m.away_team_id), []);
+  if ($('#h2hSlot') !== slot || !h2h.length) return;
+  let homeW = 0, awayW = 0;
+  h2h.forEach((x) => {
+    if (x.home_score === x.away_score) return;
+    const winner = x.home_score > x.away_score ? x.home_team_id : x.away_team_id;
+    if (winner === m.home_team_id) homeW++; else if (winner === m.away_team_id) awayW++;
+  });
+  slot.innerHTML = `<div class="block"><div class="block-head"><h2>Face-à-face</h2></div>
+    <div class="h2h-tally"><span>${esc(m.home_team?.short_name || m.home_team?.name || '')}</span><b>${homeW} – ${awayW}</b><span>${esc(m.away_team?.short_name || m.away_team?.name || '')}</span></div>
+    ${h2h.slice(0, 8).map(matchCardHtml).join('')}</div>`;
+}
+
+// -- recherche
+let searchTimer = null;
+function renderSearch() {
+  view.innerHTML = `<h1 class="view-title">Recherche</h1>
+    <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input type="search" id="searchInput" placeholder="Joueur, club, actualité…" autocomplete="off" autofocus /></div>
+    <div id="searchBody"><p class="view-sub">Tapez au moins 2 caractères.</p></div>`;
+  const input = $('#searchInput');
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const term = input.value.trim();
+    if (term.length < 2) { $('#searchBody').innerHTML = '<p class="view-sub">Tapez au moins 2 caractères.</p>'; return; }
+    $('#searchBody').innerHTML = loadingHtml();
+    searchTimer = setTimeout(async () => {
+      const res = await safe(searchAll(term), null);
+      if (input.value.trim() !== term) return; // frappe plus récente
+      $('#searchBody').innerHTML = searchResultsHtml(res);
+    }, 300);
+  });
+}
+function searchResultsHtml(res) {
+  if (!res) return errorHtml();
+  const { players, teams, news } = res;
+  if (!players.length && !teams.length && !news.length) return emptyHtml('Aucun résultat', 'Essayez un autre mot-clé.', 'inbox');
+  let html = '';
+  if (teams.length) html += `<div class="block"><div class="block-head"><h2>Clubs</h2></div><div class="roster">${teams.map((t) => `<a class="roster-row" href="#team/${t.id}">${logoHtml(t)}<span class="rr-name">${esc(t.name)}</span></a>`).join('')}</div></div>`;
+  if (players.length) html += `<div class="block"><div class="block-head"><h2>Joueurs</h2></div><div class="roster">${players.map((p) => `<a class="roster-row" href="#player/${p.id}"><span class="lava" style="width:32px;height:32px;font-size:12px">${initials(p.full_name)}</span><span class="rr-name">${esc(p.full_name)}</span></a>`).join('')}</div></div>`;
+  if (news.length) html += `<div class="block"><div class="block-head"><h2>Actualités</h2></div><div class="roster">${news.map((n) => `<a class="roster-row" href="#news/${n.id}"><span class="rr-name">${esc(n.title)}</span></a>`).join('')}</div></div>`;
+  return html;
+}
+
+// -- mes favoris (clubs favoris + joueurs suivis)
+async function renderFavoris() {
+  view.innerHTML = `<h1 class="view-title">Mes favoris</h1><div id="favBody">${loadingHtml()}</div>`;
+  const el = $('#favBody');
+  if (!session) {
+    el.innerHTML = `<div class="login-prompt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8"/></svg></div><h3>Connectez-vous</h3><p>Créez un compte pour suivre vos clubs et joueurs préférés.</p><button class="btn" id="favLogin">Se connecter</button></div>`;
+    $('#favLogin').addEventListener('click', () => openAuth('login'));
+    return;
+  }
+  const [teams, players] = await Promise.all([safe(listFavoriteTeams(), []), safe(listFollowedPlayers(), [])]);
+  let html = '';
+  if (teams.length) html += `<div class="block"><div class="block-head"><h2>Clubs favoris</h2></div><div class="club-grid">${teams.map((t) => `<a class="club-card" href="#team/${t.id}">${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span></a>`).join('')}</div></div>`;
+  if (players.length) html += `<div class="block"><div class="block-head"><h2>Joueurs suivis</h2></div><div class="roster">${players.map((p) => `<a class="roster-row" href="#player/${p.id}"><span class="lava" style="width:32px;height:32px;font-size:12px">${initials(p.full_name)}</span><span class="rr-name">${esc(p.full_name)}</span></a>`).join('')}</div></div>`;
+  el.innerHTML = html || emptyHtml('Rien pour le moment', 'Ajoutez des clubs et joueurs en favoris depuis leur fiche.', 'trophy');
+}
+
+function followBtnHtml(active, label, labelActive) {
+  return `<button class="fav-btn${active ? ' active' : ''}" id="followBtn">
+    <svg viewBox="0 0 24 24" fill="${active ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8 14.4 7c1.3-1.7 3.6-2.3 5.6-1.3 2.6 1.3 3.1 4.7 1.5 7C19 16.4 12 21 12 21z"/></svg>
+    ${active ? labelActive : label}
+  </button>`;
 }
 
 const RENDERERS = {
@@ -791,6 +1026,8 @@ const RENDERERS = {
   videos: renderVideos,
   clubs: renderClubs,
   fanzone: renderFanzone,
+  recherche: renderSearch,
+  favoris: renderFavoris,
 };
 
 function scheduleLiveRefresh(hasLive) {
@@ -803,7 +1040,7 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone'];
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris'];
 function setActiveTab(route) {
   const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
