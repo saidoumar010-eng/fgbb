@@ -28,8 +28,10 @@ const TZ = 'Africa/Conakry'; // Guinée = GMT
 let session = null;
 let profile = null;
 let currentRoute = 'accueil';
+let lastListRoute = 'accueil'; // onglet d'où l'on ouvre une fiche match (pour le retour)
 let viewRendered = false;
 let liveTimer = null;
+let detailTimer = null;
 let teamsPromise = null;
 
 // --------------------------------------------------------------- helpers DOM
@@ -125,6 +127,30 @@ async function listLeadersBy(col) {
   if (error) throw error;
   return data ?? [];
 }
+async function getMatch(id) {
+  const { data, error } = await sb.from('matches').select(MATCH_SELECT).eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+async function getMatchStats(matchId) {
+  const { data, error } = await sb
+    .from('player_match_stats')
+    .select('*, player:players(*)')
+    .eq('match_id', matchId)
+    .order('points', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+const EVENT_SELECT = '*, player:players(id, full_name, number), team:teams(id, name, short_name, color)';
+async function listMatchEvents(matchId) {
+  const { data, error } = await sb
+    .from('match_events')
+    .select(EVENT_SELECT)
+    .eq('match_id', matchId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
 function fetchTeamsMap() {
   if (!teamsPromise) {
     teamsPromise = sb
@@ -180,7 +206,7 @@ function matchCardHtml(m) {
   else if (done) status = `<span class="pill done">Terminé</span>`;
   else status = `<span class="pill next">${fmtDate(m.scheduled_at)}</span>`;
 
-  return `<a class="match" href="index.html#federation" onclick="return false;">
+  return `<a class="match" href="#match/${m.id}">
     <div class="match-meta"><span>${esc(comp)}${roundTxt}</span><span>${live || done ? fmtDate(m.scheduled_at) : ''}</span></div>
     <div class="match-body">
       <div class="mteam">${logoHtml(home)}<span class="mn">${esc(home?.name || 'Équipe')}</span></div>
@@ -273,7 +299,7 @@ async function renderAccueil() {
       ? `<div class="fscore">${f.home_score ?? 0} <span class="vs">:</span> ${f.away_score ?? 0}</div>`
       : `<div class="fscore"><span class="vs">VS</span></div>`;
     const label = isLive ? `<span class="pill live">En direct</span>` : isDone ? 'Terminé' : `${fmtDate(f.scheduled_at)} · ${fmtTime(f.scheduled_at)}`;
-    html += `<div class="featured">
+    html += `<a class="featured" href="#match/${f.id}">
       <div class="fh">${isLive ? '🔴 ' : ''}Match à la une${f.competition?.name ? ' · ' + esc(f.competition.name) : ''}</div>
       <div class="fbody">
         <div class="fteam">${logoHtml(f.home_team, 'mlogo')}<span class="fn">${esc(f.home_team?.name || '')}</span></div>
@@ -281,7 +307,7 @@ async function renderAccueil() {
         <div class="fteam">${logoHtml(f.away_team, 'mlogo')}<span class="fn">${esc(f.away_team?.name || '')}</span></div>
       </div>
       <div class="fmeta">${label}</div>
-    </div>`;
+    </a>`;
   }
 
   // Prochains / derniers matchs (max 4)
@@ -397,6 +423,128 @@ async function renderLeaders() {
     : emptyHtml('Pas encore de statistiques', 'Les leaders apparaîtront après les premiers matchs.', 'trophy');
 }
 
+// ------------------------------------------------------- fiche match (détail)
+function backBtnHtml() {
+  return `<button class="back-btn" id="backBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Retour</button>`;
+}
+function wireBack() {
+  const b = $('#backBtn');
+  if (b) b.addEventListener('click', () => { location.hash = lastListRoute; });
+}
+function eventText(ev) {
+  if (ev.label) return ev.label;
+  const who = ev.player?.full_name ? ` — ${ev.player.full_name}` : '';
+  switch (ev.kind) {
+    case 'points': return `Panier +${ev.points}${who}`;
+    case 'foul': return `Faute${who}`;
+    case 'timeout': return 'Temps mort';
+    case 'quarter': return `Fin du quart-temps ${ev.quarter || ''}`.trim();
+    case 'correction': return `Correction${who}`;
+    default: return 'Info';
+  }
+}
+function pbpRowHtml(ev) {
+  const color = ev.team?.color || 'var(--teal)';
+  return `<div class="pbp-row">
+    <span class="pbp-q">${ev.quarter ? 'Q' + ev.quarter : '·'}</span>
+    <span class="pbp-dot" style="background:${esc(color)}"></span>
+    <span class="pbp-txt">${esc(eventText(ev))}</span>
+  </div>`;
+}
+function boxTableHtml(team, rows) {
+  if (!rows.length) {
+    return `<div class="bx-team"><div class="bx-head">${logoHtml(team)}<b>${esc(team?.name || '')}</b></div><p class="bx-empty">Pas encore de statistiques.</p></div>`;
+  }
+  const body = rows.map((s) => {
+    const p = s.player;
+    return `<tr>
+      <td class="bx-p"><span class="bx-num">${p?.number ?? ''}</span>${esc(p?.full_name || '—')}</td>
+      <td class="bx-pts">${s.points}</td><td>${s.rebounds}</td><td>${s.assists}</td><td>${s.steals}</td><td>${s.blocks}</td><td class="hide-sm">${s.fouls}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="bx-team">
+    <div class="bx-head">${logoHtml(team)}<b>${esc(team?.name || '')}</b></div>
+    <div style="overflow-x:auto"><table class="bx">
+      <thead><tr><th class="bx-p">Joueur</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Int</th><th>Ct</th><th class="hide-sm">Ft</th></tr></thead>
+      <tbody>${body}</tbody></table></div>
+  </div>`;
+}
+
+async function renderMatchDetail(id) {
+  view.innerHTML = backBtnHtml() + loadingHtml();
+  wireBack();
+  window.scrollTo({ top: 0 });
+  const [m, stats, events] = await Promise.all([
+    safe(getMatch(id), null),
+    safe(getMatchStats(id), []),
+    safe(listMatchEvents(id), []),
+  ]);
+  if (!m) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+
+  const live = m.status === 'live', done = m.status === 'finished';
+  const homeWin = done && m.home_score > m.away_score;
+  const awayWin = done && m.away_score > m.home_score;
+  const scoreShown = live || done;
+  const statusPill = live
+    ? `<span class="pill live">Q${m.current_quarter || 1} · En direct</span>`
+    : done ? `<span class="pill done">Terminé</span>`
+    : `<span class="pill next">${fmtDate(m.scheduled_at)} · ${fmtTime(m.scheduled_at)}</span>`;
+
+  let qs = '';
+  if (Array.isArray(m.quarter_scores) && m.quarter_scores.length) {
+    const head = m.quarter_scores.map((q) => `<th>Q${q.q}</th>`).join('');
+    const hrow = m.quarter_scores.map((q) => `<td>${q.home}</td>`).join('');
+    const arow = m.quarter_scores.map((q) => `<td>${q.away}</td>`).join('');
+    qs = `<div style="overflow-x:auto"><table class="qscores">
+      <thead><tr><th></th>${head}</tr></thead>
+      <tbody>
+        <tr><td class="qt-team">${esc(m.home_team?.short_name || m.home_team?.name || '')}</td>${hrow}</tr>
+        <tr><td class="qt-team">${esc(m.away_team?.short_name || m.away_team?.name || '')}</td>${arow}</tr>
+      </tbody></table></div>`;
+  }
+
+  const meta = [m.competition?.name, m.round ? 'Journée ' + m.round : null, fmtDate(m.scheduled_at), m.venue].filter(Boolean).join(' · ');
+
+  let html = backBtnHtml();
+  html += `<div class="md-board">
+    <div class="md-meta">${esc(meta)}</div>
+    <div class="md-teams">
+      <div class="md-team">${logoHtml(m.home_team, 'mlogo')}<span class="md-tn ${awayWin ? 'loser' : ''}">${esc(m.home_team?.name || '')}</span></div>
+      <div class="md-center">
+        ${scoreShown
+          ? `<div class="md-score"><span class="${awayWin ? 'loser' : ''}">${m.home_score ?? 0}</span><span class="sep">:</span><span class="${homeWin ? 'loser' : ''}">${m.away_score ?? 0}</span></div>`
+          : `<div class="md-vs">VS</div>`}
+        <div class="md-status">${statusPill}</div>
+      </div>
+      <div class="md-team">${logoHtml(m.away_team, 'mlogo')}<span class="md-tn ${homeWin ? 'loser' : ''}">${esc(m.away_team?.name || '')}</span></div>
+    </div>
+    ${qs}
+    ${m.video_url ? `<a class="btn sm" style="margin-top:16px" href="${esc(m.video_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>Voir la vidéo</a>` : ''}
+  </div>`;
+
+  const homeStats = stats.filter((s) => s.team_id === m.home_team_id);
+  const awayStats = stats.filter((s) => s.team_id === m.away_team_id);
+  if (stats.length) {
+    html += `<div class="block"><div class="block-head"><h2>Feuille de match</h2></div>${boxTableHtml(m.home_team, homeStats)}${boxTableHtml(m.away_team, awayStats)}</div>`;
+  }
+  if (events.length) {
+    html += `<div class="block"><div class="block-head"><h2>Fil du match</h2></div><div class="pbp">${events.map(pbpRowHtml).join('')}</div></div>`;
+  }
+  if (!stats.length && !events.length) {
+    html += emptyHtml('Détails à venir', done ? 'La feuille de match sera publiée prochainement.' : 'Les statistiques apparaîtront pendant et après la rencontre.', 'ball');
+  }
+
+  view.innerHTML = html;
+  wireBack();
+
+  clearTimeout(detailTimer);
+  if (live) {
+    detailTimer = setTimeout(() => {
+      if (location.hash.replace('#', '') === 'match/' + id) renderMatchDetail(id);
+    }, 20000);
+  }
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   matchs: renderMatchs,
@@ -420,7 +568,9 @@ function setActiveTab(route) {
 }
 function render(route) {
   clearTimeout(liveTimer);
+  clearTimeout(detailTimer);
   currentRoute = route;
+  lastListRoute = route; // pour le bouton « Retour » d'une fiche match
   viewRendered = true;
   setActiveTab(route);
   window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
@@ -431,6 +581,14 @@ function handleHash() {
   if (h === 'connexion' || h === 'inscription') {
     if (!viewRendered) render('accueil');
     openAuth(h === 'inscription' ? 'signup' : 'login');
+    return;
+  }
+  if (h.startsWith('match/')) {
+    viewRendered = true;
+    currentRoute = h;
+    clearTimeout(liveTimer);
+    setActiveTab('');
+    renderMatchDetail(h.slice(6));
     return;
   }
   render(ROUTES.includes(h) ? h : 'accueil');
