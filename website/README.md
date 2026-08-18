@@ -81,10 +81,10 @@ vers l'hébergeur choisi.
 
 ## À personnaliser avant publication
 
-- **Adresse e-mail de contact** : le site utilise `contact@fgbb.gn` (déduit de
-  l'admin `admin@fgbb.gn`). Remplacez-la partout par l'adresse réelle de la
-  fédération si besoin (présente dans `confidentialite.html`,
-  `suppression-compte.html`, `support.html`).
+- **Coordonnées de contact** : e-mails `infos@feguiba.org` et
+  `Soleilsarlbtp@gmail.com`, téléphone `+224 626 88 83 33` (présents dans
+  `confidentialite.html`, `suppression-compte.html`, `support.html` et le pied de
+  page de `index.html`).
 - **Réseaux sociaux** : les liens Facebook / YouTube / Instagram du pied de page
   de `index.html` pointent vers `#` — mettez les vraies URL.
 - **Lien Google Play** : une fois l'app publiée, remplacez les badges
