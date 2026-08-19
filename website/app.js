@@ -147,6 +147,22 @@ async function removeCompetitionTeam(competitionId, teamId) {
   const { error } = await sb.from('competition_teams').delete().eq('competition_id', competitionId).eq('team_id', teamId);
   if (error) throw error;
 }
+// Réseaux sociaux (admin) — écriture.
+async function updateTeam(id, patch) {
+  const { error } = await sb.from('teams').update(patch).eq('id', id);
+  if (error) throw error;
+}
+async function updatePlayer(id, patch) {
+  const { error } = await sb.from('players').update(patch).eq('id', id);
+  if (error) throw error;
+}
+async function saveFederationSocials(patch) {
+  const current = await getFederationInfo();
+  const value = { ...current, ...patch };
+  Object.keys(value).forEach((k) => { if (typeof value[k] === 'string' && !value[k].trim()) delete value[k]; });
+  const { error } = await sb.from('settings').upsert({ key: 'federation', value }, { onConflict: 'key' });
+  if (error) throw error;
+}
 async function listNews() {
   const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false });
   if (error) throw error;
@@ -381,6 +397,31 @@ function externalUrl(raw) {
   if (!v) return null;
   return /^https?:\/\//i.test(v) ? v : 'https://' + v;
 }
+function waLink(v) {
+  const s = String(v).trim();
+  return /^https?:/i.test(s) ? s : 'https://wa.me/' + s.replace(/[^\d]/g, '');
+}
+const SOCIAL_ICONS = {
+  facebook: '<path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.8-1.6 1.6V12h2.7l-.4 2.9h-2.3v7A10 10 0 0022 12z"/>',
+  instagram: '<rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.6" cy="6.4" r="1.3"/>',
+  tiktok: '<path d="M16.5 3c.3 2.2 1.8 3.9 4 4.2v3c-1.5 0-2.9-.5-4-1.3v6.1a5.5 5.5 0 11-5.5-5.5c.3 0 .6 0 .9.1v3.1a2.5 2.5 0 102 2.4V3z"/>',
+  youtube: '<path d="M23 12s0-3.2-.4-4.7a2.5 2.5 0 00-1.7-1.7C19.4 5.2 12 5.2 12 5.2s-7.4 0-8.9.4A2.5 2.5 0 001.4 7.3C1 8.8 1 12 1 12s0 3.2.4 4.7a2.5 2.5 0 001.7 1.7c1.5.4 8.9.4 8.9.4s7.4 0 8.9-.4a2.5 2.5 0 001.7-1.7C23 15.2 23 12 23 12zM9.8 15.3V8.7l5.7 3.3z"/>',
+  x: '<path d="M4 3l7 8.6L4.4 21H7l5-5.9L17 21h3l-7.4-9L19.6 3H17l-4.6 5.4L8.7 3z"/>',
+  whatsapp: '<path d="M12 2a10 10 0 00-8.6 15L2 22l5.1-1.3A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7 7 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4H7c-.2 0-.4.1-.6.3a2.6 2.6 0 00-.8 2 4.6 4.6 0 001 2.4 10.4 10.4 0 004 3.5c1.4.6 2 .6 2.7.5a2.3 2.3 0 001.5-1c.2-.5.2-1 .1-1z"/>',
+  website: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3a15 15 0 010 18" fill="none" stroke="currentColor" stroke-width="2"/>',
+};
+function socialLinksHtml(obj, defs) {
+  const items = defs.map((d) => {
+    const v = obj?.[d.key];
+    if (!v || !String(v).trim()) return '';
+    const href = d.key === 'whatsapp' ? waLink(v) : externalUrl(v);
+    return `<a class="social-ic" href="${esc(href)}" target="_blank" rel="noopener" aria-label="${d.label}"><svg viewBox="0 0 24 24" fill="currentColor">${SOCIAL_ICONS[d.icon || d.key]}</svg></a>`;
+  }).filter(Boolean);
+  return items.length ? `<div class="socials-row">${items.join('')}</div>` : '';
+}
+const FED_SOCIALS = [{ key: 'facebook', label: 'Facebook' }, { key: 'instagram', label: 'Instagram' }, { key: 'tiktok', label: 'TikTok' }, { key: 'youtube', label: 'YouTube' }, { key: 'x', label: 'X' }, { key: 'whatsapp', label: 'WhatsApp' }];
+const TEAM_SOCIALS = [{ key: 'facebook', label: 'Facebook' }, { key: 'instagram', label: 'Instagram' }, { key: 'tiktok', label: 'TikTok' }, { key: 'youtube', label: 'YouTube' }, { key: 'x_url', label: 'X', icon: 'x' }, { key: 'website', label: 'Site web', icon: 'website' }];
+const PLAYER_SOCIALS = [{ key: 'instagram', label: 'Instagram' }, { key: 'tiktok', label: 'TikTok' }, { key: 'x_url', label: 'X', icon: 'x' }];
 
 // -- palmarès
 const AWARD_LABELS = { joueur_du_mois: 'Joueur du mois', mvp_saison: 'MVP de la saison', meilleur_cinq: 'Meilleur cinq', autre: 'Distinction' };
@@ -979,6 +1020,7 @@ async function renderPlayer(id) {
       <div class="profile-sub">${[p.number ? '#' + p.number : null, p.position, team ? esc(team.name) : null].filter(Boolean).join(' · ')}</div>
       ${team ? `<a class="chip-link" href="#team/${team.id}">Voir le club →</a>` : ''}
       ${followBtnHtml(following, 'Suivre', 'Suivi')}
+      ${socialLinksHtml(p, PLAYER_SOCIALS)}
     </div>
   </div>`;
   if (season) {
@@ -1016,7 +1058,7 @@ async function renderTeam(id) {
   let html = backBtnHtml();
   html += `<div class="profile">
     <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}${socialLinksHtml(t, TEAM_SOCIALS)}</div>
   </div>`;
   if (standing) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
@@ -1277,7 +1319,7 @@ const TIER_LABELS = { principal: 'Partenaire principal', officiel: 'Partenaires 
 async function renderApropos() {
   view.innerHTML = `<h1 class="view-title">La fédération</h1><div id="apBody">${loadingHtml()}</div>`;
   const [info, sponsors] = await Promise.all([safe(getFederationInfo(), {}), safe(listSponsors(), [])]);
-  let html = `<div class="ap-card"><img src="assets/logo-card.png" alt="Logo FGBB"><h2>Fédération Guinéenne de Basket-Ball</h2>${info.president ? `<p class="ap-pres">Président : ${esc(info.president)}</p>` : ''}<div class="tricolor" style="justify-content:center;margin-top:14px"><span class="r"></span><span class="y"></span><span class="g"></span></div></div>`;
+  let html = `<div class="ap-card"><img src="assets/logo-card.png" alt="Logo FGBB"><h2>Fédération Guinéenne de Basket-Ball</h2>${info.president ? `<p class="ap-pres">Président : ${esc(info.president)}</p>` : ''}<div class="tricolor" style="justify-content:center;margin-top:14px"><span class="r"></span><span class="y"></span><span class="g"></span></div>${socialLinksHtml(info, FED_SOCIALS)}</div>`;
   if (info.about) html += `<div class="block"><div class="block-head"><h2>Présentation</h2></div><p class="ap-about">${esc(info.about)}</p></div>`;
   const contacts = [];
   if (info.address) contacts.push(['Adresse', esc(info.address), null]);
@@ -1622,6 +1664,7 @@ function renderAdmin() {
   if (!isAdmin()) return renderAdminDenied();
   const items = [
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
+    { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
   ];
   view.innerHTML = `<h1 class="view-title">Espace fédération</h1><p class="view-sub">Gérez les poules, les playoffs et les réseaux sociaux.</p><div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
 }
@@ -1654,10 +1697,74 @@ async function renderAdminPoules() {
   }));
 }
 
+let adminSocialMode = 'federation';
+let adminSocialTeam = '';
+let adminSocialPlayer = '';
+function socialFormHtml(fields, obj) {
+  return `<form class="social-form">${fields.map(([k, label]) => `<div class="field"><label>${label}</label><input name="${k}" value="${esc(obj?.[k] || '')}" placeholder="https://…" autocomplete="off" /></div>`).join('')}<button class="btn" type="submit">Enregistrer</button></form>`;
+}
+function wireSocialForm(root, saver) {
+  const form = root.querySelector('.social-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {};
+    form.querySelectorAll('input').forEach((inp) => { data[inp.name] = inp.value.trim() || null; });
+    const btn = form.querySelector('button');
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = 'Enregistrement…';
+    try { await saver(data); toast('Réseaux sociaux enregistrés'); }
+    catch (err) { toast(errMsg(err)); }
+    btn.disabled = false;
+    btn.textContent = orig;
+  });
+}
+async function renderAdminSocials() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Réseaux sociaux</h1>
+    <div class="segmented" id="soMode">${[['federation', 'Fédération'], ['club', 'Clubs'], ['joueur', 'Joueurs']].map(([k, l]) => `<button class="seg ${adminSocialMode === k ? 'active' : ''}" data-m="${k}">${l}</button>`).join('')}</div>
+    <div id="soBody">${loadingHtml()}</div>`;
+  $('#soMode').querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { adminSocialMode = b.dataset.m; renderAdminSocials(); }));
+  const body = $('#soBody');
+  if (adminSocialMode === 'federation') {
+    const info = await safe(getFederationInfo(), {});
+    body.innerHTML = socialFormHtml([['facebook', 'Facebook'], ['instagram', 'Instagram'], ['tiktok', 'TikTok'], ['youtube', 'YouTube'], ['x', 'X (Twitter)'], ['whatsapp', 'WhatsApp (numéro ou lien)']], info);
+    wireSocialForm(body, (data) => saveFederationSocials(data));
+  } else if (adminSocialMode === 'club') {
+    const teams = await safe(listTeams(), []);
+    body.innerHTML = `<div class="field"><label>Club</label><select id="soPick" class="cmp-select"><option value="">— Choisir un club —</option>${teams.map((t) => `<option value="${t.id}" ${adminSocialTeam === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div><div id="soForm"></div>`;
+    const pick = $('#soPick');
+    const load = async () => {
+      adminSocialTeam = pick.value;
+      if (!adminSocialTeam) return void ($('#soForm').innerHTML = '');
+      const t = await safe(getTeam(adminSocialTeam), {});
+      $('#soForm').innerHTML = socialFormHtml([['facebook', 'Facebook'], ['instagram', 'Instagram'], ['tiktok', 'TikTok'], ['youtube', 'YouTube'], ['x_url', 'X (Twitter)'], ['website', 'Site web']], t);
+      wireSocialForm($('#soForm'), (data) => updateTeam(adminSocialTeam, data));
+    };
+    pick.addEventListener('change', load);
+    if (adminSocialTeam) load();
+  } else {
+    const players = await safe(listPlayersLite(), []);
+    body.innerHTML = `<div class="field"><label>Joueur</label><select id="soPick" class="cmp-select"><option value="">— Choisir un joueur —</option>${players.map((p) => `<option value="${p.id}" ${adminSocialPlayer === p.id ? 'selected' : ''}>${esc(p.full_name)}</option>`).join('')}</select></div><div id="soForm"></div>`;
+    const pick = $('#soPick');
+    const load = async () => {
+      adminSocialPlayer = pick.value;
+      if (!adminSocialPlayer) return void ($('#soForm').innerHTML = '');
+      const p = await safe(getPlayer(adminSocialPlayer), {});
+      $('#soForm').innerHTML = socialFormHtml([['instagram', 'Instagram'], ['tiktok', 'TikTok'], ['x_url', 'X (Twitter)']], p);
+      wireSocialForm($('#soForm'), (data) => updatePlayer(adminSocialPlayer, data));
+    };
+    pick.addEventListener('change', load);
+    if (adminSocialPlayer) load();
+  }
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   admin: renderAdmin,
   'admin-poules': renderAdminPoules,
+  'admin-socials': renderAdminSocials,
   matchs: renderMatchs,
   classement: renderClassement,
   actus: renderActus,

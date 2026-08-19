@@ -501,6 +501,18 @@ body.app-body {
 }
 .poule-select:disabled { opacity: 0.5; }
 
+/* réseaux sociaux : icônes + formulaire admin */
+.socials-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.ap-card .socials-row { justify-content: center; }
+.social-ic { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); display: grid; place-items: center; color: var(--muted); transition: color 0.15s ease, border-color 0.15s ease; }
+.social-ic:hover { color: var(--accent); border-color: var(--accent); }
+.social-ic svg { width: 19px; height: 19px; }
+.social-form .field { margin-bottom: 12px; }
+.social-form label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+.social-form input { width: 100%; background: var(--bg-deep); border: 1px solid var(--border-strong); border-radius: 10px; padding: 11px 13px; color: var(--text); font-family: inherit; font-size: 14.5px; }
+.social-form input:focus { outline: none; border-color: var(--accent); }
+.social-form .btn { margin-top: 6px; }
+
 /* ------------------------------------------------------------- news */
 .news-grid {
   display: grid;
