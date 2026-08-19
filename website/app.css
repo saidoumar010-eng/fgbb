@@ -1404,6 +1404,13 @@ a.leader, a.news-card, a.md-team { text-decoration: none; color: inherit; }
 .event-loc { display: flex; align-items: center; gap: 6px; }
 .event-loc svg { width: 14px; height: 14px; flex: none; }
 
+/* En-tête d'app sur petit écran : éviter le débordement des boutons d'auth */
+@media (max-width: 480px) {
+  #btnSignupHeader { display: none; }
+  .app-header .brand small { display: none; }
+  .header-right { gap: 8px; }
+}
+
 /* ============================ vague 3 : palmarès, discipline, agenda, quiz, fans */
 .roster-row a { color: var(--accent); text-decoration: none; }
 .roster-row.me { background: var(--accent-soft); }

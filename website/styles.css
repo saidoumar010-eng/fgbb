@@ -1660,6 +1660,10 @@ p {
   .steps {
     grid-template-columns: 1fr;
   }
+  /* la carte phare ne doit pas forcer une 2e colonne implicite en mono-colonne */
+  .card.lead {
+    grid-column: auto;
+  }
   .showcase-tiles {
     grid-template-columns: 1fr 1fr;
   }
