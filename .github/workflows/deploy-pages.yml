@@ -4,7 +4,7 @@ name: Déploiement du site (GitHub Pages)
 
 on:
   push:
-    branches: ["claude/app-website-complete-251c8b"]
+    branches: ["master"]
     paths:
       - "website/**"
       - ".github/workflows/deploy-pages.yml"
