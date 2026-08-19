@@ -512,6 +512,9 @@ body.app-body {
 .social-form input { width: 100%; background: var(--bg-deep); border: 1px solid var(--border-strong); border-radius: 10px; padding: 11px 13px; color: var(--text); font-family: inherit; font-size: 14.5px; }
 .social-form input:focus { outline: none; border-color: var(--accent); }
 .social-form .btn { margin-top: 6px; }
+.social-form select { width: 100%; background: var(--bg-deep); border: 1px solid var(--border-strong); border-radius: 10px; padding: 11px 13px; color: var(--text); font-family: inherit; font-size: 14.5px; }
+.mini-del { flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--dim); cursor: pointer; font-size: 14px; }
+.mini-del:hover { color: var(--danger); border-color: var(--danger); }
 
 /* ------------------------------------------------------------- news */
 .news-grid {

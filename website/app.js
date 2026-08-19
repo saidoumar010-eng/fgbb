@@ -163,6 +163,29 @@ async function saveFederationSocials(patch) {
   const { error } = await sb.from('settings').upsert({ key: 'federation', value }, { onConflict: 'key' });
   if (error) throw error;
 }
+// Playoffs (matches.phase = 'playoff', migration 0029).
+const PLAYOFF_ROUNDS = [
+  { key: 'quart', label: 'Quarts de finale' },
+  { key: 'demi', label: 'Demi-finales' },
+  { key: 'petite_finale', label: '3e place' },
+  { key: 'finale', label: 'Finale' },
+];
+function playoffRoundLabel(k) { return PLAYOFF_ROUNDS.find((r) => r.key === k)?.label || 'Playoff'; }
+async function listPlayoffMatches(competitionId) {
+  let q = sb.from('matches').select(MATCH_SELECT).eq('phase', 'playoff').order('scheduled_at', { ascending: true });
+  if (competitionId) q = q.eq('competition_id', competitionId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+async function createPlayoffMatch(m) {
+  const { error } = await sb.from('matches').insert({ ...m, phase: 'playoff', status: 'scheduled' });
+  if (error) throw error;
+}
+async function deleteMatch(id) {
+  const { error } = await sb.from('matches').delete().eq('id', id);
+  if (error) throw error;
+}
 async function listNews() {
   const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false });
   if (error) throw error;
@@ -1167,6 +1190,7 @@ function renderPlus() {
   const items = [
     { r: 'videos', label: 'Vidéos', ic: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>' },
     { r: 'clubs', label: 'Clubs', ic: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
+    { r: 'playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/>' },
     { r: 'fanzone', label: 'Fan Zone', ic: '<path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/>' },
     { r: 'recherche', label: 'Recherche', ic: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>' },
     { r: 'favoris', label: 'Mes favoris', ic: '<path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8 14.4 7c1.3-1.7 3.6-2.3 5.6-1.3 2.6 1.3 3.1 4.7 1.5 7C19 16.4 12 21 12 21z"/>' },
@@ -1664,6 +1688,7 @@ function renderAdmin() {
   if (!isAdmin()) return renderAdminDenied();
   const items = [
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
+    { r: 'admin-playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
   ];
   view.innerHTML = `<h1 class="view-title">Espace fédération</h1><p class="view-sub">Gérez les poules, les playoffs et les réseaux sociaux.</p><div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
@@ -1760,11 +1785,82 @@ async function renderAdminSocials() {
   }
 }
 
+let poComp;
+async function renderPlayoffs() {
+  view.innerHTML = `<h1 class="view-title">Playoffs</h1><p class="view-sub">Le tableau final : les 4 premiers de chaque poule.</p><div id="poFilter"></div><div id="poBody">${loadingHtml()}</div>`;
+  const comps = await safe(listCompetitions(), []);
+  if (poComp === undefined || (comps.length && !comps.find((c) => c.id === poComp))) poComp = comps.length ? comps[0].id : null;
+  const f = $('#poFilter');
+  if (f && comps.length > 1) {
+    f.className = 'segmented';
+    f.innerHTML = comps.map((c) => `<button class="seg ${poComp === c.id ? 'active' : ''}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+    f.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { poComp = b.dataset.c; renderPlayoffs(); }));
+  }
+  const matches = await safe(listPlayoffMatches(poComp || undefined), []);
+  const body = $('#poBody');
+  if (!body) return;
+  if (!matches.length) { body.innerHTML = emptyHtml('Playoffs à venir', 'Le tableau final apparaîtra une fois les matchs programmés.', 'trophy'); return; }
+  const byRound = {};
+  matches.forEach((m) => { const k = m.playoff_round || 'autre'; (byRound[k] = byRound[k] || []).push(m); });
+  let html = PLAYOFF_ROUNDS.filter((r) => byRound[r.key]).map((r) => `<div class="block"><div class="block-head"><h2>${r.label}</h2></div>${byRound[r.key].map(matchCardHtml).join('')}</div>`).join('');
+  if (byRound.autre) html += `<div class="block"><div class="block-head"><h2>Autres matchs</h2></div>${byRound.autre.map(matchCardHtml).join('')}</div>`;
+  body.innerHTML = html;
+}
+async function renderAdminPlayoffs() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Playoffs</h1><p class="view-sub">Programmez les matchs du tableau final.</p><div id="apoFilter"></div><div id="apoBody">${loadingHtml()}</div>`;
+  const comps = await safe(listCompetitions(), []);
+  if (!comps.length) { $('#apoBody').innerHTML = emptyHtml('Aucune compétition', "Créez d'abord une compétition dans l'app mobile.", 'inbox'); return; }
+  if (!adminComp || !comps.find((c) => c.id === adminComp)) adminComp = comps[0].id;
+  const f = $('#apoFilter');
+  f.className = 'segmented';
+  f.innerHTML = comps.map((c) => `<button class="seg ${adminComp === c.id ? 'active' : ''}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+  f.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { adminComp = b.dataset.c; renderAdminPlayoffs(); }));
+  const [teams, matches] = await Promise.all([safe(listTeams(), []), safe(listPlayoffMatches(adminComp), [])]);
+  const teamOpts = '<option value="">— Choisir —</option>' + teams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  const list = matches.length
+    ? matches.map((m) => `<div class="roster-row"><span class="rr-name"><b>${playoffRoundLabel(m.playoff_round)}</b> · ${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}</span><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></div>`).join('')
+    : '<p class="view-sub" style="padding:6px 2px">Aucun match de playoff pour l\'instant.</p>';
+  $('#apoBody').innerHTML = `
+    <form class="social-form" id="poForm">
+      <div class="field"><label>Tour</label><select name="playoff_round">${PLAYOFF_ROUNDS.map((r) => `<option value="${r.key}">${r.label}</option>`).join('')}</select></div>
+      <div class="field"><label>Équipe A (domicile)</label><select name="home_team_id" required>${teamOpts}</select></div>
+      <div class="field"><label>Équipe B (extérieur)</label><select name="away_team_id" required>${teamOpts}</select></div>
+      <div class="field"><label>Date et heure</label><input type="datetime-local" name="scheduled_at" /></div>
+      <div class="field"><label>Salle (optionnel)</label><input name="venue" placeholder="Ex. Palais des Sports de Nongo" /></div>
+      <button class="btn" type="submit">Créer le match</button>
+    </form>
+    <div class="block" style="margin-top:24px"><div class="block-head"><h2>Matchs programmés</h2></div><div class="roster">${list}</div></div>`;
+  const form = $('#poForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const home = fd.get('home_team_id'), away = fd.get('away_team_id');
+    if (!home || !away) return toast('Choisissez les deux équipes');
+    if (home === away) return toast('Les deux équipes doivent être différentes');
+    const dt = fd.get('scheduled_at');
+    const btn = form.querySelector('button');
+    btn.disabled = true;
+    try {
+      await createPlayoffMatch({ competition_id: adminComp, home_team_id: home, away_team_id: away, playoff_round: fd.get('playoff_round'), scheduled_at: dt ? dt + ':00.000Z' : null, venue: (fd.get('venue') || '').trim() || null });
+      toast('Match de playoff créé');
+      renderAdminPlayoffs();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#apoBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await deleteMatch(b.dataset.del); toast('Match supprimé'); renderAdminPlayoffs(); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   admin: renderAdmin,
   'admin-poules': renderAdminPoules,
   'admin-socials': renderAdminSocials,
+  'admin-playoffs': renderAdminPlayoffs,
+  playoffs: renderPlayoffs,
   matchs: renderMatchs,
   classement: renderClassement,
   actus: renderActus,
@@ -1797,7 +1893,7 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz', 'photos'];
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'playoffs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz', 'photos'];
 function setActiveTab(route) {
   const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
