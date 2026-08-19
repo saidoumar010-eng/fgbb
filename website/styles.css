@@ -26,26 +26,42 @@
   --teal: #0e5f58;
   --teal-deep: #0a4a44;
 
-  --red: #e23b3b;
+  --red: #e2564a;
   --green: #2bc48a;
 
-  /* Drapeau guinéen */
+  /* Rôles sémantiques — une couleur = une fonction */
+  --success: #2bc48a;
+  --success-soft: rgba(43, 196, 138, 0.14);
+  --danger: #e2564a;
+  --danger-soft: rgba(226, 86, 74, 0.14);
+  --warning: #e0b100;
+  --info: #4d9be6;
+
+  /* Drapeau guinéen — usage strictement identitaire, jamais décoratif */
   --flag-red: #ce1126;
   --flag-yellow: #fcd116;
   --flag-green: #009460;
 
-  --radius-sm: 10px;
-  --radius: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  /* Rayons — échelle maîtrisée : champ < bouton/carte < grand bloc */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
 
-  --shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
-  --shadow-soft: 0 12px 34px -18px rgba(0, 0, 0, 0.55);
+  /* Ombres — discrètes, réservées à une élévation réelle (modale, maquette) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 4px 12px -8px rgba(0, 0, 0, 0.38);
 
-  --maxw: 1160px;
+  /* Typographie */
+  --maxw: 1120px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif;
-  --font-display: "Segoe UI", "Helvetica Neue", var(--font);
+  --font-display: var(--font);
+  --lh-tight: 1.14;
+  --lh-body: 1.6;
 }
 
 /* Thème clair (activé uniquement dans l'app web via data-theme="light") */
@@ -65,8 +81,13 @@
   --accent-text: #ffffff;
   --red: #d12f2f;
   --green: #159c6e;
-  --shadow: 0 24px 60px -20px rgba(6, 32, 28, 0.25);
-  --shadow-soft: 0 12px 34px -18px rgba(6, 32, 28, 0.2);
+  --danger: #d12f2f;
+  --success: #159c6e;
+  --success-soft: rgba(21, 156, 110, 0.12);
+  --danger-soft: rgba(209, 47, 47, 0.1);
+  --shadow-sm: 0 1px 2px rgba(6, 32, 28, 0.08);
+  --shadow: 0 12px 32px -16px rgba(6, 32, 28, 0.18);
+  --shadow-soft: 0 4px 12px -8px rgba(6, 32, 28, 0.12);
 }
 
 /* ----------------------------------------------------------------- reset */
@@ -108,20 +129,26 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  line-height: 1.1;
+  line-height: var(--lh-tight);
   margin: 0;
-  letter-spacing: -0.02em;
-  font-weight: 800;
+  letter-spacing: -0.021em;
+  font-weight: 700;
 }
 
 p {
   margin: 0;
 }
 
-/* subtle scrollbar */
 ::selection {
   background: var(--accent);
   color: var(--accent-text);
+}
+
+/* Focus clavier visible et cohérent (accessibilité) */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 /* -------------------------------------------------------------- helpers */
@@ -217,8 +244,13 @@ p {
   white-space: nowrap;
 }
 .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px -12px rgba(59, 214, 27, 0.6);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+.btn:focus-visible,
+.btn.ghost:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .btn:active {
   transform: translateY(0);
@@ -253,14 +285,13 @@ p {
   align-items: center;
   gap: 12px;
   padding: 11px 20px 11px 16px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   border: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  background: var(--surface);
+  transition: border-color 0.18s ease;
 }
 .store-badge:hover {
   border-color: var(--accent);
-  transform: translateY(-2px);
 }
 .store-badge .glyph {
   width: 30px;
@@ -300,8 +331,8 @@ p {
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: saturate(140%) blur(14px);
-  background: rgba(6, 32, 28, 0.72);
+  background: rgba(6, 32, 28, 0.92);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
 .nav-inner {
@@ -378,19 +409,16 @@ p {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background:
-    radial-gradient(1100px 620px at 78% -6%, rgba(14, 95, 88, 0.55), transparent 60%),
-    radial-gradient(760px 520px at 8% 4%, rgba(59, 214, 27, 0.1), transparent 55%),
-    linear-gradient(180deg, var(--bg), var(--bg-deep));
+  background: linear-gradient(180deg, var(--bg), var(--bg-deep));
 }
 .hero-court {
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.5;
+  opacity: 0.16;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(closest-side at 70% 40%, #000 0%, transparent 78%);
-  mask-image: radial-gradient(closest-side at 70% 40%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(closest-side at 72% 42%, #000 0%, transparent 80%);
+  mask-image: radial-gradient(closest-side at 72% 42%, #000 0%, transparent 80%);
 }
 .hero-grid {
   display: grid;
@@ -413,19 +441,10 @@ p {
   max-width: 540px;
 }
 .hero-slogan {
-  margin-top: 26px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  margin-top: 24px;
+  color: var(--muted);
   font-style: italic;
-  color: var(--text);
-  font-weight: 600;
-}
-.hero-slogan .bar {
-  width: 4px;
-  align-self: stretch;
-  border-radius: 4px;
-  background: linear-gradient(180deg, var(--flag-red), var(--flag-yellow), var(--flag-green));
+  font-size: 16px;
 }
 .hero-actions {
   margin-top: 34px;
@@ -456,12 +475,7 @@ p {
   position: relative;
 }
 .phone-glow {
-  position: absolute;
-  width: 340px;
-  height: 340px;
-  background: radial-gradient(circle, rgba(59, 214, 27, 0.28), transparent 65%);
-  filter: blur(20px);
-  z-index: 0;
+  display: none;
 }
 .phone {
   position: relative;
@@ -480,7 +494,7 @@ p {
   height: 100%;
   border-radius: 34px;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--bg), #051a17);
+  background: var(--bg);
   display: flex;
   flex-direction: column;
 }
@@ -837,59 +851,51 @@ p {
   gap: 20px;
 }
 .card {
-  background: linear-gradient(160deg, var(--surface), rgba(11, 46, 41, 0.6));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 26px;
-  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
-  position: relative;
-  overflow: hidden;
-}
-.card:hover {
-  transform: translateY(-4px);
-  border-color: var(--border-strong);
+  padding: 24px;
 }
 .card .ic {
-  width: 50px;
-  height: 50px;
-  border-radius: 14px;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius);
   display: grid;
   place-items: center;
   background: var(--accent-soft);
   margin-bottom: 18px;
 }
 .card .ic svg {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   color: var(--accent);
 }
 .card h3 {
-  font-size: 19px;
-  margin-bottom: 9px;
+  font-size: 18px;
+  margin-bottom: 8px;
 }
 .card p {
   color: var(--muted);
   font-size: 15px;
+  line-height: 1.55;
 }
 .card.wide {
   grid-column: span 1;
 }
-
-/* feature card top accent line on hover */
-.card::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 3px;
-  width: 100%;
-  background: linear-gradient(90deg, var(--flag-red), var(--flag-yellow), var(--flag-green));
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
+/* Fonctionnalité phare : mise en avant asymétrique */
+.card.lead {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--surface-2);
 }
-.card:hover::after {
-  transform: scaleX(1);
+.card.lead h3 {
+  font-size: 23px;
+}
+.card.lead p {
+  font-size: 16px;
+  max-width: 52ch;
 }
 
 /* ------------------------------------------------------------- audiences */
@@ -900,11 +906,9 @@ p {
 }
 .aud-card {
   border-radius: var(--radius-lg);
-  padding: 30px;
+  padding: 28px;
   border: 1px solid var(--border);
-  background:
-    radial-gradient(420px 200px at 100% 0%, rgba(59, 214, 27, 0.08), transparent 70%),
-    var(--surface);
+  background: var(--surface);
   display: flex;
   flex-direction: column;
 }
@@ -993,7 +997,7 @@ p {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(160deg, var(--teal), var(--teal-deep));
+  background: var(--teal);
 }
 .tile.tall .lbl {
   color: rgba(255, 255, 255, 0.8);
@@ -1096,10 +1100,7 @@ p {
   position: relative;
 }
 .about-logo .halo {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(59, 214, 27, 0.18), transparent 62%);
-  filter: blur(10px);
+  display: none;
 }
 .about-logo img {
   width: min(360px, 78%);
@@ -1135,9 +1136,7 @@ p {
   border-radius: var(--radius-xl);
   padding: clamp(38px, 6vw, 72px);
   text-align: center;
-  background:
-    radial-gradient(600px 300px at 50% 0%, rgba(59, 214, 27, 0.16), transparent 70%),
-    linear-gradient(160deg, var(--teal), var(--teal-deep));
+  background: linear-gradient(165deg, var(--teal), var(--teal-deep));
   border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
@@ -1254,9 +1253,7 @@ p {
 .page-hero {
   padding-block: clamp(48px, 7vw, 90px) 40px;
   border-bottom: 1px solid var(--border);
-  background:
-    radial-gradient(760px 300px at 20% -20%, rgba(14, 95, 88, 0.4), transparent 60%),
-    var(--bg);
+  background: var(--bg);
 }
 .page-hero h1 {
   font-size: clamp(32px, 5vw, 52px);

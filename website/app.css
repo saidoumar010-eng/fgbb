@@ -14,8 +14,8 @@ body.app-body {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(6, 32, 28, 0.82);
-  backdrop-filter: saturate(140%) blur(14px);
+  background: rgba(6, 32, 28, 0.92);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
 .app-header-row {
@@ -138,7 +138,8 @@ body.app-body {
 /* ------------------------------------------------------------- app tabs */
 .app-tabs {
   border-bottom: 1px solid var(--border);
-  background: rgba(8, 34, 30, 0.5);
+  background: rgba(6, 32, 28, 0.92);
+  backdrop-filter: blur(8px);
   position: sticky;
   top: 62px;
   z-index: 30;
@@ -449,7 +450,7 @@ body.app-body {
 }
 .news-cover {
   aspect-ratio: 16 / 9;
-  background: linear-gradient(150deg, var(--teal), var(--teal-deep));
+  background: var(--surface-2);
   position: relative;
   overflow: hidden;
 }
@@ -848,9 +849,7 @@ body.app-body {
 .featured {
   border-radius: var(--radius-lg);
   padding: 22px;
-  background:
-    radial-gradient(500px 220px at 90% 0%, rgba(59, 214, 27, 0.12), transparent 70%),
-    linear-gradient(150deg, var(--teal), var(--teal-deep));
+  background: linear-gradient(150deg, var(--teal), var(--teal-deep));
   border: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 30px;
 }
@@ -916,7 +915,7 @@ a.featured {
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 a.featured:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-soft);
 }
 
@@ -949,9 +948,7 @@ a.featured:hover {
 .md-board {
   border-radius: var(--radius-lg);
   padding: 22px;
-  background:
-    radial-gradient(500px 220px at 50% 0%, rgba(59, 214, 27, 0.1), transparent 70%),
-    linear-gradient(150deg, var(--teal), var(--teal-deep));
+  background: linear-gradient(150deg, var(--teal), var(--teal-deep));
   border: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 26px;
 }
@@ -1356,7 +1353,8 @@ a.leader, a.news-card, a.md-team { text-decoration: none; color: inherit; }
 
 /* thème clair : fonds d'app codés en dur -> versions claires */
 :root[data-theme="light"] .app-header { background: rgba(255, 255, 255, 0.85); }
-:root[data-theme="light"] .app-tabs { background: rgba(255, 255, 255, 0.6); }
+:root[data-theme="light"] .app-header { background: rgba(255, 255, 255, 0.92); }
+:root[data-theme="light"] .app-tabs { background: rgba(255, 255, 255, 0.92); }
 
 /* à propos */
 .ap-card { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 20px; margin-bottom: 26px; }
@@ -1383,6 +1381,28 @@ a.leader, a.news-card, a.md-team { text-decoration: none; color: inherit; }
 .cmp-table tr:last-child td { border-bottom: 0; }
 .cmp-table .cmp-lbl { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; width: 40%; }
 .cmp-table .cmp-win { color: var(--accent); }
+
+/* Skeleton loaders — un chargement contextualisé plutôt qu'un spinner nu */
+.skeleton { display: flex; flex-direction: column; gap: 12px; padding: 6px 0; }
+.sk-line, .sk-block { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.sk-line { height: 20px; }
+.sk-line.w40 { width: 40%; }
+.sk-block { height: 74px; }
+.sk-line::after, .sk-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--surface-2), transparent);
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sk-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .sk-line::after, .sk-block::after { animation: none; }
+}
+
+.event-loc { display: flex; align-items: center; gap: 6px; }
+.event-loc svg { width: 14px; height: 14px; flex: none; }
 
 /* ============================ vague 3 : palmarès, discipline, agenda, quiz, fans */
 .roster-row a { color: var(--accent); text-decoration: none; }

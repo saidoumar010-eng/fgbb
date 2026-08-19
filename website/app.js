@@ -509,7 +509,12 @@ function fetchTeamsMap() {
 
 // --------------------------------------------------------------- gabarits
 function loadingHtml() {
-  return `<div class="loading"><div class="spinner"></div>Chargement…</div>`;
+  return `<div class="skeleton" aria-hidden="true">
+    <div class="sk-line w40"></div>
+    <div class="sk-block"></div>
+    <div class="sk-block"></div>
+    <div class="sk-block"></div>
+  </div>`;
 }
 function emptyHtml(title, sub, icon = 'inbox') {
   const icons = {
@@ -629,7 +634,7 @@ async function renderAccueil() {
     return;
   }
 
-  let html = `<h1 class="view-title">Bonjour${profile?.full_name ? ' ' + esc(profile.full_name.split(' ')[0]) : ''} 👋</h1>
+  let html = `<h1 class="view-title">Bonjour${profile?.full_name ? ' ' + esc(profile.full_name.split(' ')[0]) : ''}</h1>
     <p class="view-sub">Voici l'essentiel du basket guinéen aujourd'hui.</p>`;
 
   if (featured) {
@@ -641,7 +646,7 @@ async function renderAccueil() {
       : `<div class="fscore"><span class="vs">VS</span></div>`;
     const label = isLive ? `<span class="pill live">En direct</span>` : isDone ? 'Terminé' : `${fmtDate(f.scheduled_at)} · ${fmtTime(f.scheduled_at)}`;
     html += `<a class="featured" href="#match/${f.id}">
-      <div class="fh">${isLive ? '🔴 ' : ''}Match à la une${f.competition?.name ? ' · ' + esc(f.competition.name) : ''}</div>
+      <div class="fh">Match à la une${f.competition?.name ? ' · ' + esc(f.competition.name) : ''}</div>
       <div class="fbody">
         <div class="fteam">${logoHtml(f.home_team, 'mlogo')}<span class="fn">${esc(f.home_team?.name || '')}</span></div>
         ${centre}
@@ -911,7 +916,7 @@ async function renderPlayer(id) {
       <h1>${esc(p.full_name)}</h1>
       <div class="profile-sub">${[p.number ? '#' + p.number : null, p.position, team ? esc(team.name) : null].filter(Boolean).join(' · ')}</div>
       ${team ? `<a class="chip-link" href="#team/${team.id}">Voir le club →</a>` : ''}
-      ${followBtnHtml(following, 'Suivre', 'Suivi ✓')}
+      ${followBtnHtml(following, 'Suivre', 'Suivi')}
     </div>
   </div>`;
   if (season) {
@@ -949,7 +954,7 @@ async function renderTeam(id) {
   let html = backBtnHtml();
   html += `<div class="profile">
     <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Favori ✓')}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}</div>
   </div>`;
   if (standing) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
@@ -1347,7 +1352,7 @@ async function renderAgenda() {
   el.innerHTML = events.map((e) => {
     const dd = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, day: '2-digit' }).format(new Date(e.starts_at));
     const mm = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, month: 'short' }).format(new Date(e.starts_at));
-    return `<div class="event"><div class="event-date"><b>${dd}</b><span>${mm}</span></div><div class="event-info"><span class="news-cat">${EVENT_CAT_LABELS[e.category] || 'Autre'}</span><h3>${esc(e.title)}</h3>${e.location ? `<div class="event-loc">📍 ${esc(e.location)}</div>` : ''}${e.description ? `<p class="excerpt">${esc(e.description).slice(0, 140)}</p>` : ''}</div></div>`;
+    return `<div class="event"><div class="event-date"><b>${dd}</b><span>${mm}</span></div><div class="event-info"><span class="news-cat">${EVENT_CAT_LABELS[e.category] || 'Autre'}</span><h3>${esc(e.title)}</h3>${e.location ? `<div class="event-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(e.location)}</div>` : ''}${e.description ? `<p class="excerpt">${esc(e.description).slice(0, 140)}</p>` : ''}</div></div>`;
   }).join('');
 }
 // -- badges du supporter (dérivés de my_fan_stats, comme l'app mobile)
