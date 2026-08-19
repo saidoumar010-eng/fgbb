@@ -103,9 +103,15 @@ async function listStandings(competitionId) {
     .order('played', { ascending: true })
     .order('team_name', { ascending: true });
   if (competitionId) q = q.eq('competition_id', competitionId);
-  const { data, error } = await q;
-  if (error) throw error;
-  return data ?? [];
+  // Points marqués/encaissés et différentiel vivent dans team_season_stats :
+  // on les fusionne par équipe pour un classement complet (façon affiche D1).
+  let sq = sb.from('team_season_stats').select('team_id, pts_for, pts_against, diff');
+  if (competitionId) sq = sq.eq('competition_id', competitionId);
+  const [main, stats] = await Promise.all([q, sq]);
+  if (main.error) throw main.error;
+  const byTeam = {};
+  (stats.data ?? []).forEach((s) => { byTeam[s.team_id] = s; });
+  return (main.data ?? []).map((r) => ({ ...r, ...(byTeam[r.team_id] || {}) }));
 }
 async function listNews() {
   const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false });
@@ -563,24 +569,32 @@ function matchCardHtml(m) {
   </a>`;
 }
 
-function standingsHtml(rows) {
+function standingsHtml(rows, opts = {}) {
   if (!rows.length) return emptyHtml('Classement à venir', 'Le classement apparaîtra dès les premiers matchs joués.', 'trophy');
-  const body = rows
-    .map((r, i) => {
-      const team = { name: r.team_name, short_name: r.short_name, color: r.color };
-      return `<tr class="${i === 0 ? 'top' : ''}">
-        <td class="rk">${i + 1}</td>
-        <td class="team"><div class="team-cell">${logoHtml(team)}<a href="#team/${r.team_id}">${esc(r.team_name)}</a></div></td>
-        <td class="hide-sm">${r.played}</td>
-        <td>${r.wins}</td>
-        <td class="hide-sm">${r.losses}</td>
-        <td class="pts">${r.points}</td>
-      </tr>`;
-    })
-    .join('');
-  return `<div style="overflow-x:auto"><table class="standings">
-    <thead><tr><th class="rk">#</th><th class="team">Équipe</th><th class="hide-sm">J</th><th>V</th><th class="hide-sm">D</th><th>Pts</th></tr></thead>
-    <tbody>${body}</tbody></table></div>`;
+  const full = !!opts.full;
+  const n = rows.length;
+  const body = rows.map((r, i) => {
+    const team = { name: r.team_name, short_name: r.short_name, color: r.color };
+    const cls = [];
+    if (i === 0) cls.push('top');
+    if (full && i === n - 1 && n > 2) cls.push('relegation');
+    const diff = r.diff != null ? r.diff : (r.pts_for != null && r.pts_against != null ? r.pts_for - r.pts_against : null);
+    const diffTxt = diff == null ? '—' : diff > 0 ? '+' + diff : String(diff);
+    const extra = full
+      ? `<td class="col-pf">${r.pts_for ?? '—'}</td><td class="col-pa">${r.pts_against ?? '—'}</td><td class="diff ${diff >= 0 ? 'pos' : 'neg'}">${diffTxt}</td>`
+      : '';
+    return `<tr class="${cls.join(' ')}">
+      <td class="rk">${i + 1}</td>
+      <td class="team"><div class="team-cell">${logoHtml(team)}<a href="#team/${r.team_id}">${esc(r.team_name)}</a></div></td>
+      <td class="pts">${r.points}</td>
+      <td class="col-mj">${r.played}</td>
+      <td>${r.wins}</td>
+      <td>${r.losses}</td>
+      ${extra}
+    </tr>`;
+  }).join('');
+  const head = `<th class="rk">#</th><th class="team">Club</th><th class="pts">Pts</th><th class="col-mj">MJ</th><th>V</th><th>D</th>${full ? '<th class="col-pf">Pts+</th><th class="col-pa">Pts−</th><th>Diff</th>' : ''}`;
+  return `<div class="std-scroll"><table class="standings"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function newsCardHtml(n) {
@@ -731,7 +745,7 @@ async function renderClassement() {
   }
 
   const rows = await safe(listStandings(compFilter || undefined), null);
-  $('#clsBody').innerHTML = rows === null ? errorHtml() : standingsHtml(rows);
+  $('#clsBody').innerHTML = rows === null ? errorHtml() : standingsHtml(rows, { full: true });
 }
 
 async function renderActus() {

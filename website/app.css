@@ -419,14 +419,63 @@ body.app-body {
 .standings .rk {
   color: var(--dim);
   font-weight: 800;
-  width: 26px;
+  width: 28px;
+  font-size: 13px;
+}
+.standings tr.top .rk {
+  color: var(--accent);
+}
+.standings .team a {
+  font-weight: 700;
 }
 .standings .pts {
   color: var(--accent);
   font-weight: 800;
 }
-.standings tr.top .rk {
-  color: var(--accent);
+.standings th.pts,
+.standings td.pts {
+  border-left: 1px solid var(--border);
+}
+.standings .diff {
+  font-weight: 700;
+}
+.standings .diff.pos {
+  color: var(--success);
+}
+.standings .diff.neg {
+  color: var(--danger);
+}
+/* zébrage discret, façon affiche officielle (hors ligne de relégation) */
+.standings tbody tr:nth-child(even):not(.relegation) {
+  background: var(--surface-2);
+}
+/* dernière place = relégation, en rouge comme l'affiche */
+.standings tr.relegation {
+  background: var(--danger);
+}
+.standings tr.relegation td,
+.standings tr.relegation .team a,
+.standings tr.relegation .pts,
+.standings tr.relegation .diff {
+  color: #fff;
+}
+.standings tr.relegation .rk {
+  color: rgba(255, 255, 255, 0.78);
+}
+.std-scroll {
+  overflow-x: auto;
+}
+@media (max-width: 620px) {
+  .standings .col-mj,
+  .standings .col-pf,
+  .standings .col-pa {
+    display: none;
+  }
+  .standings th,
+  .standings td {
+    padding: 11px 7px;
+  }
+  .standings { font-size: 14px; }
 }
 
 /* ------------------------------------------------------------- news */
