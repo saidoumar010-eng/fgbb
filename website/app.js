@@ -1238,20 +1238,46 @@ async function renderApropos() {
 }
 
 // -- comparateur de joueurs
+let compareMode = 'joueurs';
 async function renderCompare() {
-  view.innerHTML = `<h1 class="view-title">Comparateur</h1><p class="view-sub">Comparez deux joueurs sur leurs moyennes de la saison.</p><div id="cmpPickers">${loadingHtml()}</div><div id="cmpBody"></div>`;
-  const players = await safe(listPlayersLite(), []);
-  const opts = ['<option value="">— Choisir un joueur —</option>'].concat(players.map((p) => `<option value="${p.id}">${esc(p.full_name)}</option>`)).join('');
+  view.innerHTML = `<h1 class="view-title">Comparateur</h1>
+    <div class="segmented" id="cmpMode">${[['joueurs', 'Joueurs'], ['equipes', 'Équipes']].map(([k, l]) => `<button class="seg ${compareMode === k ? 'active' : ''}" data-m="${k}">${l}</button>`).join('')}</div>
+    <div id="cmpPickers">${loadingHtml()}</div><div id="cmpBody"></div>`;
+  $('#cmpMode').querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { compareMode = b.dataset.m; renderCompare(); }));
+  const isTeams = compareMode === 'equipes';
+  const list = await safe(isTeams ? listTeams() : listPlayersLite(), []);
+  const label = isTeams ? 'un club' : 'un joueur';
+  const opts = [`<option value="">— Choisir ${label} —</option>`].concat(list.map((x) => `<option value="${x.id}">${esc(x.name || x.full_name)}</option>`)).join('');
   $('#cmpPickers').innerHTML = `<div class="cmp-pickers"><select id="cmpA" class="cmp-select">${opts}</select><span class="cmp-vs">VS</span><select id="cmpB" class="cmp-select">${opts}</select></div>`;
   const run = async () => {
     const a = $('#cmpA').value, b = $('#cmpB').value;
     if (!a || !b) { $('#cmpBody').innerHTML = ''; return; }
     $('#cmpBody').innerHTML = loadingHtml();
-    const [pa, pb, sa, sb2] = await Promise.all([safe(getPlayer(a), null), safe(getPlayer(b), null), safe(getPlayerSeason(a), null), safe(getPlayerSeason(b), null)]);
-    $('#cmpBody').innerHTML = compareHtml(pa, pb, sa, sb2);
+    if (isTeams) {
+      const [ta, tb, sa, sb2] = await Promise.all([safe(getTeam(a), null), safe(getTeam(b), null), safe(getTeamStanding(a), null), safe(getTeamStanding(b), null)]);
+      $('#cmpBody').innerHTML = compareTeamsHtml(ta, tb, sa, sb2);
+    } else {
+      const [pa, pb, sa, sb2] = await Promise.all([safe(getPlayer(a), null), safe(getPlayer(b), null), safe(getPlayerSeason(a), null), safe(getPlayerSeason(b), null)]);
+      $('#cmpBody').innerHTML = compareHtml(pa, pb, sa, sb2);
+    }
   };
   $('#cmpA').addEventListener('change', run);
   $('#cmpB').addEventListener('change', run);
+}
+function compareTeamsHtml(ta, tb, sa, sb) {
+  if (!ta || !tb) return '';
+  const num = (s, k) => (s ? Number(s[k] ?? 0) : 0);
+  const winpct = (s) => (s && s.played ? Math.round((s.wins / s.played) * 100) : 0);
+  const defs = [['points', 'Points', 1], ['wins', 'Victoires', 1], ['losses', 'Défaites', -1], ['played', 'Joués', 0]];
+  const rows = defs.map(([k, label, dir]) => {
+    const a = num(sa, k), b = num(sb, k);
+    const aw = dir > 0 ? sa && a >= b : dir < 0 ? sa && a <= b : false;
+    const bw = dir > 0 ? sb && b >= a : dir < 0 ? sb && b <= a : false;
+    return `<tr><td class="${aw ? 'cmp-win' : ''}">${sa ? a : '—'}</td><td class="cmp-lbl">${label}</td><td class="${bw ? 'cmp-win' : ''}">${sb ? b : '—'}</td></tr>`;
+  });
+  const wa = winpct(sa), wb = winpct(sb);
+  rows.push(`<tr><td class="${sa && wa >= wb ? 'cmp-win' : ''}">${sa ? wa + '%' : '—'}</td><td class="cmp-lbl">% victoires</td><td class="${sb && wb >= wa ? 'cmp-win' : ''}">${sb ? wb + '%' : '—'}</td></tr>`);
+  return `<div class="cmp-head"><div class="cmp-name">${logoHtml(ta)}<span>${esc(ta.name)}</span></div><div class="cmp-name right"><span>${esc(tb.name)}</span>${logoHtml(tb)}</div></div><table class="cmp-table"><tbody>${rows.join('')}</tbody></table>`;
 }
 function compareHtml(pa, pb, sa, sb) {
   if (!pa || !pb) return '';
@@ -1324,6 +1350,26 @@ async function renderAgenda() {
     return `<div class="event"><div class="event-date"><b>${dd}</b><span>${mm}</span></div><div class="event-info"><span class="news-cat">${EVENT_CAT_LABELS[e.category] || 'Autre'}</span><h3>${esc(e.title)}</h3>${e.location ? `<div class="event-loc">📍 ${esc(e.location)}</div>` : ''}${e.description ? `<p class="excerpt">${esc(e.description).slice(0, 140)}</p>` : ''}</div></div>`;
   }).join('');
 }
+// -- badges du supporter (dérivés de my_fan_stats, comme l'app mobile)
+const BADGES = [
+  { label: 'Premier pas', desc: 'Jouer son premier pronostic', color: '#3BD61B', val: (s) => s.predictions, goal: 1 },
+  { label: 'Supporter assidu', desc: 'Jouer 10 pronostics', color: '#2BC48A', val: (s) => s.predictions, goal: 10 },
+  { label: 'Fidèle du championnat', desc: 'Jouer 25 pronostics', color: '#CE1126', val: (s) => s.predictions, goal: 25 },
+  { label: 'Œil de lynx', desc: 'Gagner 5 pronostics', color: '#2BC48A', val: (s) => s.correct, goal: 5 },
+  { label: 'Oracle du basket', desc: 'Gagner 15 pronostics', color: '#FCD116', val: (s) => s.correct, goal: 15 },
+  { label: 'Cerveau du basket', desc: 'Marquer 10 points de quiz', color: '#4D9BE6', val: (s) => s.quiz_points, goal: 10 },
+  { label: 'Faiseur de MVP', desc: 'Voter 5 fois pour le MVP', color: '#FCD116', val: (s) => s.mvp_votes, goal: 5 },
+  { label: 'Centurion', desc: 'Atteindre 100 points', color: '#3BD61B', val: (s) => s.points, goal: 100 },
+  { label: 'Sur le podium', desc: 'Entrer dans le top 3', color: '#FCD116', val: (s) => (s.points > 0 && s.position_no >= 1 && s.position_no <= 3 ? 1 : 0), goal: 1 },
+];
+function badgesHtml(stats) {
+  const s = stats ?? { points: 0, predictions: 0, correct: 0, quiz_points: 0, mvp_votes: 0, position_no: 0 };
+  const earned = BADGES.filter((b) => b.val(s) >= b.goal).length;
+  return `<div class="block"><div class="block-head"><h2>Mes badges (${earned}/${BADGES.length})</h2></div><div class="badge-grid">${BADGES.map((b) => {
+    const v = b.val(s), ok = v >= b.goal;
+    return `<div class="badge${ok ? ' on' : ''}"${ok ? ` style="--bc:${b.color}"` : ''}><span class="badge-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M8.2 12.5L7 22l5-3 5 3-1.2-9.5"/></svg></span><b>${b.label}</b><span class="badge-desc">${ok ? b.desc : `${Math.min(v, b.goal)} / ${b.goal}`}</span></div>`;
+  }).join('')}</div></div>`;
+}
 // -- classement des supporters
 async function renderSupporters() {
   view.innerHTML = `<h1 class="view-title">Classement des supporters</h1><p class="view-sub">Gagnez des points avec les pronostics, le vote MVP et les quiz.</p><div id="ldbBody">${loadingHtml()}</div>`;
@@ -1332,8 +1378,9 @@ async function renderSupporters() {
   if (rows === null) return void (el.innerHTML = errorHtml());
   let html = '';
   if (mine) html += `<div class="stat-grid" style="margin-bottom:22px">${statTile(mine.points, 'Mes points', true)}${statTile(mine.correct, 'Pronostics réussis', true)}${statTile(mine.position_no, 'Mon rang', true)}</div>`;
-  if (!rows.length) return void (el.innerHTML = html + emptyHtml('Classement vide', 'Participez pour apparaître au classement.', 'trophy'));
-  html += `<div class="roster">${rows.map((r) => `<div class="roster-row${r.is_me ? ' me' : ''}"><span class="lrank" style="width:28px">${r.position_no}</span><span class="rr-name">${esc(r.name)}${r.is_me ? ' <b style="color:var(--accent)">(vous)</b>' : ''}</span><span class="rr-pos"><b style="color:var(--accent)">${r.points}</b> pts</span></div>`).join('')}</div>`;
+  if (session) html += badgesHtml(mine);
+  if (rows.length) html += `<div class="block"><div class="block-head"><h2>Classement</h2></div><div class="roster">${rows.map((r) => `<div class="roster-row${r.is_me ? ' me' : ''}"><span class="lrank" style="width:28px">${r.position_no}</span><span class="rr-name">${esc(r.name)}${r.is_me ? ' <b style="color:var(--accent)">(vous)</b>' : ''}</span><span class="rr-pos"><b style="color:var(--accent)">${r.points}</b> pts</span></div>`).join('')}</div></div>`;
+  else html += emptyHtml('Classement vide', 'Participez pour apparaître au classement.', 'trophy');
   el.innerHTML = html;
 }
 // -- quiz (liste + jeu)
