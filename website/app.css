@@ -478,6 +478,29 @@ body.app-body {
   .standings { font-size: 14px; }
 }
 
+/* ============================ poules, qualification playoffs, admin */
+.poule-block { margin-bottom: 30px; }
+.poule-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.poule-head h2 { font-size: 19px; }
+.poule-note { font-size: 12px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+/* zone de qualification (top 4 → playoffs) : liseré vert porteur de sens */
+.standings tr.qualif td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+.admin-row { gap: 12px; }
+.admin-row .rr-name { flex: 1; }
+.poule-select {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.poule-select:disabled { opacity: 0.5; }
+
 /* ------------------------------------------------------------- news */
 .news-grid {
   display: grid;

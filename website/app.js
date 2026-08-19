@@ -113,6 +113,40 @@ async function listStandings(competitionId) {
   (stats.data ?? []).forEach((s) => { byTeam[s.team_id] = s; });
   return (main.data ?? []).map((r) => ({ ...r, ...(byTeam[r.team_id] || {}) }));
 }
+// Classement par poule (vue poule_standings, migration 0029).
+async function listPouleStandings(competitionId) {
+  let q = sb
+    .from('poule_standings')
+    .select('*')
+    .order('poule', { ascending: true, nullsFirst: true })
+    .order('points', { ascending: false })
+    .order('wins', { ascending: false })
+    .order('diff', { ascending: false })
+    .order('team_name', { ascending: true });
+  if (competitionId) q = q.eq('competition_id', competitionId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+// Affectation des équipes aux poules (admin).
+async function listCompetitionTeams(competitionId) {
+  const { data, error } = await sb
+    .from('competition_teams')
+    .select('*, team:teams(id, name, short_name, color, logo_url)')
+    .eq('competition_id', competitionId);
+  if (error) throw error;
+  return data ?? [];
+}
+async function saveCompetitionTeam(competitionId, teamId, poule, seed) {
+  const { error } = await sb
+    .from('competition_teams')
+    .upsert({ competition_id: competitionId, team_id: teamId, poule: poule || null, seed: seed ?? null }, { onConflict: 'competition_id,team_id' });
+  if (error) throw error;
+}
+async function removeCompetitionTeam(competitionId, teamId) {
+  const { error } = await sb.from('competition_teams').delete().eq('competition_id', competitionId).eq('team_id', teamId);
+  if (error) throw error;
+}
 async function listNews() {
   const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false });
   if (error) throw error;
@@ -577,6 +611,7 @@ function standingsHtml(rows, opts = {}) {
     const team = { name: r.team_name, short_name: r.short_name, color: r.color };
     const cls = [];
     if (i === 0) cls.push('top');
+    if (opts.qualify && i < opts.qualify) cls.push('qualif');
     if (full && i === n - 1 && n > 2) cls.push('relegation');
     const diff = r.diff != null ? r.diff : (r.pts_for != null && r.pts_against != null ? r.pts_for - r.pts_against : null);
     const diffTxt = diff == null ? '—' : diff > 0 ? '+' + diff : String(diff);
@@ -744,8 +779,21 @@ async function renderClassement() {
     );
   }
 
-  const rows = await safe(listStandings(compFilter || undefined), null);
-  $('#clsBody').innerHTML = rows === null ? errorHtml() : standingsHtml(rows, { full: true });
+  // Classement par poule si des équipes y sont affectées ; sinon classement global.
+  const pouleRows = await safe(listPouleStandings(compFilter || undefined), []);
+  if (pouleRows.length) {
+    const groups = {};
+    pouleRows.forEach((r) => { const k = r.poule || 'Sans poule'; (groups[k] = groups[k] || []).push(r); });
+    $('#clsBody').innerHTML = Object.keys(groups).sort().map((k) => {
+      const g = groups[k];
+      const isPoule = k !== 'Sans poule';
+      const note = isPoule && g.length > 4 ? '<span class="poule-note">Top 4 → playoffs</span>' : '';
+      return `<div class="poule-block"><div class="poule-head"><h2>${isPoule ? 'Poule ' + esc(k) : 'Classement'}</h2>${note}</div>${standingsHtml(g, { full: true, qualify: g.length > 4 ? 4 : 0 })}</div>`;
+    }).join('');
+  } else {
+    const rows = await safe(listStandings(compFilter || undefined), null);
+    $('#clsBody').innerHTML = rows === null ? errorHtml() : standingsHtml(rows, { full: true });
+  }
 }
 
 async function renderActus() {
@@ -1561,8 +1609,55 @@ async function renderPhotos() {
   }));
 }
 
+// ------------------------------------------------------- espace admin (fédération)
+function isAdmin() { return !!(session && profile && profile.role === 'admin'); }
+function adminBackHtml() {
+  return `<a class="back-btn" href="#admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Espace fédération</a>`;
+}
+function renderAdminDenied() {
+  view.innerHTML = `<div class="login-prompt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Accès réservé</h3><p>Cet espace est réservé à l'administration de la fédération.</p><button class="btn" id="admLogin">Se connecter</button></div>`;
+  $('#admLogin')?.addEventListener('click', () => openAuth('login'));
+}
+function renderAdmin() {
+  if (!isAdmin()) return renderAdminDenied();
+  const items = [
+    { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
+  ];
+  view.innerHTML = `<h1 class="view-title">Espace fédération</h1><p class="view-sub">Gérez les poules, les playoffs et les réseaux sociaux.</p><div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
+}
+let adminComp;
+async function renderAdminPoules() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Poules</h1><p class="view-sub">Affectez chaque équipe à une poule. L'enregistrement est automatique.</p><div id="apFilter"></div><div id="apBody">${loadingHtml()}</div>`;
+  const comps = await safe(listCompetitions(), []);
+  if (!comps.length) { $('#apBody').innerHTML = emptyHtml('Aucune compétition', "Créez d'abord une compétition dans l'app mobile.", 'inbox'); return; }
+  if (!adminComp || !comps.find((c) => c.id === adminComp)) adminComp = comps[0].id;
+  const f = $('#apFilter');
+  f.className = 'segmented';
+  f.innerHTML = comps.map((c) => `<button class="seg ${adminComp === c.id ? 'active' : ''}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+  f.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { adminComp = b.dataset.c; renderAdminPoules(); }));
+  const [teams, assigned] = await Promise.all([safe(listTeams(), []), safe(listCompetitionTeams(adminComp), [])]);
+  if (!teams.length) { $('#apBody').innerHTML = emptyHtml('Aucune équipe', "Ajoutez des clubs dans l'app mobile.", 'ball'); return; }
+  const pouleOf = {};
+  assigned.forEach((a) => { pouleOf[a.team_id] = a.poule || ''; });
+  const poules = ['', 'A', 'B', 'C', 'D', 'E', 'F'];
+  $('#apBody').innerHTML = `<div class="roster">${teams.map((t) => `<div class="roster-row admin-row">${logoHtml(t)}<span class="rr-name">${esc(t.name)}</span><select class="poule-select" data-team="${t.id}">${poules.map((p) => `<option value="${p}" ${pouleOf[t.id] === p ? 'selected' : ''}>${p === '' ? '— Aucune —' : 'Poule ' + p}</option>`).join('')}</select></div>`).join('')}</div>`;
+  $('#apBody').querySelectorAll('.poule-select').forEach((sel) => sel.addEventListener('change', async () => {
+    const teamId = sel.dataset.team, poule = sel.value;
+    sel.disabled = true;
+    try {
+      if (poule) await saveCompetitionTeam(adminComp, teamId, poule, null);
+      else await removeCompetitionTeam(adminComp, teamId);
+      toast('Enregistré');
+    } catch (e) { toast(errMsg(e)); }
+    sel.disabled = false;
+  }));
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
+  admin: renderAdmin,
+  'admin-poules': renderAdminPoules,
   matchs: renderMatchs,
   classement: renderClassement,
   actus: renderActus,
@@ -1754,6 +1849,7 @@ function renderAuthArea() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         <div class="user-menu" id="userMenu">
           <div class="mhead"><div class="n">${esc(name)}</div><div class="r">${roleLabel(profile?.role)}</div></div>
+          ${isAdmin() ? `<a class="mi" href="#admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Espace fédération</a>` : ''}
           <a class="mi" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Site de la fédération</a>
           <a class="mi" href="confidentialite.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Confidentialité</a>
           <button class="mi danger" id="btnSignout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Se déconnecter</button>
