@@ -156,6 +156,51 @@ async function updatePlayer(id, patch) {
   const { error } = await sb.from('players').update(patch).eq('id', id);
   if (error) throw error;
 }
+// CRUD admin — clubs, joueurs, compétitions (écriture).
+async function createTeam(patch) {
+  const { data, error } = await sb.from('teams').insert(patch).select('id').single();
+  if (error) throw error;
+  return data;
+}
+async function deleteTeam(id) {
+  const { error } = await sb.from('teams').delete().eq('id', id);
+  if (error) throw error;
+}
+async function createPlayer(patch) {
+  const { data, error } = await sb.from('players').insert(patch).select('id').single();
+  if (error) throw error;
+  return data;
+}
+async function deletePlayer(id) {
+  const { error } = await sb.from('players').delete().eq('id', id);
+  if (error) throw error;
+}
+async function listAdminPlayers() {
+  const { data, error } = await sb.from('players').select('*, team:teams(id, name)').order('full_name');
+  if (error) throw error;
+  return data ?? [];
+}
+async function createCompetition(patch) {
+  const { data, error } = await sb.from('competitions').insert(patch).select('id').single();
+  if (error) throw error;
+  return data;
+}
+async function updateCompetition(id, patch) {
+  const { error } = await sb.from('competitions').update(patch).eq('id', id);
+  if (error) throw error;
+}
+async function deleteCompetition(id) {
+  const { error } = await sb.from('competitions').delete().eq('id', id);
+  if (error) throw error;
+}
+// Upload d'une image vers le bucket Storage « media » (public en lecture, écriture admin).
+async function uploadImage(file, folder) {
+  const ext = ((file.name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage.from('media').upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
+  if (error) throw error;
+  return sb.storage.from('media').getPublicUrl(path).data.publicUrl;
+}
 async function saveFederationSocials(patch) {
   const current = await getFederationInfo();
   const value = { ...current, ...patch };
@@ -1687,11 +1732,14 @@ function renderAdminDenied() {
 function renderAdmin() {
   if (!isAdmin()) return renderAdminDenied();
   const items = [
+    { r: 'admin-teams', label: 'Clubs', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/>' },
+    { r: 'admin-players', label: 'Joueurs', ic: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0114 0"/>' },
+    { r: 'admin-competitions', label: 'Compétitions', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
     { r: 'admin-playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
   ];
-  view.innerHTML = `<h1 class="view-title">Espace fédération</h1><p class="view-sub">Gérez les poules, les playoffs et les réseaux sociaux.</p><div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
+  view.innerHTML = `<h1 class="view-title">Espace fédération</h1><p class="view-sub">Gérez les clubs, les joueurs, les compétitions, les poules, les playoffs et les réseaux sociaux.</p><div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
 }
 let adminComp;
 async function renderAdminPoules() {
@@ -1854,9 +1902,260 @@ async function renderAdminPlayoffs() {
   }));
 }
 
+// --------------------------------------------------------------- CRUD admin générique
+const POSITIONS = ['Meneur', 'Arrière', 'Ailier', 'Ailier fort', 'Pivot'];
+const COMP_TYPES = [
+  { value: 'championnat', label: 'Championnat' },
+  { value: 'coupe', label: 'Coupe' },
+  { value: 'tournoi', label: 'Tournoi' },
+];
+const COMP_CATEGORIES = [
+  { value: 'messieurs', label: 'Messieurs' },
+  { value: 'dames', label: 'Dames' },
+  { value: 'mixte', label: 'Mixte' },
+];
+function labelOf(list, v) { return (list.find((o) => o.value === v) || {}).label || v || ''; }
+
+const CRUD_TEAMS = {
+  title: 'Clubs',
+  sub: 'Ajoutez, modifiez ou supprimez les clubs et sélections.',
+  singular: 'Club',
+  emptyIcon: 'ball',
+  emptyTitle: 'Aucun club',
+  emptySub: 'Créez le premier club avec le bouton « Ajouter ».',
+  list: () => listTeams(),
+  create: (patch) => createTeam(patch),
+  update: (id, patch) => updateTeam(id, patch),
+  remove: (id) => deleteTeam(id),
+  thumb: (t) => logoHtml(t),
+  itemTitle: (t) => t.name,
+  itemSub: (t) => [t.short_name, t.city, t.division].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'name', label: 'Nom du club', type: 'text', required: true, placeholder: 'Ex. Tout Sport de Kaloum' },
+    { k: 'short_name', label: 'Sigle', type: 'text', placeholder: 'Ex. TSK' },
+    { k: 'city', label: 'Ville', type: 'text', placeholder: 'Ex. Conakry' },
+    { k: 'division', label: 'Division', type: 'text', placeholder: 'Ex. D1' },
+    { k: 'coach', label: 'Entraîneur', type: 'text' },
+    { k: 'founded_year', label: 'Année de création', type: 'number', placeholder: 'Ex. 1975' },
+    { k: 'color', label: 'Couleur du club', type: 'color', default: '#1C3F8F' },
+    { k: 'logo_url', label: 'Logo', type: 'image', folder: 'teams' },
+    { k: 'is_national', label: 'Équipe nationale (sélection)', type: 'checkbox' },
+  ],
+};
+
+const CRUD_PLAYERS = {
+  title: 'Joueurs',
+  sub: 'Ajoutez, modifiez ou supprimez les fiches joueurs.',
+  singular: 'Joueur',
+  emptyIcon: 'ball',
+  emptyTitle: 'Aucun joueur',
+  emptySub: 'Créez le premier joueur avec le bouton « Ajouter ».',
+  list: () => listAdminPlayers(),
+  create: (patch) => createPlayer(patch),
+  update: (id, patch) => updatePlayer(id, patch),
+  remove: (id) => deletePlayer(id),
+  thumb: (p) => p.photo_url
+    ? `<span class="mlogo"><img src="${esc(p.photo_url)}" alt="" loading="lazy"></span>`
+    : `<span class="mlogo" style="background:var(--teal)">${esc(initials(p.full_name))}</span>`,
+  itemTitle: (p) => p.full_name,
+  itemSub: (p) => [p.team && p.team.name, p.position, p.number != null ? '#' + p.number : ''].filter(Boolean).join(' · '),
+  formContext: async () => ({ teams: await safe(listTeams(), []) }),
+  fields: (ctx) => [
+    { k: 'full_name', label: 'Nom complet', type: 'text', required: true },
+    { k: 'team_id', label: 'Club', type: 'select', emptyLabel: '— Sans club —', options: ctx.teams.map((t) => ({ value: t.id, label: t.name })) },
+    { k: 'number', label: 'Numéro', type: 'number', placeholder: 'Ex. 7' },
+    { k: 'position', label: 'Poste', type: 'select', emptyLabel: '— Non précisé —', options: POSITIONS.map((p) => ({ value: p, label: p })) },
+    { k: 'height_cm', label: 'Taille (cm)', type: 'number', placeholder: 'Ex. 190' },
+    { k: 'birth_date', label: 'Date de naissance', type: 'date' },
+    { k: 'nationality', label: 'Nationalité', type: 'text', default: 'Guinéenne' },
+    { k: 'photo_url', label: 'Photo', type: 'image', folder: 'players' },
+  ],
+};
+
+const CRUD_COMPS = {
+  title: 'Compétitions',
+  sub: 'Créez et gérez les championnats, coupes et tournois.',
+  singular: 'Compétition',
+  emptyIcon: 'trophy',
+  emptyTitle: 'Aucune compétition',
+  emptySub: 'Créez la première compétition avec le bouton « Ajouter ».',
+  list: () => listCompetitions(),
+  create: (patch) => createCompetition(patch),
+  update: (id, patch) => updateCompetition(id, patch),
+  remove: (id) => deleteCompetition(id),
+  itemTitle: (c) => c.name,
+  itemSub: (c) => [labelOf(COMP_TYPES, c.type), labelOf(COMP_CATEGORIES, c.category), c.season].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'name', label: 'Nom de la compétition', type: 'text', required: true, placeholder: 'Ex. Championnat National D1 — Messieurs' },
+    { k: 'type', label: 'Type', type: 'select', required: true, default: 'championnat', options: COMP_TYPES },
+    { k: 'category', label: 'Catégorie', type: 'select', required: true, default: 'messieurs', options: COMP_CATEGORIES },
+    { k: 'season', label: 'Saison', type: 'text', placeholder: 'Ex. 2025-2026' },
+    { k: 'format', label: 'Format', type: 'text', placeholder: 'Ex. Poules + playoffs' },
+  ],
+};
+
+function adminFieldHtml(f, value) {
+  const val = value == null ? (f.default != null ? f.default : '') : value;
+  const nm = `name="${f.k}"`;
+  if (f.type === 'checkbox') {
+    return `<div class="field field-check"><label class="check"><input type="checkbox" ${nm} ${val ? 'checked' : ''}/><span>${esc(f.label)}</span></label></div>`;
+  }
+  if (f.type === 'select') {
+    let opts = (f.options || []).slice();
+    if (val !== '' && !opts.some((o) => String(o.value != null ? o.value : o) === String(val))) opts = [{ value: val, label: String(val) }].concat(opts);
+    const optionsHtml = opts.map((o) => {
+      const ov = o.value != null ? o.value : o, ol = o.label != null ? o.label : o;
+      return `<option value="${esc(ov)}" ${String(val) === String(ov) ? 'selected' : ''}>${esc(ol)}</option>`;
+    }).join('');
+    const emptyOpt = f.required ? '' : `<option value="" ${val === '' ? 'selected' : ''}>${esc(f.emptyLabel || '— Aucun —')}</option>`;
+    return `<div class="field"><label>${esc(f.label)}${f.required ? ' *' : ''}</label><select ${nm} ${f.required ? 'required' : ''}>${emptyOpt}${optionsHtml}</select></div>`;
+  }
+  if (f.type === 'color') {
+    const c = val || f.default || '#1C3F8F';
+    return `<div class="field"><label>${esc(f.label)}</label><div class="color-field"><input type="color" ${nm} value="${esc(c)}"/><input type="text" class="color-hex" value="${esc(c)}" spellcheck="false" aria-label="Code couleur hexadécimal"/></div></div>`;
+  }
+  if (f.type === 'image') {
+    return `<div class="field"><label>${esc(f.label)}</label>
+      <div class="image-field" data-folder="${esc(f.folder || 'misc')}">
+        <span class="image-prev${val ? ' has' : ''}">${val ? `<img src="${esc(val)}" alt=""/>` : ''}</span>
+        <input type="hidden" ${nm} value="${esc(val || '')}"/>
+        <label class="btn btn-ghost image-pick">Choisir une image<input type="file" accept="image/*" hidden/></label>
+        <button type="button" class="image-clear"${val ? '' : ' hidden'}>Retirer</button>
+        <span class="image-status" aria-live="polite"></span>
+      </div></div>`;
+  }
+  const inputType = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
+  const extra = f.type === 'number' ? ' min="0" inputmode="numeric"' : '';
+  const ph = f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : '';
+  return `<div class="field"><label>${esc(f.label)}${f.required ? ' *' : ''}</label><input type="${inputType}" ${nm} value="${esc(val)}"${extra}${ph} ${f.required ? 'required' : ''} autocomplete="off"/></div>`;
+}
+
+async function renderAdminCrud(cfg) {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `
+    <div class="admin-head">
+      <div><h1 class="view-title">${esc(cfg.title)}</h1><p class="view-sub">${esc(cfg.sub)}</p></div>
+      <button class="btn" id="crudAdd">+ Ajouter</button>
+    </div>
+    <div id="crudBody">${loadingHtml()}</div>`;
+  $('#crudAdd').addEventListener('click', () => openCrudForm(cfg, null));
+  const items = await safe(cfg.list(), null);
+  const body = $('#crudBody');
+  if (!body) return;
+  if (items === null) { body.innerHTML = errorHtml(); return; }
+  if (!items.length) { body.innerHTML = emptyHtml(cfg.emptyTitle || 'Rien à afficher', cfg.emptySub || '', cfg.emptyIcon || 'inbox'); return; }
+  body.innerHTML = `<div class="admin-list">${items.map((it) => crudRowHtml(cfg, it)).join('')}</div>`;
+  body.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openCrudForm(cfg, items.find((x) => x.id === b.dataset.edit))));
+  body.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => confirmCrudDelete(cfg, items.find((x) => x.id === b.dataset.del))));
+}
+function crudRowHtml(cfg, it) {
+  const thumb = cfg.thumb ? cfg.thumb(it) : '';
+  const sub = cfg.itemSub ? cfg.itemSub(it) : '';
+  return `<div class="admin-list-row">
+    ${thumb}
+    <div class="alr-main"><b>${esc(cfg.itemTitle(it))}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>
+    <div class="alr-actions">
+      <button class="mini-btn" data-edit="${it.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+      <button class="mini-del" data-del="${it.id}" aria-label="Supprimer">✕</button>
+    </div></div>`;
+}
+async function confirmCrudDelete(cfg, it) {
+  if (!it) return;
+  if (!window.confirm(`Supprimer « ${cfg.itemTitle(it)} » ?\nCette action est définitive.`)) return;
+  try { await cfg.remove(it.id); toast('Suppression effectuée'); renderAdminCrud(cfg); }
+  catch (e) { toast(errMsg(e)); }
+}
+async function openCrudForm(cfg, item) {
+  if (!isAdmin()) return renderAdminDenied();
+  const editing = !!item;
+  const ctx = cfg.formContext ? await safe(cfg.formContext(), {}) : {};
+  const fields = typeof cfg.fields === 'function' ? cfg.fields(ctx) : cfg.fields;
+  view.innerHTML = `
+    <a class="back-btn" id="crudBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>${esc(cfg.title)}</a>
+    <h1 class="view-title">${editing ? 'Modifier' : 'Nouveau'} · ${esc(cfg.singular.toLowerCase())}</h1>
+    <form class="admin-form" id="crudForm" novalidate>
+      ${fields.map((f) => adminFieldHtml(f, editing ? item[f.k] : undefined)).join('')}
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" id="crudCancel">Annuler</button>
+        <button type="submit" class="btn" id="crudSave">${editing ? 'Enregistrer' : 'Créer'}</button>
+      </div>
+    </form>`;
+  const back = () => renderAdminCrud(cfg);
+  $('#crudBack').addEventListener('click', back);
+  $('#crudBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
+  $('#crudCancel').addEventListener('click', back);
+  wireCrudForm(cfg, fields, item);
+}
+function collectCrudForm(fields, form) {
+  const patch = {};
+  for (const f of fields) {
+    const node = form.querySelector(`[name="${f.k}"]`);
+    if (!node) continue;
+    if (f.type === 'checkbox') { patch[f.k] = node.checked; continue; }
+    const raw = (node.value || '').trim();
+    if (f.type === 'number') patch[f.k] = raw === '' ? null : Number(raw);
+    else patch[f.k] = raw === '' ? null : raw;
+  }
+  return patch;
+}
+function wireImageField(wrap) {
+  const fileInput = wrap.querySelector('input[type=file]');
+  const hidden = wrap.querySelector('input[type=hidden]');
+  const prev = wrap.querySelector('.image-prev');
+  const status = wrap.querySelector('.image-status');
+  const clearBtn = wrap.querySelector('.image-clear');
+  const folder = wrap.dataset.folder || 'misc';
+  const sync = () => { if (clearBtn) clearBtn.hidden = !hidden.value; };
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast('Image trop lourde (5 Mo maximum)'); fileInput.value = ''; return; }
+    status.textContent = 'Envoi…';
+    try {
+      const url = await uploadImage(file, folder);
+      hidden.value = url;
+      prev.innerHTML = `<img src="${esc(url)}" alt=""/>`;
+      prev.classList.add('has');
+      status.textContent = 'Image ajoutée ✓';
+    } catch (e) { status.textContent = ''; toast(errMsg(e)); }
+    fileInput.value = '';
+    sync();
+  });
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    hidden.value = ''; prev.innerHTML = ''; prev.classList.remove('has'); status.textContent = ''; sync();
+  });
+  sync();
+}
+function wireCrudForm(cfg, fields, item) {
+  const form = $('#crudForm');
+  form.querySelectorAll('.color-field').forEach((cf) => {
+    const color = cf.querySelector('input[type=color]');
+    const hex = cf.querySelector('.color-hex');
+    color.addEventListener('input', () => { hex.value = color.value; });
+    hex.addEventListener('change', () => { const v = hex.value.trim(); if (/^#[0-9a-fA-F]{6}$/.test(v)) color.value = v; else hex.value = color.value; });
+  });
+  form.querySelectorAll('.image-field').forEach(wireImageField);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = collectCrudForm(fields, form);
+    for (const f of fields) {
+      if (f.required && (patch[f.k] == null || patch[f.k] === '')) { toast(`« ${f.label} » est obligatoire`); return; }
+    }
+    const btn = $('#crudSave'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Enregistrement…';
+    try {
+      if (item) await cfg.update(item.id, patch); else await cfg.create(patch);
+      toast(item ? 'Modifications enregistrées' : 'Création effectuée');
+      renderAdminCrud(cfg);
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = orig; }
+  });
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   admin: renderAdmin,
+  'admin-teams': () => renderAdminCrud(CRUD_TEAMS),
+  'admin-players': () => renderAdminCrud(CRUD_PLAYERS),
+  'admin-competitions': () => renderAdminCrud(CRUD_COMPS),
   'admin-poules': renderAdminPoules,
   'admin-socials': renderAdminSocials,
   'admin-playoffs': renderAdminPlayoffs,
