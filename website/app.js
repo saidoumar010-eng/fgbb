@@ -1754,6 +1754,19 @@ function renderAdmin() {
     { r: 'admin-matches', label: 'Matchs', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
     { r: 'admin-playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
+    { r: 'admin-news', label: 'Actualités', ic: '<path d="M4 5h16v14H4zM4 9h16M9 5v14"/>' },
+    { r: 'admin-media', label: 'Médias', ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>' },
+    { r: 'admin-events', label: 'Agenda', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
+    { r: 'admin-sponsors', label: 'Sponsors', ic: '<path d="M3 7h18v12H3z"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>' },
+    { r: 'admin-awards', label: 'Palmarès', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
+    { r: 'admin-polls', label: 'Sondages', ic: '<path d="M6 20v-6M12 20V4M18 20v-9"/><path d="M3 20h18"/>' },
+    { r: 'admin-referees', label: 'Arbitres', ic: '<circle cx="10" cy="13" r="5"/><path d="M14 11l7-3-1.2 4.2"/>' },
+    { r: 'admin-sanctions', label: 'Discipline', ic: '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>' },
+    { r: 'admin-licenses', label: 'Licences', ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h5"/>' },
+    { r: 'admin-transfers', label: 'Transferts', ic: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>' },
+    { r: 'admin-seasons', label: 'Saisons', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3"/>' },
+    { r: 'admin-quizzes', label: 'Quiz', ic: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 015.4 1c0 1.8-2.6 2-2.6 3.5M12 17.5v.4"/>' },
+    { r: 'admin-moderation', label: 'Modération', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
     { r: 'admin-roles', label: 'Comptes & rôles', ic: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 4a3 3 0 010 6M16.5 14.5a5.5 5.5 0 013.5 5.5"/>' },
   ];
@@ -1929,7 +1942,7 @@ function matchStatusBadge(m) {
 function matchAdminRowHtml(m) {
   const score = (m.status === 'finished' || m.status === 'live') ? ` <b>${m.home_score ?? 0}–${m.away_score ?? 0}</b>` : '';
   const jour = m.round != null ? 'J' + esc(String(m.round)) + ' · ' : '';
-  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span><span class="alr-actions"><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span></div>`;
+  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span><span class="alr-actions"><button class="mini-btn" data-box="${m.id}" aria-label="Feuille de match" title="Feuille de match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3H8z"/><path d="M6 4H5v16h14V4h-1M8 12h8M8 16h5"/></svg></button><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span></div>`;
 }
 async function renderAdminMatches() {
   if (!isAdmin()) return renderAdminDenied();
@@ -1975,6 +1988,7 @@ async function renderAdminMatches() {
       renderAdminMatches();
     } catch (err) { toast(errMsg(err)); btn.disabled = false; }
   });
+  $('#amBody').querySelectorAll('[data-box]').forEach((b) => b.addEventListener('click', () => openBoxScore(b.dataset.box)));
   $('#amBody').querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openMatchEdit(b.dataset.edit)));
   $('#amBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     if (!window.confirm('Supprimer ce match ?')) return;
@@ -2037,6 +2051,79 @@ async function openMatchEdit(id) {
   });
 }
 
+// --- Feuille de match (box score) ---
+async function listTeamPlayers(teamId) {
+  const { data, error } = await sb.from('players').select('id, full_name, number').eq('team_id', teamId).order('number', { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function getMatchBoxScore(matchId) {
+  const { data, error } = await sb.from('player_match_stats').select('*').eq('match_id', matchId);
+  if (error) throw error;
+  return data ?? [];
+}
+async function saveBoxScore(rows) {
+  const { error } = await sb.from('player_match_stats').upsert(rows, { onConflict: 'match_id,player_id' });
+  if (error) throw error;
+}
+const BOX_COLS = [['minutes', 'MIN'], ['points', 'PTS'], ['rebounds', 'REB'], ['off_rebounds', 'REB.O'], ['assists', 'PD'], ['steals', 'INT'], ['blocks', 'CT'], ['turnovers', 'BP'], ['fouls', 'FTE'], ['fg_made', 'TM'], ['fg_att', 'TT'], ['three_made', '3M'], ['three_att', '3T'], ['ft_made', 'LFM'], ['ft_att', 'LFT'], ['plus_minus', '+/-']];
+function boxTeamHtml(team, players, byPlayer) {
+  if (!players.length) return `<div class="block"><div class="block-head"><h2>${esc(team?.name || '')}</h2></div><p class="view-sub" style="padding:6px 2px">Aucun joueur dans cette équipe (ajoutez-les dans « Joueurs »).</p></div>`;
+  const rows = players.map((p) => {
+    const s = byPlayer[p.id] || {};
+    const num = p.number != null ? `<b>${esc(String(p.number))}</b> ` : '';
+    return `<tr><td class="bs-name">${num}${esc(p.full_name)}</td>${BOX_COLS.map(([k]) => `<td><input type="number" inputmode="numeric" data-player="${p.id}" data-stat="${k}" value="${s[k] ?? 0}"/></td>`).join('')}</tr>`;
+  }).join('');
+  return `<div class="block"><div class="block-head"><h2>${esc(team?.name || '')}</h2></div>
+    <div class="boxscore-wrap"><table class="boxscore"><thead><tr><th class="bs-name">Joueur</th>${BOX_COLS.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+async function openBoxScore(matchId) {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + loadingHtml();
+  const m = await safe(getMatch(matchId), null);
+  if (!m) { view.innerHTML = adminBackHtml() + errorHtml(); return; }
+  const [homeP, awayP, stats] = await Promise.all([
+    safe(listTeamPlayers(m.home_team_id), []),
+    safe(listTeamPlayers(m.away_team_id), []),
+    safe(getMatchBoxScore(matchId), []),
+  ]);
+  const byPlayer = {};
+  stats.forEach((s) => { byPlayer[s.player_id] = s; });
+  const teamOf = {};
+  homeP.forEach((p) => { teamOf[p.id] = m.home_team_id; });
+  awayP.forEach((p) => { teamOf[p.id] = m.away_team_id; });
+  view.innerHTML = `
+    <a class="back-btn" id="bsBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Matchs</a>
+    <h1 class="view-title">Feuille de match</h1>
+    <p class="view-sub">${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${m.status === 'finished' ? ` · ${m.home_score}–${m.away_score}` : ''}. Saisissez les statistiques par joueur, puis enregistrez.</p>
+    ${boxTeamHtml(m.home_team, homeP, byPlayer)}
+    ${boxTeamHtml(m.away_team, awayP, byPlayer)}
+    <div class="form-actions"><button class="btn btn-ghost" id="bsBack2" type="button">Retour</button><button class="btn" id="bsSave" type="button">Enregistrer la feuille</button></div>`;
+  const back = () => renderAdminMatches();
+  $('#bsBack').addEventListener('click', back);
+  $('#bsBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
+  $('#bsBack2').addEventListener('click', back);
+  $('#bsSave').addEventListener('click', async () => {
+    const players = [...homeP, ...awayP];
+    const rows = [];
+    players.forEach((p) => {
+      const row = { match_id: matchId, player_id: p.id, team_id: teamOf[p.id] };
+      let has = false;
+      BOX_COLS.forEach(([k]) => {
+        const el = view.querySelector(`input[data-player="${p.id}"][data-stat="${k}"]`);
+        const v = el ? (parseInt(el.value, 10) || 0) : 0;
+        row[k] = v; if (v) has = true;
+      });
+      if (has || byPlayer[p.id]) rows.push(row);
+    });
+    if (!rows.length) return toast('Aucune statistique à enregistrer');
+    const btn = $('#bsSave'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Enregistrement…';
+    try { await saveBoxScore(rows); toast('Feuille de match enregistrée'); }
+    catch (e) { toast(errMsg(e)); }
+    btn.disabled = false; btn.textContent = orig;
+  });
+}
+
 // --------------------------------------------------------------- CRUD admin générique
 const POSITIONS = ['Meneur', 'Arrière', 'Ailier', 'Ailier fort', 'Pivot'];
 const COMP_TYPES = [
@@ -2050,6 +2137,21 @@ const COMP_CATEGORIES = [
   { value: 'mixte', label: 'Mixte' },
 ];
 function labelOf(list, v) { return (list.find((o) => o.value === v) || {}).label || v || ''; }
+
+// Helpers CRUD génériques (une table = une ligne).
+function crudList(table, opts) {
+  const o = opts || {};
+  return async () => {
+    const { data, error } = await sb.from(table).select(o.select || '*').order(o.orderBy || 'created_at', { ascending: o.asc || false, nullsFirst: false });
+    if (error) throw error;
+    return data ?? [];
+  };
+}
+function crudCreate(table) { return async (patch) => { const { error } = await sb.from(table).insert(patch); if (error) throw error; }; }
+function crudUpdate(table) { return async (id, patch) => { const { error } = await sb.from(table).update(patch).eq('id', id); if (error) throw error; }; }
+function crudRemove(table) { return async (id) => { const { error } = await sb.from(table).delete().eq('id', id); if (error) throw error; }; }
+async function listSeasons() { const { data, error } = await sb.from('seasons').select('id, name').order('start_date', { ascending: false, nullsFirst: false }); if (error) throw error; return data ?? []; }
+const optsFrom = (rows, valueKey, labelKey) => rows.map((r) => ({ value: r[valueKey], label: r[labelKey] }));
 
 const CRUD_TEAMS = {
   title: 'Clubs',
@@ -2129,6 +2231,187 @@ const CRUD_COMPS = {
   ],
 };
 
+// --- Configs CRUD supplémentaires (portage admin complet) ---
+const NEWS_CATS = [{ value: 'officiel', label: 'Officiel' }, { value: 'communiqué', label: 'Communiqué' }, { value: 'compétition', label: 'Compétition' }, { value: 'interview', label: 'Interview' }];
+const SPONSOR_TIERS = [{ value: 'principal', label: 'Sponsor principal' }, { value: 'officiel', label: 'Sponsor officiel' }, { value: 'partenaire', label: 'Partenaire' }, { value: 'media', label: 'Partenaire média' }];
+const SPONSOR_PLACEMENTS = [{ value: 'tous', label: 'Partout' }, { value: 'accueil', label: 'Accueil' }, { value: 'apropos', label: 'À propos' }, { value: 'matchs', label: 'Matchs' }];
+const REF_LEVELS = [{ value: 'regional', label: 'Régional' }, { value: 'national', label: 'National' }, { value: 'international', label: 'International' }];
+const AWARD_KINDS = [{ value: 'champion', label: 'Champion' }, { value: 'vainqueur_coupe', label: 'Vainqueur de coupe' }, { value: 'mvp', label: 'MVP' }, { value: 'meilleur_marqueur', label: 'Meilleur marqueur' }, { value: 'meilleur_espoir', label: 'Meilleur espoir' }, { value: 'meilleur_defenseur', label: 'Meilleur défenseur' }];
+const SANCTION_KINDS = [{ value: 'avertissement', label: 'Avertissement' }, { value: 'suspension', label: 'Suspension' }, { value: 'amende', label: 'Amende' }, { value: 'exclusion', label: 'Exclusion' }];
+const SANCTION_STATUS = [{ value: 'active', label: 'Active' }, { value: 'purgee', label: 'Purgée' }, { value: 'annulee', label: 'Annulée' }];
+const AD_MEDIA_KINDS = [{ value: 'interview', label: 'Interview' }, { value: 'podcast', label: 'Podcast' }, { value: 'reportage', label: 'Reportage' }, { value: 'video', label: 'Vidéo' }];
+const EVENT_CATS = [{ value: 'federation', label: 'Fédération' }, { value: 'competition', label: 'Compétition' }, { value: 'formation', label: 'Formation' }, { value: 'ceremonie', label: 'Cérémonie' }];
+const LICENSE_STATUS = [{ value: 'pending', label: 'En attente' }, { value: 'valid', label: 'Validée' }, { value: 'expired', label: 'Expirée' }, { value: 'suspended', label: 'Suspendue' }];
+const TRANSFER_STATUS = [{ value: 'pending', label: 'En attente' }, { value: 'approved', label: 'Approuvé' }, { value: 'rejected', label: 'Refusé' }];
+
+const CRUD_NEWS = {
+  title: 'Actualités', singular: 'Actualité', emptyIcon: 'news', emptyTitle: 'Aucune actualité', emptySub: 'Publiez la première actualité.',
+  list: crudList('news', { orderBy: 'published_at' }), create: crudCreate('news'), update: crudUpdate('news'), remove: crudRemove('news'),
+  thumb: (n) => n.cover_url ? `<span class="mlogo"><img src="${esc(n.cover_url)}" alt="" loading="lazy"></span>` : '',
+  itemTitle: (n) => n.title, itemSub: (n) => [labelOf(NEWS_CATS, n.category), n.published_at ? fmtDate(n.published_at) : ''].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'title', label: 'Titre', type: 'text', required: true },
+    { k: 'category', label: 'Catégorie', type: 'select', default: 'officiel', options: NEWS_CATS },
+    { k: 'body', label: 'Contenu', type: 'textarea', rows: 8 },
+    { k: 'author', label: 'Auteur', type: 'text', placeholder: 'Ex. Service communication FGBB' },
+    { k: 'cover_url', label: 'Image de couverture', type: 'image', folder: 'news' },
+    { k: 'published_at', label: 'Date de publication', type: 'datetime', omitEmpty: true },
+  ],
+};
+const CRUD_SPONSORS = {
+  title: 'Sponsors', singular: 'Sponsor', emptyTitle: 'Aucun sponsor',
+  list: crudList('sponsors', { orderBy: 'position', asc: true }), create: crudCreate('sponsors'), update: crudUpdate('sponsors'), remove: crudRemove('sponsors'),
+  thumb: (s) => s.logo_url ? `<span class="mlogo"><img src="${esc(s.logo_url)}" alt="" loading="lazy"></span>` : '',
+  itemTitle: (s) => s.name, itemSub: (s) => [labelOf(SPONSOR_TIERS, s.tier), s.is_active ? '' : 'inactif'].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'name', label: 'Nom', type: 'text', required: true },
+    { k: 'logo_url', label: 'Logo', type: 'image', folder: 'sponsors' },
+    { k: 'url', label: 'Site web', type: 'text', placeholder: 'https://…' },
+    { k: 'tier', label: 'Niveau', type: 'select', default: 'partenaire', options: SPONSOR_TIERS },
+    { k: 'placement', label: 'Emplacement', type: 'select', default: 'tous', options: SPONSOR_PLACEMENTS },
+    { k: 'position', label: 'Ordre d’affichage', type: 'number', omitEmpty: true, placeholder: '0' },
+    { k: 'is_active', label: 'Actif', type: 'checkbox', default: true },
+  ],
+};
+const CRUD_REFEREES = {
+  title: 'Arbitres', singular: 'Arbitre', emptyTitle: 'Aucun arbitre',
+  list: crudList('referees', { orderBy: 'full_name', asc: true }), create: crudCreate('referees'), update: crudUpdate('referees'), remove: crudRemove('referees'),
+  thumb: (r) => r.photo_url ? `<span class="mlogo"><img src="${esc(r.photo_url)}" alt="" loading="lazy"></span>` : `<span class="mlogo" style="background:var(--teal)">${esc(initials(r.full_name))}</span>`,
+  itemTitle: (r) => r.full_name, itemSub: (r) => [labelOf(REF_LEVELS, r.level), r.city, r.is_active ? '' : 'inactif'].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'full_name', label: 'Nom complet', type: 'text', required: true },
+    { k: 'city', label: 'Ville', type: 'text' },
+    { k: 'level', label: 'Niveau', type: 'select', default: 'regional', options: REF_LEVELS },
+    { k: 'license_number', label: 'N° de licence', type: 'text' },
+    { k: 'photo_url', label: 'Photo', type: 'image', folder: 'referees' },
+    { k: 'is_active', label: 'Actif', type: 'checkbox', default: true },
+  ],
+};
+const CRUD_SEASONS = {
+  title: 'Saisons', singular: 'Saison', emptyTitle: 'Aucune saison',
+  list: crudList('seasons', { orderBy: 'start_date' }), create: crudCreate('seasons'), update: crudUpdate('seasons'), remove: crudRemove('seasons'),
+  itemTitle: (s) => s.name, itemSub: (s) => [s.start_date, s.is_current ? 'en cours' : ''].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'name', label: 'Nom', type: 'text', required: true, placeholder: 'Ex. 2026-2027' },
+    { k: 'start_date', label: 'Début', type: 'date' },
+    { k: 'end_date', label: 'Fin', type: 'date' },
+    { k: 'is_current', label: 'Saison en cours', type: 'checkbox' },
+  ],
+};
+const CRUD_EVENTS = {
+  title: 'Agenda', singular: 'Événement', emptyTitle: 'Aucun événement',
+  list: crudList('events', { orderBy: 'starts_at' }), create: crudCreate('events'), update: crudUpdate('events'), remove: crudRemove('events'),
+  thumb: (e) => e.cover_url ? `<span class="mlogo"><img src="${esc(e.cover_url)}" alt="" loading="lazy"></span>` : '',
+  itemTitle: (e) => e.title, itemSub: (e) => [e.starts_at ? fmtDate(e.starts_at) : '', e.location].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'title', label: 'Titre', type: 'text', required: true },
+    { k: 'category', label: 'Catégorie', type: 'select', default: 'federation', options: EVENT_CATS },
+    { k: 'description', label: 'Description', type: 'textarea', rows: 4 },
+    { k: 'starts_at', label: 'Début', type: 'datetime', required: true },
+    { k: 'ends_at', label: 'Fin (optionnel)', type: 'datetime' },
+    { k: 'location', label: 'Lieu', type: 'text' },
+    { k: 'cover_url', label: 'Image', type: 'image', folder: 'events' },
+  ],
+};
+const CRUD_MEDIA = {
+  title: 'Médias', singular: 'Média', emptyTitle: 'Aucun média',
+  list: crudList('media_items', { orderBy: 'published_at' }), create: crudCreate('media_items'), update: crudUpdate('media_items'), remove: crudRemove('media_items'),
+  thumb: (m) => m.cover_url ? `<span class="mlogo"><img src="${esc(m.cover_url)}" alt="" loading="lazy"></span>` : '',
+  itemTitle: (m) => m.title, itemSub: (m) => [labelOf(AD_MEDIA_KINDS, m.kind), m.published_at ? fmtDate(m.published_at) : ''].filter(Boolean).join(' · '),
+  fields: [
+    { k: 'kind', label: 'Type', type: 'select', default: 'interview', options: AD_MEDIA_KINDS },
+    { k: 'title', label: 'Titre', type: 'text', required: true },
+    { k: 'description', label: 'Description', type: 'textarea', rows: 3 },
+    { k: 'url', label: 'Lien (vidéo/audio)', type: 'text', required: true, placeholder: 'https://…' },
+    { k: 'cover_url', label: 'Vignette', type: 'image', folder: 'media' },
+    { k: 'duration_min', label: 'Durée (min)', type: 'number' },
+    { k: 'published_at', label: 'Date de publication', type: 'datetime', omitEmpty: true },
+  ],
+};
+const CRUD_POLLS = {
+  title: 'Sondages', singular: 'Sondage', emptyTitle: 'Aucun sondage',
+  list: crudList('polls'), create: crudCreate('polls'), update: crudUpdate('polls'), remove: crudRemove('polls'),
+  itemTitle: (p) => p.question, itemSub: (p) => [(p.options || []).length + ' options', p.is_active ? 'actif' : 'inactif'].join(' · '),
+  fields: [
+    { k: 'question', label: 'Question', type: 'text', required: true },
+    { k: 'options', label: 'Options de réponse', type: 'lines', required: true, rows: 5, placeholder: 'Une réponse par ligne' },
+    { k: 'is_active', label: 'Actif', type: 'checkbox', default: true },
+  ],
+};
+const CRUD_AWARDS = {
+  title: 'Palmarès', singular: 'Distinction', emptyIcon: 'trophy', emptyTitle: 'Aucune distinction',
+  list: crudList('awards', { orderBy: 'awarded_at' }), create: crudCreate('awards'), update: crudUpdate('awards'), remove: crudRemove('awards'),
+  itemTitle: (a) => a.label || labelOf(AWARD_KINDS, a.kind), itemSub: (a) => [labelOf(AWARD_KINDS, a.kind), a.awarded_at].filter(Boolean).join(' · '),
+  formContext: async () => ({ teams: await safe(listTeams(), []), players: await safe(listAdminPlayers(), []), seasons: await safe(listSeasons(), []) }),
+  fields: (ctx) => [
+    { k: 'kind', label: 'Type de distinction', type: 'select', required: true, options: AWARD_KINDS },
+    { k: 'label', label: 'Intitulé (optionnel)', type: 'text', placeholder: 'Ex. Champion National 2026' },
+    { k: 'season_id', label: 'Saison', type: 'select', emptyLabel: '— Aucune —', options: optsFrom(ctx.seasons, 'id', 'name') },
+    { k: 'team_id', label: 'Équipe (optionnel)', type: 'select', emptyLabel: '— Aucune —', options: optsFrom(ctx.teams, 'id', 'name') },
+    { k: 'player_id', label: 'Joueur (optionnel)', type: 'select', emptyLabel: '— Aucun —', options: ctx.players.map((p) => ({ value: p.id, label: p.full_name })) },
+    { k: 'note', label: 'Note', type: 'textarea', rows: 2 },
+    { k: 'awarded_at', label: 'Date', type: 'date' },
+  ],
+};
+const CRUD_SANCTIONS = {
+  title: 'Discipline', singular: 'Sanction', emptyTitle: 'Aucune sanction',
+  list: crudList('sanctions', { orderBy: 'decided_at' }), create: crudCreate('sanctions'), update: crudUpdate('sanctions'), remove: crudRemove('sanctions'),
+  itemTitle: (s) => labelOf(SANCTION_KINDS, s.kind), itemSub: (s) => [s.reason, labelOf(SANCTION_STATUS, s.status), s.decided_at].filter(Boolean).join(' · '),
+  formContext: async () => ({ teams: await safe(listTeams(), []), players: await safe(listAdminPlayers(), []) }),
+  fields: (ctx) => [
+    { k: 'kind', label: 'Type', type: 'select', default: 'avertissement', options: SANCTION_KINDS },
+    { k: 'player_id', label: 'Joueur (optionnel)', type: 'select', emptyLabel: '— Aucun —', options: ctx.players.map((p) => ({ value: p.id, label: p.full_name })) },
+    { k: 'team_id', label: 'Équipe (optionnel)', type: 'select', emptyLabel: '— Aucune —', options: optsFrom(ctx.teams, 'id', 'name') },
+    { k: 'games', label: 'Matchs de suspension', type: 'number', omitEmpty: true, placeholder: '0' },
+    { k: 'amount_gnf', label: 'Amende (GNF)', type: 'number', omitEmpty: true, placeholder: '0' },
+    { k: 'reason', label: 'Motif', type: 'textarea', rows: 3 },
+    { k: 'decided_at', label: 'Date de décision', type: 'date', omitEmpty: true },
+    { k: 'status', label: 'Statut', type: 'select', default: 'active', options: SANCTION_STATUS },
+  ],
+};
+const CRUD_LICENSES = {
+  title: 'Licences', singular: 'Licence', emptyTitle: 'Aucune licence',
+  list: crudList('licenses'), create: crudCreate('licenses'), update: crudUpdate('licenses'), remove: crudRemove('licenses'),
+  itemTitle: (l) => l.number || 'Licence', itemSub: (l) => [labelOf(LICENSE_STATUS, l.status), l.expires_at].filter(Boolean).join(' · '),
+  formContext: async () => ({ teams: await safe(listTeams(), []), players: await safe(listAdminPlayers(), []), seasons: await safe(listSeasons(), []) }),
+  fields: (ctx) => [
+    { k: 'player_id', label: 'Joueur', type: 'select', required: true, options: ctx.players.map((p) => ({ value: p.id, label: p.full_name })) },
+    { k: 'team_id', label: 'Club', type: 'select', emptyLabel: '— Aucun —', options: optsFrom(ctx.teams, 'id', 'name') },
+    { k: 'season_id', label: 'Saison', type: 'select', emptyLabel: '— Aucune —', options: optsFrom(ctx.seasons, 'id', 'name') },
+    { k: 'number', label: 'N° de licence', type: 'text' },
+    { k: 'status', label: 'Statut', type: 'select', default: 'pending', options: LICENSE_STATUS },
+    { k: 'issued_at', label: 'Délivrée le', type: 'date' },
+    { k: 'expires_at', label: 'Expire le', type: 'date' },
+    { k: 'document_url', label: 'Document', type: 'image', folder: 'licenses' },
+    { k: 'note', label: 'Note', type: 'textarea', rows: 2 },
+  ],
+};
+const CRUD_TRANSFERS = {
+  title: 'Transferts', singular: 'Transfert', emptyTitle: 'Aucun transfert',
+  list: crudList('transfers', { select: '*, player:players(full_name)', orderBy: 'requested_at' }), create: crudCreate('transfers'), update: crudUpdate('transfers'), remove: crudRemove('transfers'),
+  itemTitle: (t) => (t.player && t.player.full_name) || 'Transfert', itemSub: (t) => [labelOf(TRANSFER_STATUS, t.status)].filter(Boolean).join(' · '),
+  formContext: async () => ({ teams: await safe(listTeams(), []), players: await safe(listAdminPlayers(), []), seasons: await safe(listSeasons(), []) }),
+  fields: (ctx) => [
+    { k: 'player_id', label: 'Joueur', type: 'select', required: true, options: ctx.players.map((p) => ({ value: p.id, label: p.full_name })) },
+    { k: 'from_team_id', label: 'Club d’origine', type: 'select', emptyLabel: '— Aucun —', options: optsFrom(ctx.teams, 'id', 'name') },
+    { k: 'to_team_id', label: 'Nouveau club', type: 'select', emptyLabel: '— Aucun —', options: optsFrom(ctx.teams, 'id', 'name') },
+    { k: 'season_id', label: 'Saison', type: 'select', emptyLabel: '— Aucune —', options: optsFrom(ctx.seasons, 'id', 'name') },
+    { k: 'status', label: 'Statut', type: 'select', default: 'pending', options: TRANSFER_STATUS },
+    { k: 'note', label: 'Note', type: 'textarea', rows: 2 },
+  ],
+};
+const CRUD_QUIZZES = {
+  title: 'Quiz', singular: 'Quiz', emptyTitle: 'Aucun quiz',
+  list: crudList('quizzes'), create: crudCreate('quizzes'), update: crudUpdate('quizzes'), remove: crudRemove('quizzes'),
+  itemTitle: (q) => q.title, itemSub: (q) => (q.is_active ? 'actif' : 'inactif'),
+  extraAction: { label: 'Questions', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 015.4 1c0 1.8-2.6 2-2.6 3.5M12 17.5v.4"/></svg>', run: (q) => openQuizQuestions(q.id, q.title) },
+  fields: [
+    { k: 'title', label: 'Titre', type: 'text', required: true },
+    { k: 'description', label: 'Description', type: 'textarea', rows: 3 },
+    { k: 'is_active', label: 'Actif', type: 'checkbox' },
+  ],
+};
+
 function adminFieldHtml(f, value) {
   const val = value == null ? (f.default != null ? f.default : '') : value;
   const nm = `name="${f.k}"`;
@@ -2159,6 +2442,17 @@ function adminFieldHtml(f, value) {
         <span class="image-status" aria-live="polite"></span>
       </div></div>`;
   }
+  if (f.type === 'textarea') {
+    return `<div class="field"><label>${esc(f.label)}${f.required ? ' *' : ''}</label><textarea ${nm} rows="${f.rows || 4}" ${f.required ? 'required' : ''} placeholder="${esc(f.placeholder || '')}">${esc(val)}</textarea></div>`;
+  }
+  if (f.type === 'datetime') {
+    const dv = val ? String(val).slice(0, 16) : '';
+    return `<div class="field"><label>${esc(f.label)}${f.required ? ' *' : ''}</label><input type="datetime-local" ${nm} value="${esc(dv)}" ${f.required ? 'required' : ''} /></div>`;
+  }
+  if (f.type === 'lines') {
+    const txt = Array.isArray(val) ? val.join('\n') : (val || '');
+    return `<div class="field"><label>${esc(f.label)}${f.required ? ' *' : ''}</label><textarea ${nm} rows="${f.rows || 4}" placeholder="${esc(f.placeholder || 'Une entrée par ligne')}">${esc(txt)}</textarea><span class="field-hint">Une entrée par ligne.</span></div>`;
+  }
   const inputType = f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text';
   const extra = f.type === 'number' ? ' min="0" inputmode="numeric"' : '';
   const ph = f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : '';
@@ -2180,6 +2474,7 @@ async function renderAdminCrud(cfg) {
   if (items === null) { body.innerHTML = errorHtml(); return; }
   if (!items.length) { body.innerHTML = emptyHtml(cfg.emptyTitle || 'Rien à afficher', cfg.emptySub || '', cfg.emptyIcon || 'inbox'); return; }
   body.innerHTML = `<div class="admin-list">${items.map((it) => crudRowHtml(cfg, it)).join('')}</div>`;
+  if (cfg.extraAction) body.querySelectorAll('[data-extra]').forEach((b) => b.addEventListener('click', () => cfg.extraAction.run(items.find((x) => x.id === b.dataset.extra))));
   body.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openCrudForm(cfg, items.find((x) => x.id === b.dataset.edit))));
   body.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => confirmCrudDelete(cfg, items.find((x) => x.id === b.dataset.del))));
 }
@@ -2190,6 +2485,7 @@ function crudRowHtml(cfg, it) {
     ${thumb}
     <div class="alr-main"><b>${esc(cfg.itemTitle(it))}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>
     <div class="alr-actions">
+      ${cfg.extraAction ? `<button class="mini-btn" data-extra="${it.id}" aria-label="${esc(cfg.extraAction.label)}" title="${esc(cfg.extraAction.label)}">${cfg.extraAction.icon || ''}</button>` : ''}
       <button class="mini-btn" data-edit="${it.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button>
       <button class="mini-del" data-del="${it.id}" aria-label="Supprimer">✕</button>
     </div></div>`;
@@ -2228,8 +2524,14 @@ function collectCrudForm(fields, form) {
     if (!node) continue;
     if (f.type === 'checkbox') { patch[f.k] = node.checked; continue; }
     const raw = (node.value || '').trim();
-    if (f.type === 'number') patch[f.k] = raw === '' ? null : Number(raw);
-    else patch[f.k] = raw === '' ? null : raw;
+    let value;
+    if (f.type === 'number') value = raw === '' ? null : Number(raw);
+    else if (f.type === 'datetime') value = raw === '' ? null : raw + ':00.000Z';
+    else if (f.type === 'lines') value = raw === '' ? [] : raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    else value = raw === '' ? null : raw;
+    const empty = value === null || value === '' || (Array.isArray(value) && value.length === 0);
+    if (f.omitEmpty && empty) continue; // laisser la valeur par défaut de la base (colonnes NOT NULL)
+    patch[f.k] = value;
   }
   return patch;
 }
@@ -2274,7 +2576,8 @@ function wireCrudForm(cfg, fields, item) {
     e.preventDefault();
     const patch = collectCrudForm(fields, form);
     for (const f of fields) {
-      if (f.required && (patch[f.k] == null || patch[f.k] === '')) { toast(`« ${f.label} » est obligatoire`); return; }
+      const v = patch[f.k];
+      if (f.required && (v == null || v === '' || (Array.isArray(v) && v.length === 0))) { toast(`« ${f.label} » est obligatoire`); return; }
     }
     const btn = $('#crudSave'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Enregistrement…';
     try {
@@ -2322,6 +2625,81 @@ async function renderAdminRoles() {
   });
 }
 
+async function listQuizQuestions(quizId) {
+  const { data, error } = await sb.from('quiz_questions').select('*').eq('quiz_id', quizId).order('position', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+async function createQuizQuestion(q) { const { error } = await sb.from('quiz_questions').insert(q); if (error) throw error; }
+async function deleteQuizQuestion(id) { const { error } = await sb.from('quiz_questions').delete().eq('id', id); if (error) throw error; }
+async function openQuizQuestions(quizId, quizTitle) {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = `<a class="back-btn" id="qqBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Quiz</a><h1 class="view-title">Questions</h1><p class="view-sub">${esc(quizTitle || '')}</p><div id="qqBody">${loadingHtml()}</div>`;
+  $('#qqBack').addEventListener('click', () => renderAdminCrud(CRUD_QUIZZES));
+  const questions = await safe(listQuizQuestions(quizId), []);
+  const list = questions.length
+    ? `<div class="roster">${questions.map((q, i) => `<div class="roster-row"><span class="rr-name"><b>${i + 1}.</b> ${esc(q.question)}<br><span class="rr-sub">${(q.options || []).map((o, idx) => `${idx === q.correct_index ? '✓ ' : ''}${esc(o)}`).join(' · ')}</span></span><button class="mini-del" data-del="${q.id}" aria-label="Supprimer">✕</button></div>`).join('')}</div>`
+    : '<p class="view-sub" style="padding:6px 2px">Aucune question pour l’instant.</p>';
+  $('#qqBody').innerHTML = `
+    <form class="admin-form" id="qqForm" novalidate>
+      <div class="field"><label>Question *</label><input name="question" required autocomplete="off" /></div>
+      <div class="field"><label>Réponses *</label><textarea name="options" rows="4" placeholder="Une réponse par ligne"></textarea><span class="field-hint">Une réponse par ligne (2 minimum).</span></div>
+      <div class="field"><label>N° de la bonne réponse</label><input type="number" name="correct" min="1" value="1" /></div>
+      <button class="btn" type="submit">Ajouter la question</button>
+    </form>
+    <div class="block" style="margin-top:20px"><div class="block-head"><h2>Questions</h2></div>${list}</div>`;
+  const form = $('#qqForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const question = (fd.get('question') || '').trim();
+    const options = (fd.get('options') || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (!question) return toast('Question obligatoire');
+    if (options.length < 2) return toast('Ajoutez au moins 2 réponses');
+    const correct = Math.max(1, Math.min(options.length, parseInt(fd.get('correct'), 10) || 1)) - 1;
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try {
+      await createQuizQuestion({ quiz_id: quizId, question, options, correct_index: correct, position: questions.length });
+      toast('Question ajoutée');
+      openQuizQuestions(quizId, quizTitle);
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#qqBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await deleteQuizQuestion(b.dataset.del); toast('Question supprimée'); openQuizQuestions(quizId, quizTitle); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
+async function listModerationWords() { const { data, error } = await sb.from('moderation_words').select('word').order('word', { ascending: true }); if (error) throw error; return data ?? []; }
+async function addModerationWord(word) { const { error } = await sb.from('moderation_words').insert({ word }); if (error) throw error; }
+async function removeModerationWord(word) { const { error } = await sb.from('moderation_words').delete().eq('word', word); if (error) throw error; }
+async function renderAdminModeration() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Modération</h1><p class="view-sub">Mots interdits dans les commentaires et le chat en direct.</p><div id="modBody">${loadingHtml()}</div>`;
+  const words = await safe(listModerationWords(), []);
+  const list = words.length
+    ? `<div class="roster">${words.map((w) => `<div class="roster-row"><span class="rr-name">${esc(w.word)}</span><button class="mini-del" data-del="${esc(w.word)}" aria-label="Supprimer">✕</button></div>`).join('')}</div>`
+    : '<p class="view-sub" style="padding:6px 2px">Aucun mot filtré.</p>';
+  $('#modBody').innerHTML = `
+    <form class="social-form" id="modForm"><div class="field"><label>Ajouter un mot interdit</label><input name="word" required autocomplete="off" /></div><button class="btn" type="submit">Ajouter</button></form>
+    <div class="block" style="margin-top:20px"><div class="block-head"><h2>Mots filtrés</h2></div>${list}</div>`;
+  const form = $('#modForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const word = (new FormData(form).get('word') || '').trim().toLowerCase();
+    if (!word) return;
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try { await addModerationWord(word); toast('Mot ajouté'); renderAdminModeration(); }
+    catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#modBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await removeModerationWord(b.dataset.del); toast('Mot supprimé'); renderAdminModeration(); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   admin: renderAdmin,
@@ -2329,6 +2707,19 @@ const RENDERERS = {
   'admin-players': () => renderAdminCrud(CRUD_PLAYERS),
   'admin-competitions': () => renderAdminCrud(CRUD_COMPS),
   'admin-matches': renderAdminMatches,
+  'admin-news': () => renderAdminCrud(CRUD_NEWS),
+  'admin-media': () => renderAdminCrud(CRUD_MEDIA),
+  'admin-events': () => renderAdminCrud(CRUD_EVENTS),
+  'admin-sponsors': () => renderAdminCrud(CRUD_SPONSORS),
+  'admin-awards': () => renderAdminCrud(CRUD_AWARDS),
+  'admin-polls': () => renderAdminCrud(CRUD_POLLS),
+  'admin-referees': () => renderAdminCrud(CRUD_REFEREES),
+  'admin-sanctions': () => renderAdminCrud(CRUD_SANCTIONS),
+  'admin-licenses': () => renderAdminCrud(CRUD_LICENSES),
+  'admin-transfers': () => renderAdminCrud(CRUD_TRANSFERS),
+  'admin-seasons': () => renderAdminCrud(CRUD_SEASONS),
+  'admin-quizzes': () => renderAdminCrud(CRUD_QUIZZES),
+  'admin-moderation': renderAdminModeration,
   'admin-poules': renderAdminPoules,
   'admin-socials': renderAdminSocials,
   'admin-playoffs': renderAdminPlayoffs,
