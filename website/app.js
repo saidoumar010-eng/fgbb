@@ -1767,6 +1767,9 @@ function renderAdmin() {
     { r: 'admin-seasons', label: 'Saisons', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3"/>' },
     { r: 'admin-quizzes', label: 'Quiz', ic: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 015.4 1c0 1.8-2.6 2-2.6 3.5M12 17.5v.4"/>' },
     { r: 'admin-moderation', label: 'Modération', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/>' },
+    { r: 'admin-club-members', label: 'Responsables clubs', ic: '<path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-5h6v5"/>' },
+    { r: 'admin-club-messages', label: 'Messages clubs', ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' },
+    { r: 'admin-bans', label: 'Bannissements', ic: '<circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
     { r: 'admin-roles', label: 'Comptes & rôles', ic: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 4a3 3 0 010 6M16.5 14.5a5.5 5.5 0 013.5 5.5"/>' },
   ];
@@ -1942,7 +1945,7 @@ function matchStatusBadge(m) {
 function matchAdminRowHtml(m) {
   const score = (m.status === 'finished' || m.status === 'live') ? ` <b>${m.home_score ?? 0}–${m.away_score ?? 0}</b>` : '';
   const jour = m.round != null ? 'J' + esc(String(m.round)) + ' · ' : '';
-  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span><span class="alr-actions"><button class="mini-btn" data-box="${m.id}" aria-label="Feuille de match" title="Feuille de match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3H8z"/><path d="M6 4H5v16h14V4h-1M8 12h8M8 16h5"/></svg></button><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span></div>`;
+  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span><span class="alr-actions"><button class="mini-btn" data-box="${m.id}" aria-label="Feuille de match" title="Feuille de match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3H8z"/><path d="M6 4H5v16h14V4h-1M8 12h8M8 16h5"/></svg></button><button class="mini-btn" data-officials="${m.id}" aria-label="Officiels" title="Officiels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="13" r="5"/><path d="M14 11l7-3-1.2 4.2"/></svg></button><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span></div>`;
 }
 async function renderAdminMatches() {
   if (!isAdmin()) return renderAdminDenied();
@@ -1989,6 +1992,7 @@ async function renderAdminMatches() {
     } catch (err) { toast(errMsg(err)); btn.disabled = false; }
   });
   $('#amBody').querySelectorAll('[data-box]').forEach((b) => b.addEventListener('click', () => openBoxScore(b.dataset.box)));
+  $('#amBody').querySelectorAll('[data-officials]').forEach((b) => b.addEventListener('click', () => openMatchOfficials(b.dataset.officials)));
   $('#amBody').querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openMatchEdit(b.dataset.edit)));
   $('#amBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     if (!window.confirm('Supprimer ce match ?')) return;
@@ -2700,6 +2704,178 @@ async function renderAdminModeration() {
   }));
 }
 
+// --- Officiels d'un match (arbitres, délégués, table de marque) ---
+const OFFICIAL_ROLES = [{ value: 'principal', label: 'Arbitre principal' }, { value: 'assistant', label: 'Arbitre assistant' }, { value: 'table', label: 'Table de marque' }, { value: 'commissaire', label: 'Commissaire / Délégué' }];
+async function listRefereesLite() { const { data, error } = await sb.from('referees').select('id, full_name').order('full_name'); if (error) throw error; return data ?? []; }
+async function getMatchOfficials(matchId) { const { data, error } = await sb.from('match_officials').select('*, referee:referees(full_name)').eq('match_id', matchId); if (error) throw error; return data ?? []; }
+async function addMatchOfficial(row) { const { error } = await sb.from('match_officials').upsert(row, { onConflict: 'match_id,referee_id' }); if (error) throw error; }
+async function removeMatchOfficial(matchId, refereeId) { const { error } = await sb.from('match_officials').delete().eq('match_id', matchId).eq('referee_id', refereeId); if (error) throw error; }
+async function openMatchOfficials(matchId) {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + loadingHtml();
+  const [m, referees, officials] = await Promise.all([safe(getMatch(matchId), null), safe(listRefereesLite(), []), safe(getMatchOfficials(matchId), [])]);
+  if (!m) { view.innerHTML = adminBackHtml() + errorHtml(); return; }
+  const refOpts = '<option value="">— Choisir —</option>' + referees.map((r) => `<option value="${r.id}">${esc(r.full_name)}</option>`).join('');
+  const roleOpts = OFFICIAL_ROLES.map((o) => `<option value="${o.value}">${o.label}</option>`).join('');
+  const list = officials.length
+    ? `<div class="roster">${officials.map((o) => `<div class="roster-row"><span class="rr-name">${esc(o.referee?.full_name || '?')}<br><span class="rr-sub">${esc(labelOf(OFFICIAL_ROLES, o.role))}</span></span><button class="mini-del" data-del="${o.referee_id}" aria-label="Retirer">✕</button></div>`).join('')}</div>`
+    : '<p class="view-sub" style="padding:6px 2px">Aucun officiel désigné.</p>';
+  view.innerHTML = `
+    <a class="back-btn" id="moBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Matchs</a>
+    <h1 class="view-title">Officiels du match</h1>
+    <p class="view-sub">${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}. Arbitres, délégués et table de marque.${referees.length ? '' : ' Ajoutez d’abord des arbitres dans « Arbitres ».'}</p>
+    <form class="social-form" id="moForm">
+      <div class="field"><label>Officiel</label><select name="referee_id" required>${refOpts}</select></div>
+      <div class="field"><label>Rôle</label><select name="role">${roleOpts}</select></div>
+      <button class="btn" type="submit">Désigner</button>
+    </form>
+    <div class="block" style="margin-top:20px"><div class="block-head"><h2>Désignés</h2></div>${list}</div>`;
+  const back = () => renderAdminMatches();
+  $('#moBack').addEventListener('click', back);
+  $('#moBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
+  const form = $('#moForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form); const ref = fd.get('referee_id');
+    if (!ref) return toast('Choisissez un officiel');
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try { await addMatchOfficial({ match_id: matchId, referee_id: ref, role: fd.get('role') }); toast('Officiel désigné'); openMatchOfficials(matchId); }
+    catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  view.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await removeMatchOfficial(matchId, b.dataset.del); toast('Officiel retiré'); openMatchOfficials(matchId); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
+// --- Responsables de club (club_members) ---
+let acmTeam = '';
+async function listClubMembers() { const { data, error } = await sb.from('club_members').select('*').order('created_at'); if (error) throw error; return data ?? []; }
+async function addClubMember(userId, teamId) { const { error } = await sb.from('club_members').insert({ user_id: userId, team_id: teamId }); if (error) throw error; }
+async function removeClubMember(userId, teamId) { const { error } = await sb.from('club_members').delete().eq('user_id', userId).eq('team_id', teamId); if (error) throw error; }
+async function renderAdminClubMembers() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Responsables de club</h1><p class="view-sub">Désignez les personnes qui gèrent un club (elles pourront l’administrer dans l’app). Chacune crée d’abord son compte.</p><div id="cmFilter"></div><div id="cmBody">${loadingHtml()}</div>`;
+  const [teams, accounts, members] = await Promise.all([safe(listTeams(), []), safe(listAccounts(), []), safe(listClubMembers(), [])]);
+  if (!teams.length) { $('#cmBody').innerHTML = emptyHtml('Aucun club', 'Créez d’abord des clubs dans « Clubs ».', 'ball'); return; }
+  if (!acmTeam || !teams.find((t) => t.id === acmTeam)) acmTeam = teams[0].id;
+  const f = $('#cmFilter'); f.className = 'segmented';
+  f.innerHTML = teams.map((t) => `<button class="seg ${acmTeam === t.id ? 'active' : ''}" data-c="${t.id}">${esc(t.name)}</button>`).join('');
+  f.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { acmTeam = b.dataset.c; renderAdminClubMembers(); }));
+  const accById = {}; accounts.forEach((a) => { accById[a.id] = a; });
+  const teamMembers = members.filter((m) => m.team_id === acmTeam);
+  const memberIds = new Set(teamMembers.map((m) => m.user_id));
+  const available = accounts.filter((a) => !memberIds.has(a.id));
+  const list = teamMembers.length
+    ? `<div class="roster">${teamMembers.map((m) => { const a = accById[m.user_id]; return `<div class="roster-row"><span class="rr-name">${esc(a?.full_name || '—')}<br><span class="rr-sub">${esc(a?.email || m.user_id)}</span></span><button class="mini-del" data-del="${m.user_id}" aria-label="Retirer">✕</button></div>`; }).join('')}</div>`
+    : '<p class="view-sub" style="padding:6px 2px">Aucun responsable pour ce club.</p>';
+  $('#cmBody').innerHTML = `
+    <form class="social-form" id="cmForm"><div class="field"><label>Ajouter un responsable</label><select name="user_id" required><option value="">— Choisir un compte —</option>${available.map((a) => `<option value="${a.id}">${esc(a.full_name || a.email)} (${esc(a.email)})</option>`).join('')}</select></div><button class="btn" type="submit">Ajouter</button></form>
+    <div class="block" style="margin-top:20px"><div class="block-head"><h2>Responsables du club</h2></div>${list}</div>`;
+  const form = $('#cmForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); const uid = new FormData(form).get('user_id'); if (!uid) return;
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try { await addClubMember(uid, acmTeam); toast('Responsable ajouté'); renderAdminClubMembers(); }
+    catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#cmBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await removeClubMember(b.dataset.del, acmTeam); toast('Responsable retiré'); renderAdminClubMembers(); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
+// --- Messages aux clubs (club_messages) ---
+async function listClubMessages() { const { data, error } = await sb.from('club_messages').select('*, recipients:club_message_recipients(team_id)').order('created_at', { ascending: false }); if (error) throw error; return data ?? []; }
+async function sendClubMessage({ title, body, teamIds }) {
+  const { data, error } = await sb.from('club_messages').insert({ title, body, created_by: session?.user?.id || null }).select('id').single();
+  if (error) throw error;
+  const rows = teamIds.map((t) => ({ message_id: data.id, team_id: t }));
+  const { error: e2 } = await sb.from('club_message_recipients').insert(rows);
+  if (e2) throw e2;
+}
+async function deleteClubMessage(id) { const { error } = await sb.from('club_messages').delete().eq('id', id); if (error) throw error; }
+async function renderAdminClubMessages() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Messages aux clubs</h1><p class="view-sub">Envoyez un message que les clubs verront dans leur espace.</p><div id="msgBody">${loadingHtml()}</div>`;
+  const [teams, messages] = await Promise.all([safe(listTeams(), []), safe(listClubMessages(), [])]);
+  const teamOpts = teams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  const list = messages.length
+    ? `<div class="roster">${messages.map((m) => `<div class="roster-row"><span class="rr-name">${esc(m.title)}<br><span class="rr-sub">${(m.recipients || []).length} club(s) · ${fmtDate(m.created_at)}</span></span><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></div>`).join('')}</div>`
+    : '<p class="view-sub" style="padding:6px 2px">Aucun message envoyé.</p>';
+  $('#msgBody').innerHTML = `
+    <form class="admin-form" id="msgForm" novalidate>
+      <div class="field"><label>Titre *</label><input name="title" required autocomplete="off" /></div>
+      <div class="field"><label>Message *</label><textarea name="body" rows="5" required></textarea></div>
+      <div class="field"><label>Destinataires</label><select name="target" id="msgTarget"><option value="all">Tous les clubs</option><option value="one">Un club précis</option></select></div>
+      <div class="field" id="msgOneWrap" style="display:none"><label>Club</label><select name="team_id">${teamOpts}</select></div>
+      <button class="btn" type="submit">Envoyer</button>
+    </form>
+    <div class="block" style="margin-top:20px"><div class="block-head"><h2>Messages envoyés</h2></div>${list}</div>`;
+  const targetSel = $('#msgTarget');
+  targetSel.addEventListener('change', () => { $('#msgOneWrap').style.display = targetSel.value === 'one' ? '' : 'none'; });
+  const form = $('#msgForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const title = (fd.get('title') || '').trim(), body = (fd.get('body') || '').trim();
+    if (!title || !body) return toast('Titre et message obligatoires');
+    if (!teams.length) return toast('Aucun club à qui envoyer');
+    const teamIds = fd.get('target') === 'one' ? [fd.get('team_id')].filter(Boolean) : teams.map((t) => t.id);
+    if (!teamIds.length) return toast('Choisissez un destinataire');
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try { await sendClubMessage({ title, body, teamIds }); toast('Message envoyé aux clubs'); renderAdminClubMessages(); }
+    catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#msgBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    if (!window.confirm('Supprimer ce message ?')) return;
+    b.disabled = true;
+    try { await deleteClubMessage(b.dataset.del); toast('Message supprimé'); renderAdminClubMessages(); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
+// --- Bannissements (bans) ---
+async function listBans() { const { data, error } = await sb.from('bans').select('*').order('created_at', { ascending: false }); if (error) throw error; return data ?? []; }
+async function addBan(row) { const { error } = await sb.from('bans').upsert(row, { onConflict: 'user_id' }); if (error) throw error; }
+async function removeBan(userId) { const { error } = await sb.from('bans').delete().eq('user_id', userId); if (error) throw error; }
+async function renderAdminBans() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Bannissements</h1><p class="view-sub">Empêcher un compte de commenter et d’utiliser le chat en direct.</p><div id="banBody">${loadingHtml()}</div>`;
+  const [accounts, bans] = await Promise.all([safe(listAccounts(), []), safe(listBans(), [])]);
+  const accById = {}; accounts.forEach((a) => { accById[a.id] = a; });
+  const bannedIds = new Set(bans.map((b) => b.user_id));
+  const available = accounts.filter((a) => !bannedIds.has(a.id));
+  const list = bans.length
+    ? `<div class="roster">${bans.map((b) => { const a = accById[b.user_id]; return `<div class="roster-row"><span class="rr-name">${esc(a?.full_name || a?.email || b.user_id)}<br><span class="rr-sub">${b.reason ? esc(b.reason) + ' · ' : ''}${b.until ? 'jusqu’au ' + fmtDate(b.until) : 'permanent'}</span></span><button class="mini-del" data-del="${b.user_id}" aria-label="Lever le bannissement">✕</button></div>`; }).join('')}</div>`
+    : '<p class="view-sub" style="padding:6px 2px">Aucun compte banni.</p>';
+  $('#banBody').innerHTML = `
+    <form class="admin-form" id="banForm" novalidate>
+      <div class="field"><label>Compte</label><select name="user_id" required><option value="">— Choisir —</option>${available.map((a) => `<option value="${a.id}">${esc(a.full_name || a.email)} (${esc(a.email)})</option>`).join('')}</select></div>
+      <div class="field"><label>Motif</label><input name="reason" autocomplete="off" /></div>
+      <div class="field"><label>Jusqu’au (vide = permanent)</label><input type="datetime-local" name="until" /></div>
+      <button class="btn" type="submit">Bannir</button>
+    </form>
+    <div class="block" style="margin-top:20px"><div class="block-head"><h2>Comptes bannis</h2></div>${list}</div>`;
+  const form = $('#banForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form); const uid = fd.get('user_id');
+    if (!uid) return toast('Choisissez un compte');
+    const until = fd.get('until');
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try { await addBan({ user_id: uid, reason: (fd.get('reason') || '').trim() || null, until: until ? until + ':00.000Z' : null }); toast('Compte banni'); renderAdminBans(); }
+    catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#banBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await removeBan(b.dataset.del); toast('Bannissement levé'); renderAdminBans(); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   admin: renderAdmin,
@@ -2720,6 +2896,9 @@ const RENDERERS = {
   'admin-seasons': () => renderAdminCrud(CRUD_SEASONS),
   'admin-quizzes': () => renderAdminCrud(CRUD_QUIZZES),
   'admin-moderation': renderAdminModeration,
+  'admin-club-members': renderAdminClubMembers,
+  'admin-club-messages': renderAdminClubMessages,
+  'admin-bans': renderAdminBans,
   'admin-poules': renderAdminPoules,
   'admin-socials': renderAdminSocials,
   'admin-playoffs': renderAdminPlayoffs,
