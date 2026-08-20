@@ -1755,6 +1755,7 @@ function renderAdmin() {
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
     { r: 'admin-playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
+    { r: 'admin-roles', label: 'Comptes & rôles', ic: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 4a3 3 0 010 6M16.5 14.5a5.5 5.5 0 013.5 5.5"/>' },
   ];
   view.innerHTML = `<h1 class="view-title">Espace fédération</h1><p class="view-sub">Gérez les clubs, les joueurs, les compétitions, les poules, les playoffs et les réseaux sociaux.</p><div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
 }
@@ -2284,6 +2285,43 @@ function wireCrudForm(cfg, fields, item) {
   });
 }
 
+async function listAccounts() {
+  const { data, error } = await sb.rpc('admin_list_accounts');
+  if (error) throw error;
+  return data ?? [];
+}
+async function setUserRole(id, role) {
+  const { error } = await sb.rpc('admin_set_role', { target: id, new_role: role });
+  if (error) throw error;
+}
+const ROLE_OPTIONS = [['fan', 'Supporter'], ['table_technique', 'Table technique'], ['admin', 'Fédération (admin)']];
+function roleFrLabel(r) { return (ROLE_OPTIONS.find((o) => o[0] === r) || [null, r])[1]; }
+async function renderAdminRoles() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Comptes &amp; rôles</h1><p class="view-sub">Attribuez un rôle aux comptes existants. Chaque personne crée d’abord son compte (inscription), puis apparaît ici. Après un changement, elle doit se reconnecter pour que le rôle s’applique.</p><div id="arBody">${loadingHtml()}</div>`;
+  const accounts = await safe(listAccounts(), null);
+  const body = $('#arBody');
+  if (!body) return;
+  if (accounts === null) { body.innerHTML = errorHtml(); return; }
+  if (!accounts.length) { body.innerHTML = emptyHtml('Aucun compte', 'Les comptes apparaîtront ici après inscription.', 'inbox'); return; }
+  const myId = session?.user?.id;
+  body.innerHTML = `<div class="roster">${accounts.map((a) => {
+    const isMe = a.id === myId;
+    const opts = ROLE_OPTIONS.map(([v, l]) => `<option value="${v}" ${a.role === v ? 'selected' : ''}>${l}</option>`).join('');
+    return `<div class="roster-row"><span class="rr-name">${esc(a.full_name || '—')}<br><span class="rr-sub">${esc(a.email || '')}${isMe ? ' · vous' : ''}</span></span><select class="poule-select role-select" data-id="${a.id}" ${isMe ? 'disabled title="Vous ne pouvez pas changer votre propre rôle"' : ''}>${opts}</select></div>`;
+  }).join('')}</div>`;
+  body.querySelectorAll('.role-select').forEach((sel) => {
+    sel.dataset.prev = sel.value;
+    sel.addEventListener('change', async () => {
+      const id = sel.dataset.id, role = sel.value;
+      sel.disabled = true;
+      try { await setUserRole(id, role); toast('Rôle mis à jour : ' + roleFrLabel(role)); sel.dataset.prev = role; }
+      catch (e) { toast(errMsg(e)); sel.value = sel.dataset.prev; }
+      sel.disabled = false;
+    });
+  });
+}
+
 const RENDERERS = {
   accueil: renderAccueil,
   admin: renderAdmin,
@@ -2294,6 +2332,7 @@ const RENDERERS = {
   'admin-poules': renderAdminPoules,
   'admin-socials': renderAdminSocials,
   'admin-playoffs': renderAdminPlayoffs,
+  'admin-roles': renderAdminRoles,
   playoffs: renderPlayoffs,
   matchs: renderMatchs,
   classement: renderClassement,
