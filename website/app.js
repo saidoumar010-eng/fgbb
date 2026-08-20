@@ -231,6 +231,22 @@ async function deleteMatch(id) {
   const { error } = await sb.from('matches').delete().eq('id', id);
   if (error) throw error;
 }
+// Matchs de championnat (phase 'regular') — programmation & résultats (admin).
+async function listAdminMatches(competitionId) {
+  let q = sb.from('matches').select(MATCH_SELECT).or('phase.eq.regular,phase.is.null').order('scheduled_at', { ascending: false, nullsFirst: false });
+  if (competitionId) q = q.eq('competition_id', competitionId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+async function scheduleMatch(m) {
+  const { error } = await sb.from('matches').insert({ ...m, phase: 'regular', status: 'scheduled' });
+  if (error) throw error;
+}
+async function updateMatch(id, patch) {
+  const { error } = await sb.from('matches').update(patch).eq('id', id);
+  if (error) throw error;
+}
 async function listNews() {
   const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false });
   if (error) throw error;
@@ -1735,6 +1751,7 @@ function renderAdmin() {
     { r: 'admin-teams', label: 'Clubs', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/>' },
     { r: 'admin-players', label: 'Joueurs', ic: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0114 0"/>' },
     { r: 'admin-competitions', label: 'Compétitions', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
+    { r: 'admin-matches', label: 'Matchs', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
     { r: 'admin-playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
@@ -1900,6 +1917,123 @@ async function renderAdminPlayoffs() {
     try { await deleteMatch(b.dataset.del); toast('Match supprimé'); renderAdminPlayoffs(); }
     catch (err) { toast(errMsg(err)); b.disabled = false; }
   }));
+}
+
+let adminMatchComp = '';
+function matchStatusBadge(m) {
+  if (m.status === 'live') return '<span class="pill live">En direct</span>';
+  if (m.status === 'finished') return '<span class="pill done">Terminé</span>';
+  return `<span class="pill next">${m.scheduled_at ? fmtDate(m.scheduled_at) + ' · ' + fmtTime(m.scheduled_at) : 'À programmer'}</span>`;
+}
+function matchAdminRowHtml(m) {
+  const score = (m.status === 'finished' || m.status === 'live') ? ` <b>${m.home_score ?? 0}–${m.away_score ?? 0}</b>` : '';
+  const jour = m.round != null ? 'J' + esc(String(m.round)) + ' · ' : '';
+  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span><span class="alr-actions"><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span></div>`;
+}
+async function renderAdminMatches() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Matchs</h1><p class="view-sub">Programmez les matchs du championnat et saisissez les résultats.</p><div id="amFilter"></div><div id="amBody">${loadingHtml()}</div>`;
+  const [comps, teams] = await Promise.all([safe(listCompetitions(), []), safe(listTeams(), [])]);
+  if (!teams.length) { $('#amBody').innerHTML = emptyHtml('Aucune équipe', 'Créez d’abord des clubs dans « Clubs ».', 'ball'); return; }
+  const f = $('#amFilter');
+  if (comps.length) {
+    f.className = 'segmented';
+    f.innerHTML = `<button class="seg ${adminMatchComp === '' ? 'active' : ''}" data-c="">Tous</button>` + comps.map((c) => `<button class="seg ${adminMatchComp === c.id ? 'active' : ''}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+    f.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { adminMatchComp = b.dataset.c; renderAdminMatches(); }));
+  }
+  const matches = await safe(listAdminMatches(adminMatchComp || undefined), []);
+  const teamOpts = '<option value="">— Choisir —</option>' + teams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  const compOpts = '<option value="">— Amical / hors compétition —</option>' + comps.map((c) => `<option value="${c.id}" ${adminMatchComp === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+  const list = matches.length
+    ? matches.map(matchAdminRowHtml).join('')
+    : '<p class="view-sub" style="padding:6px 2px">Aucun match programmé pour l’instant.</p>';
+  $('#amBody').innerHTML = `
+    <form class="social-form" id="amForm">
+      <div class="field"><label>Compétition</label><select name="competition_id">${compOpts}</select></div>
+      <div class="field"><label>Journée (optionnel)</label><input name="round" placeholder="Ex. 1" inputmode="numeric" /></div>
+      <div class="field"><label>Équipe A (domicile)</label><select name="home_team_id" required>${teamOpts}</select></div>
+      <div class="field"><label>Équipe B (extérieur)</label><select name="away_team_id" required>${teamOpts}</select></div>
+      <div class="field"><label>Date et heure</label><input type="datetime-local" name="scheduled_at" /></div>
+      <div class="field"><label>Salle (optionnel)</label><input name="venue" placeholder="Ex. Palais des Sports de Nongo" /></div>
+      <button class="btn" type="submit">Programmer le match</button>
+    </form>
+    <div class="block" style="margin-top:24px"><div class="block-head"><h2>Matchs programmés</h2></div><div class="roster">${list}</div></div>`;
+  const form = $('#amForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const home = fd.get('home_team_id'), away = fd.get('away_team_id');
+    if (!home || !away) return toast('Choisissez les deux équipes');
+    if (home === away) return toast('Les deux équipes doivent être différentes');
+    const dt = fd.get('scheduled_at');
+    const rn = parseInt(fd.get('round'), 10);
+    const btn = form.querySelector('button'); btn.disabled = true;
+    try {
+      await scheduleMatch({ competition_id: fd.get('competition_id') || null, home_team_id: home, away_team_id: away, scheduled_at: dt ? dt + ':00.000Z' : null, venue: (fd.get('venue') || '').trim() || null, round: Number.isFinite(rn) ? rn : null });
+      toast('Match programmé');
+      renderAdminMatches();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#amBody').querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openMatchEdit(b.dataset.edit)));
+  $('#amBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+    if (!window.confirm('Supprimer ce match ?')) return;
+    b.disabled = true;
+    try { await deleteMatch(b.dataset.del); toast('Match supprimé'); renderAdminMatches(); }
+    catch (err) { toast(errMsg(err)); b.disabled = false; }
+  }));
+}
+async function openMatchEdit(id) {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + loadingHtml();
+  const [m, teams] = await Promise.all([safe(getMatch(id), null), safe(listTeams(), [])]);
+  if (!m) { view.innerHTML = adminBackHtml() + errorHtml(); return; }
+  const teamOpts = (sel) => teams.map((t) => `<option value="${t.id}" ${sel === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+  const dtLocal = m.scheduled_at ? m.scheduled_at.slice(0, 16) : '';
+  const STATUSES = [['scheduled', 'À venir'], ['live', 'En direct'], ['finished', 'Terminé']];
+  view.innerHTML = `
+    <a class="back-btn" id="amBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Matchs</a>
+    <h1 class="view-title">Modifier le match</h1>
+    <form class="admin-form" id="amEdit" novalidate>
+      <div class="field"><label>Journée (optionnel)</label><input name="round" value="${m.round != null ? esc(String(m.round)) : ''}" inputmode="numeric" placeholder="Ex. 1" /></div>
+      <div class="field"><label>Équipe A (domicile)</label><select name="home_team_id" required>${teamOpts(m.home_team_id)}</select></div>
+      <div class="field"><label>Équipe B (extérieur)</label><select name="away_team_id" required>${teamOpts(m.away_team_id)}</select></div>
+      <div class="field"><label>Date et heure</label><input type="datetime-local" name="scheduled_at" value="${esc(dtLocal)}" /></div>
+      <div class="field"><label>Salle</label><input name="venue" value="${esc(m.venue || '')}" placeholder="Ex. Palais des Sports de Nongo" /></div>
+      <div class="field"><label>Statut</label><select name="status">${STATUSES.map(([v, l]) => `<option value="${v}" ${m.status === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="score-row">
+        <div class="field"><label>Score ${esc(m.home_team?.short_name || m.home_team?.name || 'A')}</label><input type="number" min="0" name="home_score" value="${m.home_score ?? 0}" /></div>
+        <div class="field"><label>Score ${esc(m.away_team?.short_name || m.away_team?.name || 'B')}</label><input type="number" min="0" name="away_score" value="${m.away_score ?? 0}" /></div>
+      </div>
+      <div class="form-actions"><button type="button" class="btn btn-ghost" id="amCancel">Annuler</button><button type="submit" class="btn">Enregistrer</button></div>
+    </form>`;
+  const back = () => renderAdminMatches();
+  $('#amBack').addEventListener('click', back);
+  $('#amBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
+  $('#amCancel').addEventListener('click', back);
+  const form = $('#amEdit');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const home = fd.get('home_team_id'), away = fd.get('away_team_id');
+    if (home === away) return toast('Les deux équipes doivent être différentes');
+    const dt = fd.get('scheduled_at');
+    const rn = parseInt(fd.get('round'), 10);
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true;
+    try {
+      await updateMatch(id, {
+        home_team_id: home,
+        away_team_id: away,
+        round: Number.isFinite(rn) ? rn : null,
+        scheduled_at: dt ? dt + ':00.000Z' : null,
+        venue: (fd.get('venue') || '').trim() || null,
+        status: fd.get('status'),
+        home_score: parseInt(fd.get('home_score'), 10) || 0,
+        away_score: parseInt(fd.get('away_score'), 10) || 0,
+      });
+      toast('Match mis à jour');
+      renderAdminMatches();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
 }
 
 // --------------------------------------------------------------- CRUD admin générique
@@ -2156,6 +2290,7 @@ const RENDERERS = {
   'admin-teams': () => renderAdminCrud(CRUD_TEAMS),
   'admin-players': () => renderAdminCrud(CRUD_PLAYERS),
   'admin-competitions': () => renderAdminCrud(CRUD_COMPS),
+  'admin-matches': renderAdminMatches,
   'admin-poules': renderAdminPoules,
   'admin-socials': renderAdminSocials,
   'admin-playoffs': renderAdminPlayoffs,

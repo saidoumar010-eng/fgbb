@@ -1619,3 +1619,8 @@ button.news-card { width: 100%; text-align: left; font-family: inherit; cursor: 
 
 .btn.btn-ghost { background: none; border: 1px solid var(--border-strong); color: var(--text); }
 .btn.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---- admin matchs ---- */
+.rr-sub { display: inline-block; margin-top: 4px; }
+.score-row { display: flex; gap: 12px; }
+.score-row .field { flex: 1; margin-bottom: 14px; }
