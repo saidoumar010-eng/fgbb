@@ -1142,7 +1142,7 @@ async function renderTeam(id) {
   let html = backBtnHtml();
   html += `<div class="profile">
     <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[t.city, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}${socialLinksHtml(t, TEAM_SOCIALS)}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[labelOf(TEAM_GENDERS, t.gender), esc(t.city), t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}${socialLinksHtml(t, TEAM_SOCIALS)}</div>
   </div>`;
   if (standing) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
@@ -2140,6 +2140,13 @@ const COMP_CATEGORIES = [
   { value: 'dames', label: 'Dames' },
   { value: 'mixte', label: 'Mixte' },
 ];
+// Genre d'une équipe : choix binaire masculine (messieurs) / féminine (dames).
+// Sous-ensemble du vocabulaire de la catégorie des compétitions (sans « mixte »,
+// une équipe étant l'un ou l'autre) — la contrainte CHECK en base est alignée.
+const TEAM_GENDERS = [
+  { value: 'messieurs', label: 'Masculine' },
+  { value: 'dames', label: 'Féminine' },
+];
 function labelOf(list, v) { return (list.find((o) => o.value === v) || {}).label || v || ''; }
 
 // Helpers CRUD génériques (une table = une ligne).
@@ -2170,10 +2177,11 @@ const CRUD_TEAMS = {
   remove: (id) => deleteTeam(id),
   thumb: (t) => logoHtml(t),
   itemTitle: (t) => t.name,
-  itemSub: (t) => [t.short_name, t.city, t.division].filter(Boolean).join(' · '),
+  itemSub: (t) => [t.short_name, labelOf(TEAM_GENDERS, t.gender), t.city, t.division].filter(Boolean).join(' · '),
   fields: [
     { k: 'name', label: 'Nom du club', type: 'text', required: true, placeholder: 'Ex. Tout Sport de Kaloum' },
     { k: 'short_name', label: 'Sigle', type: 'text', placeholder: 'Ex. TSK' },
+    { k: 'gender', label: 'Genre de l’équipe', type: 'select', emptyLabel: '— Non précisé —', options: TEAM_GENDERS },
     { k: 'city', label: 'Ville', type: 'text', placeholder: 'Ex. Conakry' },
     { k: 'division', label: 'Division', type: 'text', placeholder: 'Ex. D1' },
     { k: 'coach', label: 'Entraîneur', type: 'text' },
