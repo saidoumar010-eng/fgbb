@@ -2612,10 +2612,11 @@ async function renderAdminRoles() {
   if (accounts === null) { body.innerHTML = errorHtml(); return; }
   if (!accounts.length) { body.innerHTML = emptyHtml('Aucun compte', 'Les comptes apparaîtront ici après inscription.', 'inbox'); return; }
   const myId = session?.user?.id;
-  body.innerHTML = `<div class="roster">${accounts.map((a) => {
+  body.innerHTML = `<div class="search-box" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input type="search" id="arSearch" placeholder="Rechercher un nom ou un e-mail…" autocomplete="off" /></div>
+  <div class="roster">${accounts.map((a) => {
     const isMe = a.id === myId;
     const opts = ROLE_OPTIONS.map(([v, l]) => `<option value="${v}" ${a.role === v ? 'selected' : ''}>${l}</option>`).join('');
-    return `<div class="roster-row"><span class="rr-name">${esc(a.full_name || '—')}<br><span class="rr-sub">${esc(a.email || '')}${isMe ? ' · vous' : ''}</span></span><select class="poule-select role-select" data-id="${a.id}" ${isMe ? 'disabled title="Vous ne pouvez pas changer votre propre rôle"' : ''}>${opts}</select></div>`;
+    return `<div class="roster-row" data-search="${esc(((a.full_name || '') + ' ' + (a.email || '')).toLowerCase())}"><span class="rr-name">${esc(a.full_name || '—')}<br><span class="rr-sub">${esc(a.email || '')}${isMe ? ' · vous' : ''}</span></span><select class="poule-select role-select" data-id="${a.id}" ${isMe ? 'disabled title="Vous ne pouvez pas changer votre propre rôle"' : ''}>${opts}</select></div>`;
   }).join('')}</div>`;
   body.querySelectorAll('.role-select').forEach((sel) => {
     sel.dataset.prev = sel.value;
@@ -2626,6 +2627,12 @@ async function renderAdminRoles() {
       catch (e) { toast(errMsg(e)); sel.value = sel.dataset.prev; }
       sel.disabled = false;
     });
+  });
+  const search = $('#arSearch');
+  const rows = body.querySelectorAll('.roster-row');
+  if (search) search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    rows.forEach((row) => { row.style.display = !q || (row.dataset.search || '').includes(q) ? '' : 'none'; });
   });
 }
 
