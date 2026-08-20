@@ -2601,7 +2601,7 @@ async function setUserRole(id, role) {
   const { error } = await sb.rpc('admin_set_role', { target: id, new_role: role });
   if (error) throw error;
 }
-const ROLE_OPTIONS = [['fan', 'Supporter'], ['table_technique', 'Table technique'], ['admin', 'Fédération (admin)']];
+const ROLE_OPTIONS = [['fan', 'Supporter'], ['joueur', 'Joueur'], ['club', 'Club'], ['table_technique', 'Table technique'], ['admin', 'Fédération (admin)']];
 function roleFrLabel(r) { return (ROLE_OPTIONS.find((o) => o[0] === r) || [null, r])[1]; }
 async function renderAdminRoles() {
   if (!isAdmin()) return renderAdminDenied();
@@ -3081,7 +3081,7 @@ async function loadProfile(userId) {
 }
 
 function roleLabel(role) {
-  return { admin: 'Fédération', table_technique: 'Table technique', fan: 'Supporter' }[role] || 'Supporter';
+  return { admin: 'Fédération', table_technique: 'Table technique', club: 'Club', joueur: 'Joueur', fan: 'Supporter' }[role] || 'Supporter';
 }
 
 function renderAuthArea() {
