@@ -1684,3 +1684,64 @@ p {
     flex: 1;
   }
 }
+
+/* --------------------------------------------------------- bandeau cookies */
+.cookie-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
+  transform: translateY(130%);
+  transition: transform 0.32s ease;
+}
+.cookie-bar.show {
+  transform: translateY(0);
+}
+.cookie-bar-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.cookie-bar-txt {
+  margin: 0;
+  flex: 1 1 320px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.cookie-bar-txt strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.cookie-bar-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cookie-bar-link:hover {
+  color: var(--accent-2);
+}
+.cookie-bar-actions {
+  flex: 0 0 auto;
+}
+@media (max-width: 560px) {
+  .cookie-bar-actions {
+    width: 100%;
+  }
+  .cookie-bar-actions .btn {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cookie-bar {
+    transition: none;
+  }
+}

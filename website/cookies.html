@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cookies &amp; stockage local — FGBB</title>
+  <meta name="description" content="Politique cookies du site et de l'application FGBB (Fédération Guinéenne de Basket-Ball) : cookies et stockage strictement nécessaires, aucune publicité ni traceur tiers." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://fgbb.ink/cookies.html" />
+  <meta name="theme-color" content="#06201C" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="nav" id="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html" aria-label="Accueil FGBB">
+        <img src="assets/icon.png" alt="Logo FGBB" />
+        <span class="brand-txt"><b>FGBB</b><small>Basket-Ball · Guinée</small></span>
+      </a>
+      <nav class="nav-links" aria-label="Navigation principale">
+        <a href="index.html#fonctionnalites">Fonctionnalités</a>
+        <a href="confidentialite.html">Confidentialité</a>
+        <a href="support.html">Support</a>
+      </nav>
+      <div class="nav-cta">
+        <a class="btn ghost sm" href="index.html">Retour au site</a>
+      </div>
+      <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> <span>›</span> Cookies</div>
+      <span class="eyebrow">Cookies &amp; stockage</span>
+      <h1>Cookies &amp; stockage local</h1>
+      <p>Le site et l'application web FGBB fonctionnent avec le strict minimum :
+        aucun traceur publicitaire, aucune mesure d'audience tierce. Cette page
+        détaille ce qui est enregistré sur votre appareil, pourquoi, et pour
+        combien de temps.</p>
+      <p class="updated">Dernière mise à jour : 22 août 2026</p>
+    </div>
+  </section>
+
+  <main class="container">
+    <article class="prose">
+
+      <div class="callout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <p>FGBB n'utilise <strong>que des cookies et du stockage strictement
+          nécessaires</strong>. Nous n'affichons aucune publicité et n'intégrons
+          <strong>aucun traceur publicitaire ni outil de mesure d'audience tiers</strong>
+          (pas de Google Analytics, pas de pixel de réseau social).</p>
+      </div>
+
+      <h2 id="definition">Qu'est-ce qu'un cookie&nbsp;?</h2>
+      <p>Un « cookie » est un petit fichier déposé par un site sur votre appareil.
+        La technologie voisine du « stockage local » (<em>localStorage</em>) permet
+        de mémoriser des informations directement dans votre navigateur. FGBB
+        s'appuie surtout sur le <strong>stockage local</strong> plutôt que sur des
+        cookies classiques&nbsp;; le principe et vos droits sont identiques, c'est
+        pourquoi nous les traitons ensemble sur cette page.</p>
+
+      <h2 id="usage">À quoi servent-ils sur FGBB&nbsp;?</h2>
+      <p>Uniquement à faire fonctionner le service&nbsp;: vous garder connecté d'une
+        page à l'autre, mémoriser vos préférences d'affichage et accélérer le
+        chargement. Ces éléments sont <strong>indispensables</strong>&nbsp;: sans eux,
+        la connexion à votre compte ne pourrait pas être maintenue.</p>
+
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr><th>Nom</th><th>Finalité</th><th>Type</th><th>Durée de conservation</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>sb-&lt;projet&gt;-auth-token</code></td>
+              <td>Vous garder connecté à votre compte (jeton de session sécurisé, fourni par Supabase).</td>
+              <td>Stockage local — nécessaire</td>
+              <td>Jusqu'à la déconnexion ou l'expiration de la session.</td>
+            </tr>
+            <tr>
+              <td><code>fgbb-theme</code></td>
+              <td>Mémoriser votre choix de thème (clair / sombre).</td>
+              <td>Stockage local — nécessaire</td>
+              <td>Jusqu'à effacement par vos soins.</td>
+            </tr>
+            <tr>
+              <td><code>fgbb-cookie-consent</code></td>
+              <td>Retenir que vous avez pris connaissance de ce bandeau, pour ne pas le réafficher.</td>
+              <td>Stockage local — nécessaire</td>
+              <td>Jusqu'à effacement par vos soins.</td>
+            </tr>
+            <tr>
+              <td>Cache d'affichage</td>
+              <td>Mémoriser temporairement des données déjà chargées (scores, classements) pour accélérer l'affichage.</td>
+              <td>Stockage local — nécessaire</td>
+              <td>Temporaire&nbsp;; renouvelé à chaque usage.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="tiers">Services tiers</h2>
+      <p>Le maintien de votre connexion repose sur <strong>Supabase</strong>, notre
+        hébergeur d'authentification et de base de données (données hébergées dans
+        l'Union européenne). Le jeton de session est technique et ne sert qu'à vous
+        identifier auprès de nos serveurs. Nous ne déposons <strong>aucun</strong>
+        cookie de réseau publicitaire ou de régie tierce. Le détail des
+        sous-traitants figure dans notre
+        <a class="inline" href="confidentialite.html#partage">politique de
+        confidentialité</a>.</p>
+
+      <h2 id="gestion">Gérer ou supprimer ces données</h2>
+      <p>Vous gardez le contrôle&nbsp;:</p>
+      <ul>
+        <li>Depuis votre navigateur, vous pouvez à tout moment effacer le stockage
+          local et les cookies du site (réglages « Confidentialité » ou « Données
+          de site »).</li>
+        <li>La <strong>déconnexion</strong> depuis l'application supprime le jeton de
+          session.</li>
+        <li>Vous pouvez réafficher le bandeau et réinitialiser votre choix avec le
+          bouton ci-dessous.</li>
+      </ul>
+      <p>
+        <button type="button" class="btn ghost sm" onclick="if(window.fgbbCookieSettings)window.fgbbCookieSettings();">
+          Gérer mon choix
+        </button>
+      </p>
+      <p>Comme FGBB n'utilise que du stockage strictement nécessaire, le blocage de
+        ces éléments empêcherait la connexion à votre compte, mais la consultation
+        publique (scores, classements, actualités) reste possible.</p>
+
+      <h2 id="modif">Modifications</h2>
+      <p>Cette politique peut évoluer si le service change. La date de dernière mise à
+        jour figure en haut de page. Pour toute question&nbsp;:
+        <a class="inline" href="mailto:infos@feguiba.org">infos@feguiba.org</a>.</p>
+
+    </article>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom" style="margin-top:0;border-top:0">
+        <span>© <span id="year">2026</span> Fédération Guinéenne de Basket-Ball.</span>
+        <span class="made"><a href="index.html" style="color:var(--muted)">Accueil</a> · <a href="confidentialite.html" style="color:var(--muted)">Confidentialité</a> · <a href="cgu.html" style="color:var(--muted)">CGU</a> · <a href="mentions-legales.html" style="color:var(--muted)">Mentions légales</a> · <a href="support.html" style="color:var(--muted)">Support</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    var nav = document.getElementById('nav'), toggle = document.getElementById('navToggle');
+    toggle.addEventListener('click', function () {
+      var open = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  </script>
+  <script src="cookies.js" defer></script>
+</body>
+</html>
