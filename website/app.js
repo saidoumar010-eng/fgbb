@@ -1145,7 +1145,7 @@ async function renderPlayer(id) {
 async function renderTeam(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
   const uid = session?.user?.id;
-  const [t, players, standing, matches, isFav, posts] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), [])]);
+  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), [])]);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   let html = backBtnHtml();
   html += `<div class="profile">
@@ -1165,8 +1165,11 @@ async function renderTeam(id) {
   const show = [...live, ...upcoming.slice(0, 5), ...done.slice(-5).reverse()];
   if (show.length) html += `<div class="block"><div class="block-head"><h2>Matchs</h2></div>${show.map(matchCardHtml).join('')}</div>`;
   if (posts.length) html += `<div class="block"><div class="block-head"><h2>Publications</h2></div>${posts.map((p) => postCardHtml(p, false)).join('')}</div>`;
-  if (!players.length && !matches.length && !standing && !posts.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
+  if (activePolls.length) html += `<div class="block"><div class="block-head"><h2>Sondages du club</h2></div><div id="teamPolls"></div></div>`;
+  html += teamSupportersHtml(ldb) + teamPalmaresHtml(awards) + teamRecordsHtml(highs) + teamSponsorsHtml(sponsors);
+  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
   view.innerHTML = html; wireBack();
+  if (activePolls.length) { const slot = $('#teamPolls'); for (const p of activePolls) slot.appendChild(await pollCardEl(p, () => renderTeam(id))); }
   const fb = $('#followBtn');
   if (fb) fb.addEventListener('click', async () => {
     if (!uid) return openAuth('login');
@@ -1224,12 +1227,12 @@ async function renderFanzone() {
   const polls = await safe(listPolls(), null);
   const el = $('#fzBody');
   if (polls === null) { el.innerHTML = errorHtml(); return; }
-  const active = polls.filter((p) => p.is_active);
+  const active = polls.filter((p) => p.is_active && !p.team_id);
   if (!active.length) { el.innerHTML = emptyHtml('Aucun sondage', 'Les sondages de la fédération apparaîtront ici.', 'news'); return; }
   el.innerHTML = '';
   for (const p of active) el.appendChild(await pollCardEl(p));
 }
-async function pollCardEl(p) {
+async function pollCardEl(p, refresh) {
   const uid = session?.user?.id;
   const [results, mine] = await Promise.all([safe(pollResults(p.id), []), uid ? safe(myPollVote(p.id, uid), null) : Promise.resolve(null)]);
   const total = results.reduce((s, r) => s + Number(r.votes || 0), 0);
@@ -1250,7 +1253,7 @@ async function pollCardEl(p) {
   if (!voted) {
     wrap.querySelectorAll('.poll-opt').forEach((b) => b.addEventListener('click', async () => {
       if (!uid) return openAuth('login');
-      try { await votePoll(p.id, uid, Number(b.dataset.i)); toast('Vote enregistré'); renderFanzone(); }
+      try { await votePoll(p.id, uid, Number(b.dataset.i)); toast('Vote enregistré'); (refresh || renderFanzone)(); }
       catch { toast('Vote impossible'); }
     }));
   }
@@ -2963,6 +2966,8 @@ const RENDERERS = {
   'mon-club-licences': renderClubLicences,
   'mon-club-discipline': renderClubDiscipline,
   'mon-club-feuille': renderClubFeuille,
+  'mon-club-sondages': renderClubPolls,
+  'mon-club-sponsors': renderClubSponsors,
   'inscription-club': renderInscriptionClub,
   'admin-registrations': renderAdminRegistrations,
 };
@@ -3321,6 +3326,8 @@ const CLUB_NAV_ICONS = {
   megaphone: '<path d="M3 11v2a1 1 0 001 1h2l4 4V6L6 10H4a1 1 0 00-1 1z"/><path d="M14 8a4 4 0 010 8"/>',
   ribbon: '<circle cx="12" cy="9" r="5"/><path d="M9 13l-2 8 5-3 5 3-2-8"/>',
   warning: '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  poll: '<path d="M6 20v-6M12 20V4M18 20v-9"/><path d="M3 20h18"/>',
+  sponsor: '<path d="M3 7h18v12H3z"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>',
 };
 function clubBackHtml() {
   return `<a class="back-btn" href="#mon-club">${icoSvg('<path d="M15 18l-6-6 6-6"/>')}Mon club</a>`;
@@ -3400,6 +3407,8 @@ async function renderMonClub() {
     ${clubNavRow('mon-club-publications', CLUB_NAV_ICONS.megaphone, 'Publications', 'Publiez pour vos abonnés et voyez votre audience', CHEVRON)}
     ${clubNavRow('mon-club-licences', CLUB_NAV_ICONS.ribbon, 'Licences de mes joueurs', 'État et expiration des licences', CHEVRON)}
     ${clubNavRow('mon-club-discipline', CLUB_NAV_ICONS.warning, 'Discipline', 'Sanctions et amendes du club', CHEVRON)}
+    ${clubNavRow('mon-club-sondages', CLUB_NAV_ICONS.poll, 'Sondages', 'Posez des questions à vos abonnés', CHEVRON)}
+    ${clubNavRow('mon-club-sponsors', CLUB_NAV_ICONS.sponsor, 'Sponsors', 'Vos partenaires sur la page du club', CHEVRON)}
   </div>`;
 
   // effectif
@@ -4076,6 +4085,192 @@ async function renderAdminRegistrations() {
     btn.disabled = true;
     try { await rejectRegistration(reg.id); toast('Demande rejetée'); renderAdminRegistrations(); }
     catch (e) { toast(errMsg(e)); btn.disabled = false; }
+  }));
+}
+
+// =========================================================================
+// VAGUE 1 — Engagement du club : classement des supporters du club, sondages
+// du club, sponsors du club, palmarès & records du club. Réutilise au maximum
+// l'existant ; côté base : colonne polls.team_id + table club_sponsors (RLS
+// bornées par manages_team). La confidentialité du classement est gérée par la
+// fonction fan_leaderboard_by_team (n'expose que les supporters opt-in).
+// =========================================================================
+function externalUrlWeb(raw) {
+  const v = (raw || '').trim();
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : 'https://' + v;
+}
+
+// -- données
+async function fanLeaderboardByTeam(teamId, limit = 20) {
+  const { data, error } = await sb.rpc('fan_leaderboard_by_team', { p_team_id: teamId, p_limit: limit });
+  if (error) throw error;
+  return data ?? [];
+}
+async function listTeamAwards(teamId) {
+  const { data, error } = await sb.from('awards').select('*, player:players(id, full_name)').eq('team_id', teamId).order('awarded_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function listTeamGameHighs(teamId) {
+  const { data, error } = await sb.from('game_highs').select('*').eq('team_id', teamId).limit(500);
+  if (error) throw error;
+  return data ?? [];
+}
+function teamRecordsFrom(rows) {
+  // meilleure performance du club pour chaque catégorie de records
+  return RECORD_COLS.map((c) => {
+    const best = rows.filter((r) => Number(r[c.key]) > 0).sort((a, b) => Number(b[c.key]) - Number(a[c.key]))[0];
+    return best ? { key: c.key, label: c.label, unit: c.unit, ic: c.ic, row: best } : null;
+  }).filter(Boolean);
+}
+async function listClubPolls(teamId) { // gestion : tous les sondages du club
+  const { data, error } = await sb.from('polls').select('*').eq('team_id', teamId).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function listActiveTeamPolls(teamId) { // affichage public : sondages actifs
+  const { data, error } = await sb.from('polls').select('*').eq('team_id', teamId).eq('is_active', true).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function createClubPoll(teamId, question, options) {
+  const { error } = await sb.from('polls').insert({ team_id: teamId, question: question.trim(), options, is_active: true });
+  if (error) throw error;
+}
+async function setPollActive(id, active) {
+  const { error } = await sb.from('polls').update({ is_active: active }).eq('id', id);
+  if (error) throw error;
+}
+async function deletePoll(id) {
+  const { error } = await sb.from('polls').delete().eq('id', id);
+  if (error) throw error;
+}
+async function listClubSponsors(teamId) {
+  const { data, error } = await sb.from('club_sponsors').select('*').eq('team_id', teamId).order('position', { ascending: true }).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+async function createClubSponsor(teamId, patch) {
+  const { error } = await sb.from('club_sponsors').insert({ team_id: teamId, ...patch });
+  if (error) throw error;
+}
+async function deleteClubSponsor(id) {
+  const { error } = await sb.from('club_sponsors').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// -- blocs publics (fiche équipe)
+function teamSupportersHtml(rows) {
+  if (!rows.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Classement des supporters</h2></div><div class="roster">${rows.map((r) => `<div class="roster-row${r.is_me ? ' me' : ''}"><span class="lrank" style="width:28px">${r.position_no}</span><span class="rr-name">${esc(r.name)}${r.is_me ? ' <b style="color:var(--accent)">(vous)</b>' : ''}</span><span class="rr-pos"><b style="color:var(--accent)">${r.points}</b> pts</span></div>`).join('')}</div></div>`;
+}
+function teamPalmaresHtml(awards) {
+  if (!awards.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Palmarès</h2></div><div class="roster">${awards.map((a) => `<div class="roster-row"><span class="award-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}</span><span class="rr-name"><b>${esc(AWARD_LABELS[a.kind] || 'Distinction')}</b>${a.player ? ' — ' + esc(a.player.full_name) : a.label ? ' — ' + esc(a.label) : ''}${a.note ? `<span style="display:block;color:var(--dim);font-size:12.5px">${esc(a.note)}</span>` : ''}</span><span class="rr-pos">${a.awarded_at ? fmtDate(a.awarded_at) : ''}</span></div>`).join('')}</div></div>`;
+}
+function teamRecordsHtml(highs) {
+  const recs = teamRecordsFrom(highs);
+  if (!recs.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Records du club</h2></div><div class="rec-grid">${recs.map((c) => `<a class="rec-mini" href="#player/${c.row.player_id}"><span class="rec-mini-ic">${icoSvg(c.ic)}</span><span class="rec-mini-val">${c.row[c.key]}<small>${esc(c.unit)}</small></span><span class="rec-mini-lbl">${esc(c.label)}</span><span class="rec-mini-who">${esc(c.row.full_name)}</span></a>`).join('')}</div></div>`;
+}
+function teamSponsorsHtml(sponsors) {
+  if (!sponsors.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Partenaires du club</h2></div><div class="club-sponsors">${sponsors.map((s) => {
+    const inner = s.logo_url ? `<img src="${esc(s.logo_url)}" alt="${esc(s.name)}" loading="lazy">` : `<span class="cs-name">${esc(s.name)}</span>`;
+    const url = externalUrlWeb(s.url);
+    return url ? `<a class="cs-item" href="${esc(url)}" target="_blank" rel="noopener nofollow">${inner}</a>` : `<span class="cs-item">${inner}</span>`;
+  }).join('')}</div></div>`;
+}
+
+// -- sous-écran : sondages du club (gestion)
+async function renderClubPolls() {
+  view.innerHTML = clubBackHtml() + `<h1 class="view-title">Sondages du club</h1><p class="view-sub">Posez des questions à vos abonnés. Les sondages actifs s'affichent sur votre page.</p><div id="cpBody">${loadingHtml()}</div>`;
+  const b = $('#cpBody'); if (!b) return;
+  const club = session ? await resolveMyClub() : null;
+  if (!club) { b.innerHTML = clubGateHtml(); return; }
+  const polls = await safe(listClubPolls(club.id), []);
+  b.innerHTML = `
+    <form class="admin-form" id="cpollForm" novalidate>
+      <div class="field"><label>Question</label><input type="text" name="question" placeholder="Qui sera l'homme du match ?" autocomplete="off"></div>
+      <div class="field"><label>Options de réponse</label><textarea name="options" rows="4" placeholder="Une réponse par ligne"></textarea><span class="field-hint">Une réponse par ligne (2 minimum).</span></div>
+      <div class="form-actions"><button type="submit" class="btn">Créer le sondage</button></div>
+    </form>
+    <div class="block-head mc-sec"><h2>Mes sondages (${polls.length})</h2></div>
+    <div id="cpollList">${polls.length ? loadingHtml() : `<p class="view-sub" style="font-size:12.5px;margin:0">Aucun sondage pour le moment.</p>`}</div>`;
+  $('#cpollForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = e.target.querySelector('[name=question]').value.trim();
+    const opts = e.target.querySelector('[name=options]').value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (!q) { toast('Écrivez une question'); return; }
+    if (opts.length < 2) { toast('Ajoutez au moins 2 réponses'); return; }
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; const o = btn.textContent; btn.textContent = 'Création…';
+    try { await createClubPoll(club.id, q, opts); toast('Sondage créé'); renderClubPolls(); }
+    catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = o; }
+  });
+  if (polls.length) {
+    const listEl = $('#cpollList');
+    const cards = await Promise.all(polls.map((p) => clubPollAdminCard(p)));
+    if ($('#cpollList') !== listEl) return;
+    listEl.innerHTML = '';
+    cards.forEach((c) => listEl.appendChild(c));
+  }
+}
+async function clubPollAdminCard(p) {
+  const results = await safe(pollResults(p.id), []);
+  const total = results.reduce((s, r) => s + Number(r.votes || 0), 0);
+  const opts = (p.options || []).map((opt, i) => {
+    const votes = Number(results.find((r) => r.option_index === i)?.votes || 0);
+    const pct = total ? Math.round((votes / total) * 100) : 0;
+    return `<div class="poll-res"><span class="pr-fill" style="width:${pct}%"></span><span class="pr-label">${esc(opt)}</span><span class="pr-pct">${pct}% · ${votes}</span></div>`;
+  }).join('');
+  const wrap = document.createElement('div');
+  wrap.className = 'poll';
+  wrap.innerHTML = `<div class="cpoll-head"><h3>${esc(p.question)}</h3><span class="status-pill ${p.is_active ? 'ok' : 'mut'}">${p.is_active ? 'Actif' : 'Masqué'}</span></div><div class="poll-res-list">${opts}</div><div class="poll-foot">${total} vote${total > 1 ? 's' : ''}</div><div class="reg-actions"><button class="reg-btn ok" data-toggle="${p.id}">${p.is_active ? 'Masquer' : 'Activer'}</button><button class="reg-btn bad" data-del="${p.id}">Supprimer</button></div>`;
+  wrap.querySelector('[data-toggle]').addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    try { await setPollActive(p.id, !p.is_active); toast(p.is_active ? 'Sondage masqué' : 'Sondage activé'); renderClubPolls(); }
+    catch (err) { toast(errMsg(err)); e.currentTarget.disabled = false; }
+  });
+  wrap.querySelector('[data-del]').addEventListener('click', async () => {
+    if (!window.confirm('Supprimer ce sondage ?\nCette action est définitive.')) return;
+    try { await deletePoll(p.id); toast('Sondage supprimé'); renderClubPolls(); }
+    catch (err) { toast(errMsg(err)); }
+  });
+  return wrap;
+}
+
+// -- sous-écran : sponsors du club (gestion)
+async function renderClubSponsors() {
+  view.innerHTML = clubBackHtml() + `<h1 class="view-title">Sponsors du club</h1><p class="view-sub">Vos partenaires, affichés sur la page publique de votre club.</p><div id="csBody">${loadingHtml()}</div>`;
+  const b = $('#csBody'); if (!b) return;
+  const club = session ? await resolveMyClub() : null;
+  if (!club) { b.innerHTML = clubGateHtml(); return; }
+  const sponsors = await safe(listClubSponsors(club.id), []);
+  b.innerHTML = `
+    <form class="admin-form" id="csForm" novalidate>
+      ${adminFieldHtml({ k: 'name', type: 'text', label: 'Nom du partenaire', required: true, placeholder: 'Ex. Orange Guinée' }, '')}
+      ${adminFieldHtml({ k: 'logo_url', type: 'image', folder: 'sponsors', label: 'Logo' }, '')}
+      ${adminFieldHtml({ k: 'url', type: 'text', label: 'Site web', placeholder: 'https://…' }, '')}
+      <div class="form-actions"><button type="submit" class="btn">Ajouter</button></div>
+    </form>
+    <div class="block-head mc-sec"><h2>Mes partenaires (${sponsors.length})</h2></div>
+    <div id="csList">${sponsors.length ? `<div class="roster">${sponsors.map((s) => `<div class="roster-row">${s.logo_url ? `<span class="mlogo sm"><img src="${esc(s.logo_url)}" alt=""></span>` : `<span class="mlogo sm">${esc(initials(s.name))}</span>`}<span class="rr-name">${esc(s.name)}${s.url ? `<span style="display:block;color:var(--dim);font-size:12px">${esc(s.url)}</span>` : ''}</span><span class="rr-actions"><button class="mini-del" data-del="${s.id}" aria-label="Retirer">✕</button></span></div>`).join('')}</div>` : `<p class="view-sub" style="font-size:12.5px;margin:0">Aucun partenaire pour le moment.</p>`}</div>`;
+  const form = $('#csForm');
+  form.querySelectorAll('.image-field').forEach(wireImageField);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = form.querySelector('[name=name]').value.trim();
+    if (!name) { toast('Le nom du partenaire est obligatoire'); return; }
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true; const o = btn.textContent; btn.textContent = 'Ajout…';
+    try {
+      await createClubSponsor(club.id, { name, logo_url: form.querySelector('[name=logo_url]').value || null, url: form.querySelector('[name=url]').value.trim() || null });
+      toast('Partenaire ajouté'); renderClubSponsors();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = o; }
+  });
+  b.querySelectorAll('#csList [data-del]').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!window.confirm('Retirer ce partenaire ?')) return;
+    try { await deleteClubSponsor(btn.dataset.del); toast('Partenaire retiré'); renderClubSponsors(); } catch (e) { toast(errMsg(e)); }
   }));
 }
 
