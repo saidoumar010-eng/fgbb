@@ -1208,7 +1208,9 @@ async function renderVideos() {
 
 // ------------------------------------------------------- clubs (liste)
 async function renderClubs() {
-  view.innerHTML = `<h1 class="view-title">Clubs</h1><p class="view-sub">Les équipes engagées.</p><div id="clubBody">${loadingHtml()}</div>`;
+  view.innerHTML = `<h1 class="view-title">Clubs</h1><p class="view-sub">Les équipes engagées.</p>
+    <div class="sub-links"><a class="sub-link" href="#inscription-club">${icoSvg('<path d="M12 5v14M5 12h14"/>')}Inscrire mon club</a></div>
+    <div id="clubBody">${loadingHtml()}</div>`;
   const teams = await safe(listTeams(), null);
   const el = $('#clubBody');
   if (teams === null) { el.innerHTML = errorHtml(); return; }
@@ -1761,6 +1763,7 @@ function renderAdmin() {
   if (!isAdmin()) return renderAdminDenied();
   const items = [
     { r: 'admin-teams', label: 'Clubs', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/>' },
+    { r: 'admin-registrations', label: 'Inscriptions', ic: '<path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h8"/><path d="M9 12l2.5 2.5L21 5"/>' },
     { r: 'admin-players', label: 'Joueurs', ic: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0114 0"/>' },
     { r: 'admin-competitions', label: 'Compétitions', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-matches', label: 'Matchs', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
@@ -2960,6 +2963,8 @@ const RENDERERS = {
   'mon-club-licences': renderClubLicences,
   'mon-club-discipline': renderClubDiscipline,
   'mon-club-feuille': renderClubFeuille,
+  'inscription-club': renderInscriptionClub,
+  'admin-registrations': renderAdminRegistrations,
 };
 
 function scheduleLiveRefresh(hasLive) {
@@ -3133,6 +3138,7 @@ function renderAuthArea() {
           <div class="mhead"><div class="n">${esc(name)}</div><div class="r">${roleLabel(profile?.role)}</div></div>
           ${isAdmin() ? `<a class="mi" href="#admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Espace fédération</a>` : ''}
           ${(myClubsCache && myClubsCache.length) ? `<a class="mi" href="#mon-club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 2 4-2 4 3-3 3v10H7V9L4 6z"/></svg>Mon club</a>` : ''}
+          <a class="mi" href="#inscription-club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h8"/><path d="M9 12l2.5 2.5L21 5"/></svg>Inscrire mon club</a>
           <a class="mi" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Site de la fédération</a>
           <a class="mi" href="confidentialite.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Confidentialité</a>
           <a class="mi" href="cookies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r=".6" fill="currentColor"/><circle cx="14.5" cy="13.5" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/></svg>Cookies</a>
@@ -3886,6 +3892,191 @@ async function fillShotChart(m) {
     });
   }
   paint();
+}
+
+// =========================================================================
+// INSCRIPTION DES CLUBS — un dirigeant dépose une demande d'engagement en
+// compétition (formulaire public, connexion requise). La fédération l'examine
+// depuis l'espace admin (« Inscriptions ») : approuver crée l'équipe. Garde-fous
+// dans la base (RLS : insert = sa propre demande, lecture = la sienne ou admin).
+// =========================================================================
+const REGISTRATION_SELECT = '*, competition:competitions(*)';
+const REG_CATS = [['messieurs', 'Messieurs'], ['dames', 'Dames'], ['u18', 'U18'], ['autre', 'Autre']];
+const REG_STATUS = { pending: { label: 'En attente', cls: 'pend' }, approved: { label: 'Approuvée', cls: 'ok' }, rejected: { label: 'Rejetée', cls: 'bad' } };
+function catLabelWeb(c) { return ({ messieurs: 'Messieurs', dames: 'Dames', u18: 'U18', autre: 'Autre' })[c] || c; }
+
+async function getCurrentSeason() {
+  const { data } = await sb.from('seasons').select('*').eq('is_current', true).maybeSingle();
+  return data ?? null;
+}
+async function listMyRegistrations() {
+  const uid = session?.user?.id;
+  if (!uid) return [];
+  const { data, error } = await sb.from('club_registrations').select(REGISTRATION_SELECT).eq('user_id', uid).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function submitRegistration(input) {
+  const uid = session?.user?.id;
+  if (!uid) throw new Error('Connectez-vous pour envoyer une demande.');
+  const { error } = await sb.from('club_registrations').insert({ ...input, user_id: uid });
+  if (error) throw error;
+}
+async function listRegistrations(status) {
+  let q = sb.from('club_registrations').select(REGISTRATION_SELECT).order('created_at', { ascending: false });
+  if (status) q = q.eq('status', status);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+// Sigle proposé pour le club créé : initiales des mots, sinon le début du nom.
+function regShortName(name) {
+  const words = (name || '').trim().split(/\s+/).filter(Boolean);
+  const ini = words.map((w) => w[0]).join('').toUpperCase();
+  return (ini.length >= 2 ? ini : (name || '').trim().toUpperCase()).slice(0, 4);
+}
+async function approveRegistration(id) {
+  const { data, error: readErr } = await sb.from('club_registrations').select('*').eq('id', id).single();
+  if (readErr) throw readErr;
+  const reg = data;
+  // Une demande déjà rattachée à une équipe ne doit pas en recréer une (double clic).
+  let teamId = reg.team_id;
+  if (!teamId) {
+    const { data: team, error: teamErr } = await sb.from('teams').insert({ name: reg.club_name, short_name: regShortName(reg.club_name), city: reg.city, logo_url: reg.logo_url }).select('id').single();
+    if (teamErr) throw teamErr;
+    teamId = team.id;
+  }
+  const { error } = await sb.from('club_registrations').update({ status: 'approved', team_id: teamId, decided_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+  return teamId;
+}
+async function rejectRegistration(id) {
+  const { error } = await sb.from('club_registrations').update({ status: 'rejected', decided_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+
+function regMineCardHtml(r) {
+  const s = REG_STATUS[r.status] || { label: r.status, cls: 'mut' };
+  const meta = [r.city, catLabelWeb(r.category), r.competition?.name].filter(Boolean).join(' · ');
+  const ava = r.logo_url ? `<span class="lic-ava"><img src="${esc(r.logo_url)}" alt=""></span>` : `<span class="lic-ava">${esc(initials(r.club_name))}</span>`;
+  return `<div class="lic-card"><div class="lic-row">${ava}<div class="lic-info"><b>${esc(r.club_name)}</b><span>${esc(meta)}</span></div><span class="status-pill ${s.cls}">${esc(s.label)}</span></div><div class="reg-date">${fmtFullDate(r.created_at)}</div></div>`;
+}
+
+let regCat = 'messieurs';
+let regComp; // compétition visée (optionnelle)
+async function renderInscriptionClub() {
+  view.innerHTML = `<h1 class="view-title">Inscrire mon club</h1><p class="view-sub">Déposez une demande d'engagement en compétition.</p><div id="icBody">${loadingHtml()}</div>`;
+  const b = $('#icBody'); if (!b) return;
+  if (!session) {
+    b.innerHTML = emptyHtml('Connexion requise', 'Connectez-vous avec le compte du club pour déposer une demande et suivre son avancement.', 'inbox') + `<div style="text-align:center;margin-top:14px"><button class="btn" id="icLogin">Se connecter</button></div>`;
+    $('#icLogin')?.addEventListener('click', () => openAuth('login'));
+    return;
+  }
+  regCat = 'messieurs'; regComp = undefined;
+  const [comps, season, mine] = await Promise.all([safe(listCompetitions(), []), safe(getCurrentSeason(), null), safe(listMyRegistrations(), [])]);
+  if ($('#icBody') !== b) return;
+  const compSeg = comps.length
+    ? `<div class="segmented" id="icComp">${comps.map((c) => `<button type="button" class="seg" data-c="${c.id}">${esc(c.name)}</button>`).join('')}</div>`
+    : `<p class="view-sub" style="font-size:12.5px;margin:0">Aucune compétition ouverte pour le moment.</p>`;
+  const seasonLine = season ? `<p class="view-sub" style="font-size:11.5px;margin:6px 0 0">Saison ${esc(season.name)}</p>` : '';
+  b.innerHTML = `
+    <form class="admin-form" id="icForm" novalidate>
+      <p class="view-sub" style="font-size:12.5px">Renseignez les informations de votre club. La fédération valide la demande, crée l'équipe et l'inscrit à la compétition choisie.</p>
+      ${adminFieldHtml({ k: 'logo_url', type: 'image', folder: 'clubs', label: 'Logo du club' }, '')}
+      ${adminFieldHtml({ k: 'club_name', type: 'text', label: 'Nom du club', required: true, placeholder: 'Ex. Étoile de Conakry' }, '')}
+      ${adminFieldHtml({ k: 'city', type: 'text', label: 'Ville', placeholder: 'Conakry' }, '')}
+      <div class="field"><label>Catégorie</label><div class="segmented" id="icCat">${REG_CATS.map(([id, l]) => `<button type="button" class="seg ${regCat === id ? 'active' : ''}" data-c="${id}">${l}</button>`).join('')}</div></div>
+      <div class="field"><label>Compétition visée</label>${compSeg}${seasonLine}</div>
+      <div class="block-head mc-sec"><h2>Personne à contacter</h2></div>
+      ${adminFieldHtml({ k: 'contact_name', type: 'text', label: 'Nom du responsable', placeholder: 'Prénom et nom' }, profile?.full_name || '')}
+      ${adminFieldHtml({ k: 'contact_phone', type: 'text', label: 'Téléphone', placeholder: '+224 6XX XX XX XX' }, '')}
+      ${adminFieldHtml({ k: 'contact_email', type: 'text', label: 'E-mail', placeholder: 'club@exemple.gn' }, session.user.email || '')}
+      ${adminFieldHtml({ k: 'note', type: 'textarea', label: 'Message', placeholder: 'Précisions utiles à la fédération', rows: 3 }, '')}
+      <div class="form-actions"><button type="submit" class="btn">Envoyer la demande</button></div>
+    </form>
+    <div class="block-head mc-sec"><h2>Mes demandes</h2></div>
+    <div id="icMine">${mine.length ? mine.map(regMineCardHtml).join('') : `<p class="view-sub" style="font-size:12.5px;margin:0">Vous n'avez pas encore déposé de demande.</p>`}</div>`;
+
+  const form = $('#icForm');
+  form.querySelectorAll('.image-field').forEach(wireImageField);
+  $('#icCat').querySelectorAll('.seg').forEach((btn) => btn.addEventListener('click', () => {
+    regCat = btn.dataset.c;
+    $('#icCat').querySelectorAll('.seg').forEach((x) => x.classList.toggle('active', x === btn));
+  }));
+  const compWrap = $('#icComp');
+  if (compWrap) compWrap.querySelectorAll('.seg').forEach((btn) => btn.addEventListener('click', () => {
+    if (regComp === btn.dataset.c) { regComp = undefined; btn.classList.remove('active'); }
+    else { regComp = btn.dataset.c; compWrap.querySelectorAll('.seg').forEach((x) => x.classList.toggle('active', x === btn)); }
+  }));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const g = (n) => (form.querySelector(`[name="${n}"]`)?.value || '').trim();
+    const clubName = g('club_name'), phone = g('contact_phone'), email = g('contact_email');
+    if (!clubName) { toast('Le nom du club est obligatoire'); return; }
+    if (!phone && !email) { toast('Indiquez au moins un téléphone ou un e-mail'); return; }
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Envoi…';
+    try {
+      await submitRegistration({
+        club_name: clubName, city: g('city') || null, category: regCat,
+        contact_name: g('contact_name') || null, contact_phone: phone || null, contact_email: email || null,
+        competition_id: regComp || null, season_id: season?.id || null,
+        logo_url: form.querySelector('[name="logo_url"]')?.value || null, note: g('note') || null,
+      });
+      toast('Demande envoyée. La fédération vous répondra prochainement.');
+      renderInscriptionClub();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = orig; }
+  });
+}
+
+// ----------------------------------------------------- revue admin des inscriptions
+function regContactLine(icInner, text) {
+  return text ? `<div class="reg-cline">${icoSvg(icInner)}<span>${esc(text)}</span></div>` : '';
+}
+function regAdminCardHtml(reg) {
+  const s = REG_STATUS[reg.status] || { label: reg.status, cls: 'mut' };
+  const meta = [reg.city, catLabelWeb(reg.category), reg.competition?.name].filter(Boolean).join(' · ');
+  const ava = reg.logo_url ? `<span class="lic-ava"><img src="${esc(reg.logo_url)}" alt=""></span>` : `<span class="lic-ava">${esc(initials(reg.club_name))}</span>`;
+  const contact = [
+    regContactLine('<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0114 0"/>', reg.contact_name),
+    regContactLine('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>', reg.contact_phone),
+    regContactLine('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>', reg.contact_email),
+  ].join('') || '<div class="reg-cline mut">Aucun contact renseigné</div>';
+  const actions = reg.status === 'pending'
+    ? `<div class="reg-actions"><button class="reg-btn ok" data-approve="${reg.id}">✓ Approuver</button><button class="reg-btn bad" data-reject="${reg.id}">✕ Rejeter</button></div>`
+    : '';
+  return `<div class="reg-card">
+    <div class="lic-row">${ava}<div class="lic-info"><b>${esc(reg.club_name)}</b><span>${esc(meta)}</span></div><span class="status-pill ${s.cls}">${esc(s.label)}</span></div>
+    <div class="reg-contact"><div class="reg-clabel">Contact</div>${contact}${reg.note ? `<div class="reg-note">${esc(reg.note)}</div>` : ''}<div class="reg-date">${fmtFullDate(reg.created_at)}</div></div>
+    ${actions}
+  </div>`;
+}
+let regFilter = 'pending';
+async function renderAdminRegistrations() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `<h1 class="view-title">Inscriptions des clubs</h1><p class="view-sub">Examinez les demandes déposées par les clubs. Approuver crée l'équipe.</p><div id="regFilter"></div><div id="regBody">${loadingHtml()}</div>`;
+  const f = $('#regFilter'); f.className = 'segmented';
+  const filters = [['pending', 'En attente'], ['approved', 'Approuvées'], ['rejected', 'Rejetées'], ['all', 'Toutes']];
+  f.innerHTML = filters.map(([id, l]) => `<button class="seg ${regFilter === id ? 'active' : ''}" data-f="${id}">${l}</button>`).join('');
+  f.querySelectorAll('.seg').forEach((btn) => btn.addEventListener('click', () => { regFilter = btn.dataset.f; renderAdminRegistrations(); }));
+  const rows = await safe(listRegistrations(regFilter === 'all' ? undefined : regFilter), null);
+  const b = $('#regBody'); if (!b) return;
+  if (rows === null) { b.innerHTML = errorHtml(); return; }
+  if (!rows.length) { b.innerHTML = emptyHtml('Aucune demande', "Les demandes d'inscription déposées par les clubs apparaissent ici.", 'inbox'); return; }
+  b.innerHTML = rows.map(regAdminCardHtml).join('');
+  b.querySelectorAll('[data-approve]').forEach((btn) => btn.addEventListener('click', async () => {
+    const reg = rows.find((x) => x.id === btn.dataset.approve); if (!reg) return;
+    if (!window.confirm(`Approuver l'inscription de « ${reg.club_name} » ?\nLe club sera créé dans la liste des équipes de la fédération.`)) return;
+    btn.disabled = true;
+    try { await approveRegistration(reg.id); teamsPromise = null; toast(`${reg.club_name} inscrit et ajouté aux équipes`); renderAdminRegistrations(); }
+    catch (e) { toast(errMsg(e)); btn.disabled = false; }
+  }));
+  b.querySelectorAll('[data-reject]').forEach((btn) => btn.addEventListener('click', async () => {
+    const reg = rows.find((x) => x.id === btn.dataset.reject); if (!reg) return;
+    if (!window.confirm(`Rejeter l'inscription de « ${reg.club_name} » ?`)) return;
+    btn.disabled = true;
+    try { await rejectRegistration(reg.id); toast('Demande rejetée'); renderAdminRegistrations(); }
+    catch (e) { toast(errMsg(e)); btn.disabled = false; }
+  }));
 }
 
 // --------------------------------------------------------------- init
