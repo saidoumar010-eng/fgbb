@@ -1878,3 +1878,12 @@ a.cs-item:hover { border-color: var(--accent); }
 .share-prev img { width: 100%; border-radius: 12px; display: block; }
 .share-actions { display: flex; gap: 8px; margin-top: 14px; }
 .share-actions .btn { flex: 1; }
+
+/* Feature 07 — bandeau d'activation des notifications (page Favoris) */
+.push-banner { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
+.push-ic { width: 38px; height: 38px; border-radius: 12px; background: var(--accent-soft); display: grid; place-items: center; flex: none; }
+.push-ic svg { width: 20px; height: 20px; color: var(--accent); }
+.push-txt { flex: 1; min-width: 0; }
+.push-txt b { font-size: 14px; font-weight: 600; display: block; }
+.push-txt span { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.push-banner .btn { flex: none; white-space: nowrap; }

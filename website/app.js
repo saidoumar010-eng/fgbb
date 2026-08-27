@@ -1411,11 +1411,13 @@ async function renderFavoris() {
     $('#favLogin').addEventListener('click', () => openAuth('login'));
     return;
   }
-  const [teams, players] = await Promise.all([safe(listFavoriteTeams(), []), safe(listFollowedPlayers(), [])]);
-  let html = '';
+  const [teams, players, pushOn] = await Promise.all([safe(listFavoriteTeams(), []), safe(listFollowedPlayers(), []), isPushEnabled()]);
+  let html = pushBannerHtml(pushOn);
   if (teams.length) html += `<div class="block"><div class="block-head"><h2>Clubs favoris</h2></div><div class="club-grid">${teams.map((t) => `<a class="club-card" href="#team/${t.id}">${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span></a>`).join('')}</div></div>`;
   if (players.length) html += `<div class="block"><div class="block-head"><h2>Joueurs suivis</h2></div><div class="roster">${players.map((p) => `<a class="roster-row" href="#player/${p.id}"><span class="lava" style="width:32px;height:32px;font-size:12px">${initials(p.full_name)}</span><span class="rr-name">${esc(p.full_name)}</span></a>`).join('')}</div></div>`;
-  el.innerHTML = html || emptyHtml('Rien pour le moment', 'Ajoutez des clubs et joueurs en favoris depuis leur fiche.', 'trophy');
+  if (!teams.length && !players.length) html += emptyHtml('Rien pour le moment', 'Ajoutez des clubs et joueurs en favoris depuis leur fiche.', 'trophy');
+  el.innerHTML = html;
+  wirePushBanner(pushOn);
 }
 
 function followBtnHtml(active, label, labelActive) {
@@ -3548,6 +3550,7 @@ async function renderClubPublications() {
     const btn = form.querySelector('button[type=submit]'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Publication…';
     try {
       await createClubPost({ team_id: club.id, author_id: session.user.id, body: bodyVal, image_url: form.querySelector('[name=image_url]').value || null });
+      notifyClubPost(club, bodyVal); // prévient les abonnés (Web Push), sans bloquer
       toast('Publication envoyée');
       renderClubPublications();
     } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = orig; }
@@ -4543,6 +4546,107 @@ function matchShareSpec(m) {
   };
 }
 
+// =========================================================================
+// Feature 07 — Notifications aux abonnés (Web Push / VAPID). Canal WEB, distinct
+// du canal mobile (Expo). L'utilisateur active les notifications sur sa page
+// « Favoris » ; il est alors prévenu quand un club qu'il suit publie. Envoi via
+// l'Edge Function send-web-push. Table push_subscriptions (un abonnement par
+// navigateur/appareil). iOS : nécessite l'app installée à l'écran d'accueil.
+// =========================================================================
+const VAPID_PUBLIC_KEY = 'BLfbJXY3ggd3odP-Sig41fJfXWiGwtfpMtP70_LfqDB-PHiNy4svyZG28kuOUWZdGmRbOj_Bjx-XhhbNwc-5aeU';
+const BELL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>';
+
+function pushSupported() {
+  return typeof navigator !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
+}
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+let swRegPromise = null;
+function ensureServiceWorker() {
+  if (!('serviceWorker' in navigator)) return Promise.resolve(null);
+  if (!swRegPromise) swRegPromise = navigator.serviceWorker.register('/sw.js').catch(() => null);
+  return swRegPromise;
+}
+async function isPushEnabled() {
+  if (!pushSupported() || Notification.permission !== 'granted') return false;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return false;
+    const sub = await reg.pushManager.getSubscription();
+    return !!sub;
+  } catch { return false; }
+}
+async function enablePush() {
+  if (!pushSupported()) { toast('Notifications non disponibles sur cet appareil'); return false; }
+  const uid = session?.user?.id;
+  if (!uid) { openAuth('login'); return false; }
+  let perm;
+  try { perm = await Notification.requestPermission(); } catch { perm = 'denied'; }
+  if (perm !== 'granted') { toast(perm === 'denied' ? 'Notifications bloquées dans le navigateur' : 'Notifications non activées'); return false; }
+  const reg = await ensureServiceWorker();
+  if (!reg) { toast('Service worker indisponible'); return false; }
+  try { await navigator.serviceWorker.ready; } catch {}
+  let sub;
+  try {
+    sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+  } catch { toast('Abonnement impossible'); return false; }
+  const j = sub.toJSON();
+  try {
+    const { error } = await sb.from('push_subscriptions').upsert({
+      user_id: uid, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth,
+      user_agent: navigator.userAgent, updated_at: new Date().toISOString(),
+    }, { onConflict: 'endpoint' });
+    if (error) throw error;
+  } catch (e) { toast(errMsg(e)); return false; }
+  toast('Notifications activées');
+  return true;
+}
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && (await reg.pushManager.getSubscription());
+    if (sub) {
+      const ep = sub.endpoint;
+      try { await sub.unsubscribe(); } catch {}
+      await safe(sb.from('push_subscriptions').delete().eq('endpoint', ep), null);
+    }
+  } catch {}
+  toast('Notifications désactivées');
+}
+// Notifie les abonnés d'un club après une publication (best-effort, ne bloque pas
+// l'UI). Canal WEB via send-web-push ; le canal mobile reste géré à part.
+function notifyClubPost(club, bodyText) {
+  const title = club.name;
+  const body = String(bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+  const url = '/app#team/' + club.id;
+  safe(sb.functions.invoke('send-web-push', { body: { team_id: club.id, title, body, url } }), null);
+}
+// Bandeau d'activation sur la page Favoris
+function pushBannerHtml(enabled) {
+  if (!pushSupported()) return '';
+  return `<div class="push-banner" id="pushBanner">
+    <span class="push-ic">${BELL_SVG}</span>
+    <div class="push-txt"><b>Notifications des clubs suivis</b><span>${enabled ? 'Activées — vous serez prévenu à chaque publication.' : 'Soyez prévenu quand un club que vous suivez publie.'}</span></div>
+    <button class="btn sm ${enabled ? 'btn-ghost' : ''}" id="pushToggle">${enabled ? 'Désactiver' : 'Activer'}</button>
+  </div>`;
+}
+function wirePushBanner(enabled) {
+  const btn = $('#pushToggle'); if (!btn) return;
+  btn.onclick = async () => {
+    btn.disabled = true;
+    if (enabled) await disablePush(); else await enablePush();
+    btn.disabled = false;
+    if (RENDERERS[currentRoute] === renderFavoris) renderFavoris();
+  };
+}
+
 // --------------------------------------------------------------- init
 // -- thème clair / sombre (mémorisé)
 const SUN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
@@ -4586,6 +4690,7 @@ function wireStaticEvents() {
 async function init() {
   wireStaticEvents();
   fetchTeamsMap(); // préchargement en tâche de fond
+  if (pushSupported()) ensureServiceWorker(); // enregistre le SW (réception des notifications)
 
   // session courante
   const { data } = await sb.auth.getSession();
