@@ -1059,7 +1059,10 @@ async function renderMatchDetail(id) {
       <a class="md-team" href="#team/${m.away_team_id}">${logoHtml(m.away_team, 'mlogo')}<span class="md-tn ${homeWin ? 'loser' : ''}">${esc(m.away_team?.name || '')}</span></a>
     </div>
     ${qs}
-    ${m.video_url ? `<a class="btn sm" style="margin-top:16px" href="${esc(m.video_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>Voir la vidéo</a>` : ''}
+    <div class="md-actions">
+      ${m.video_url ? `<a class="btn sm" href="${esc(m.video_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>Voir la vidéo</a>` : ''}
+      ${scoreShown ? `<button class="btn btn-ghost sm" id="matchShareBtn">${SHARE_ICON}Partager le résultat</button>` : ''}
+    </div>
   </div>`;
 
   const homeStats = stats.filter((s) => s.team_id === m.home_team_id);
@@ -1077,6 +1080,7 @@ async function renderMatchDetail(id) {
 
   view.innerHTML = html;
   wireBack();
+  $('#matchShareBtn')?.addEventListener('click', () => openShareCard(matchShareSpec(m)));
   fillOfficials(m.id);
   fillMatchFan(m, stats);
   fillShotChart(m);
@@ -1145,16 +1149,17 @@ async function renderPlayer(id) {
 async function renderTeam(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
   const uid = session?.user?.id;
-  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), [])]);
+  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), [])]);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   let html = backBtnHtml();
   html += `<div class="profile">
     <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[labelOf(TEAM_GENDERS, t.gender), esc(t.city), t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}${socialLinksHtml(t, TEAM_SOCIALS)}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[labelOf(TEAM_GENDERS, t.gender), esc(t.city), t.founded_year ? 'Depuis ' + t.founded_year : null, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div><div class="profile-actions">${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}<button class="btn btn-ghost sm" id="teamShareBtn">${SHARE_ICON}Partager</button></div>${socialLinksHtml(t, TEAM_SOCIALS)}</div>
   </div>`;
   if (standing) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
   }
+  if (t.presentation) html += `<div class="block"><div class="block-head"><h2>À propos</h2></div><div class="team-about">${esc(t.presentation).replace(/\n+/g, '<br>')}</div></div>`;
   if (players.length) {
     const rows = players.map((pl) => `<a class="roster-row" href="#player/${pl.id}"><span class="bx-num">${pl.number ?? ''}</span><span class="rr-name">${esc(pl.full_name)}</span><span class="rr-pos">${esc(pl.position || '')}</span></a>`).join('');
     html += `<div class="block"><div class="block-head"><h2>Effectif</h2></div><div class="roster">${rows}</div></div>`;
@@ -1166,10 +1171,15 @@ async function renderTeam(id) {
   if (show.length) html += `<div class="block"><div class="block-head"><h2>Matchs</h2></div>${show.map(matchCardHtml).join('')}</div>`;
   if (posts.length) html += `<div class="block"><div class="block-head"><h2>Publications</h2></div>${posts.map((p) => postCardHtml(p, false)).join('')}</div>`;
   if (activePolls.length) html += `<div class="block"><div class="block-head"><h2>Sondages du club</h2></div><div id="teamPolls"></div></div>`;
-  html += teamSupportersHtml(ldb) + teamPalmaresHtml(awards) + teamRecordsHtml(highs) + teamSponsorsHtml(sponsors);
-  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
+  html += teamGalleryHtml(photos) + teamSupportersHtml(ldb) + teamPalmaresHtml(awards) + teamRecordsHtml(highs) + teamSponsorsHtml(sponsors);
+  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length && !photos.length && !t.presentation) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
   view.innerHTML = html; wireBack();
   if (activePolls.length) { const slot = $('#teamPolls'); for (const p of activePolls) slot.appendChild(await pollCardEl(p, () => renderTeam(id))); }
+  if (photos.length) { const urls = photos.map((p) => p.url); view.querySelectorAll('#teamGallery .photo-thumb').forEach((b) => b.addEventListener('click', () => openLightbox(urls, Number(b.dataset.i)))); }
+  $('#teamShareBtn')?.addEventListener('click', () => openShareCard(teamShareSpec(t, standing)));
+  view.querySelectorAll('[data-share-post]').forEach((b) => b.addEventListener('click', () => {
+    const p = posts.find((x) => x.id === b.dataset.sharePost); if (p) openShareCard(postShareSpec(t, p));
+  }));
   const fb = $('#followBtn');
   if (fb) fb.addEventListener('click', async () => {
     if (!uid) return openAuth('login');
@@ -2968,6 +2978,7 @@ const RENDERERS = {
   'mon-club-feuille': renderClubFeuille,
   'mon-club-sondages': renderClubPolls,
   'mon-club-sponsors': renderClubSponsors,
+  'mon-club-galerie': renderClubGallery,
   'inscription-club': renderInscriptionClub,
   'admin-registrations': renderAdminRegistrations,
 };
@@ -3220,6 +3231,7 @@ async function updateMyClub(input) {
   const { error } = await sb.rpc('update_my_club', {
     p_team_id: input.team_id, p_coach: input.coach, p_city: input.city,
     p_color: input.color, p_logo_url: input.logo_url,
+    p_presentation: input.presentation ?? null, p_founded_year: input.founded_year ?? null,
   });
   if (error) throw error;
 }
@@ -3328,6 +3340,7 @@ const CLUB_NAV_ICONS = {
   warning: '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
   poll: '<path d="M6 20v-6M12 20V4M18 20v-9"/><path d="M3 20h18"/>',
   sponsor: '<path d="M3 7h18v12H3z"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>',
+  gallery: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/>',
 };
 function clubBackHtml() {
   return `<a class="back-btn" href="#mon-club">${icoSvg('<path d="M15 18l-6-6 6-6"/>')}Mon club</a>`;
@@ -3344,7 +3357,7 @@ function postCardHtml(p, withDelete) {
   return `<div class="post-card">
     ${p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy">` : ''}
     <div class="body">${esc(p.body)}</div>
-    <div class="post-foot"><span class="date">${fmtFullDate(p.created_at)}</span>${withDelete ? `<button class="mini-del" data-del="${p.id}" aria-label="Supprimer">✕</button>` : ''}</div>
+    <div class="post-foot"><span class="date">${fmtFullDate(p.created_at)}</span><span class="post-foot-actions"><button class="post-share" data-share-post="${p.id}" aria-label="Partager">${SHARE_ICON}Partager</button>${withDelete ? `<button class="mini-del" data-del="${p.id}" aria-label="Supprimer">✕</button>` : ''}</span></div>
   </div>`;
 }
 function msgCardHtml(r) {
@@ -3409,6 +3422,7 @@ async function renderMonClub() {
     ${clubNavRow('mon-club-discipline', CLUB_NAV_ICONS.warning, 'Discipline', 'Sanctions et amendes du club', CHEVRON)}
     ${clubNavRow('mon-club-sondages', CLUB_NAV_ICONS.poll, 'Sondages', 'Posez des questions à vos abonnés', CHEVRON)}
     ${clubNavRow('mon-club-sponsors', CLUB_NAV_ICONS.sponsor, 'Sponsors', 'Vos partenaires sur la page du club', CHEVRON)}
+    ${clubNavRow('mon-club-galerie', CLUB_NAV_ICONS.gallery, 'Galerie photos', 'La vitrine photo de votre club', CHEVRON)}
   </div>`;
 
   // effectif
@@ -3419,8 +3433,10 @@ async function renderMonClub() {
   // présentation
   const pres = `<form class="admin-form" id="mcPres" novalidate>
     ${adminFieldHtml({ k: 'logo_url', type: 'image', folder: 'teams', label: 'Logo du club' }, club.logo_url || '')}
+    ${adminFieldHtml({ k: 'presentation', type: 'textarea', rows: 5, label: 'Présentation du club', placeholder: 'Histoire, palmarès, salle, ambiance… ce qui donne envie de suivre votre club.' }, club.presentation || '')}
     ${adminFieldHtml({ k: 'coach', type: 'text', label: 'Entraîneur', placeholder: 'Nom du coach' }, club.coach || '')}
     ${adminFieldHtml({ k: 'city', type: 'text', label: 'Ville', placeholder: 'Conakry' }, club.city || '')}
+    ${adminFieldHtml({ k: 'founded_year', type: 'number', label: 'Année de fondation', placeholder: '1998' }, club.founded_year ?? '')}
     <div class="field"><label>Couleur du club</label><div class="color-swatches">${TEAM_COLORS_WEB.map((c) => `<button type="button" class="color-sw${(club.color || TEAM_COLORS_WEB[0]) === c ? ' active' : ''}" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</div><input type="hidden" name="color" value="${esc(club.color || TEAM_COLORS_WEB[0])}"></div>
     <div class="form-actions"><button type="submit" class="btn">Enregistrer</button></div>
   </form>`;
@@ -3450,12 +3466,15 @@ async function renderMonClub() {
     e.preventDefault();
     const btn = form.querySelector('button[type=submit]'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Enregistrement…';
     try {
+      const fy = parseInt(form.querySelector('[name=founded_year]').value, 10);
       await updateMyClub({
         team_id: club.id,
         coach: form.querySelector('[name=coach]').value.trim() || null,
         city: form.querySelector('[name=city]').value.trim() || null,
         color: hiddenColor.value || null,
         logo_url: form.querySelector('[name=logo_url]').value || null,
+        presentation: form.querySelector('[name=presentation]').value.trim() || null,
+        founded_year: Number.isFinite(fy) ? fy : null,
       });
       await safe(loadMyClubs(), null); // rafraîchit la carte d'identité
       toast('Fiche du club enregistrée');
@@ -3536,6 +3555,9 @@ async function renderClubPublications() {
   b.querySelectorAll('#pubList [data-del]').forEach((btn) => btn.addEventListener('click', async () => {
     if (!window.confirm('Supprimer cette publication ?\nCette action est définitive.')) return;
     try { await deleteClubPost(btn.dataset.del); toast('Publication supprimée'); renderClubPublications(); } catch (e) { toast(errMsg(e)); }
+  }));
+  b.querySelectorAll('#pubList [data-share-post]').forEach((btn) => btn.addEventListener('click', () => {
+    const p = posts.find((x) => x.id === btn.dataset.sharePost); if (p) openShareCard(postShareSpec(club, p));
   }));
 }
 
@@ -4272,6 +4294,253 @@ async function renderClubSponsors() {
     if (!window.confirm('Retirer ce partenaire ?')) return;
     try { await deleteClubSponsor(btn.dataset.del); toast('Partenaire retiré'); renderClubSponsors(); } catch (e) { toast(errMsg(e)); }
   }));
+}
+
+// =========================================================================
+// VAGUE 2 — Visibilité & partage : vitrine du club (présentation + galerie
+// photos) et cartes de partage (image générée côté client + partage natif).
+// Côté base : colonne teams.presentation + photos.team_id (RLS manages_team).
+// Les cartes ne touchent AUCUNE donnée serveur : Canvas + navigator.share.
+// =========================================================================
+const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
+
+// -- données : galerie photos du club (réutilise la table photos via team_id)
+async function listTeamPhotos(teamId) {
+  const { data, error } = await sb.from('photos').select('*').eq('team_id', teamId).order('position', { ascending: true }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+async function addTeamPhoto(teamId, patch) {
+  const { error } = await sb.from('photos').insert({ team_id: teamId, ...patch });
+  if (error) throw error;
+}
+async function deleteTeamPhoto(id) {
+  const { error } = await sb.from('photos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// -- bloc public : galerie (fiche équipe) ; câblage lightbox fait par renderTeam
+function teamGalleryHtml(photos) {
+  if (!photos.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Galerie</h2></div><div class="photo-grid" id="teamGallery">${photos.map((p, i) => `<button class="photo-thumb" data-i="${i}"><img src="${esc(p.url)}" alt="${esc(p.caption || '')}" loading="lazy"></button>`).join('')}</div></div>`;
+}
+
+// -- sous-écran « Mon club » : gestion de la galerie
+async function renderClubGallery() {
+  view.innerHTML = clubBackHtml() + `<h1 class="view-title">Galerie photos</h1><p class="view-sub">Vos photos s'affichent dans la vitrine publique de votre club.</p><div id="cgBody">${loadingHtml()}</div>`;
+  const b = $('#cgBody'); if (!b) return;
+  const club = session ? await resolveMyClub() : null;
+  if (!club) { b.innerHTML = clubGateHtml(); return; }
+  const photos = await safe(listTeamPhotos(club.id), []);
+  b.innerHTML = `
+    <form class="admin-form" id="cgForm" novalidate>
+      ${adminFieldHtml({ k: 'url', type: 'image', folder: 'teams', label: 'Photo' }, '')}
+      ${adminFieldHtml({ k: 'caption', type: 'text', label: 'Légende (optionnel)', placeholder: 'Ex. Finale de la coupe 2024' }, '')}
+      <div class="form-actions"><button type="submit" class="btn">Ajouter à la galerie</button></div>
+    </form>
+    <div class="block-head mc-sec"><h2>Mes photos (${photos.length})</h2></div>
+    <div id="cgList">${photos.length ? `<div class="photo-grid">${photos.map((p) => `<div class="cg-cell"><img src="${esc(p.url)}" alt="${esc(p.caption || '')}" loading="lazy"><button class="cg-del" data-del="${p.id}" aria-label="Retirer">✕</button></div>`).join('')}</div>` : `<p class="view-sub" style="font-size:12.5px;margin:0">Aucune photo pour le moment.</p>`}</div>`;
+  const form = $('#cgForm');
+  form.querySelectorAll('.image-field').forEach(wireImageField);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = form.querySelector('[name=url]').value;
+    if (!url) { toast('Choisissez une image'); return; }
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true; const o = btn.textContent; btn.textContent = 'Ajout…';
+    try {
+      await addTeamPhoto(club.id, { url, caption: form.querySelector('[name=caption]').value.trim() || null });
+      toast('Photo ajoutée'); renderClubGallery();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = o; }
+  });
+  b.querySelectorAll('#cgList [data-del]').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!window.confirm('Retirer cette photo ?')) return;
+    try { await deleteTeamPhoto(btn.dataset.del); toast('Photo retirée'); renderClubGallery(); } catch (e) { toast(errMsg(e)); }
+  }));
+}
+
+// -- cartes de partage : dessin d'une image 1080×1080 puis partage/téléchargement
+const SHARE_SIZE = 1080;
+function shareTeamColor(hex) {
+  const v = (hex || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : '#3BD61B';
+}
+function slugForFile(s) {
+  return (String(s || 'club').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)) || 'club';
+}
+function loadShareImage(url) {
+  // charge en CORS ; si le serveur ne renvoie pas d'en-tête CORS, onerror se
+  // déclenche et la carte se dessine sans logo (canvas jamais « tainted »).
+  return new Promise((resolve) => {
+    if (!url) return resolve(null);
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    let done = false; const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    img.onload = () => finish(img); img.onerror = () => finish(null);
+    setTimeout(() => finish(null), 4000);
+    img.src = url;
+  });
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fitLine(ctx, text, maxW) {
+  let t = String(text || '');
+  if (ctx.measureText(t).width <= maxW) return t;
+  while (t.length && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+function wrapLines(ctx, text, maxW, maxLines) {
+  const words = String(text || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  const lines = []; let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && cur) {
+      lines.push(cur); cur = w;
+      if (lines.length === maxLines) { cur = ''; break; }
+    } else cur = test;
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  // ellipse si le texte déborde du nombre de lignes autorisé
+  const shown = lines.join(' ').split(' ').filter(Boolean).length;
+  if (shown < words.length && lines.length) {
+    let last = lines[lines.length - 1];
+    while (last.length && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+    lines[lines.length - 1] = last + '…';
+  }
+  return lines;
+}
+async function drawShareCard(spec) {
+  const S = SHARE_SIZE, pad = 84;
+  const cvs = document.createElement('canvas'); cvs.width = S; cvs.height = S;
+  const ctx = cvs.getContext('2d');
+  const accent = shareTeamColor(spec.accent);
+  ctx.fillStyle = '#071E1B'; ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = accent; ctx.fillRect(0, 0, S, 14);
+
+  // en-tête fédération
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = accent; ctx.font = '800 44px system-ui, "Segoe UI", sans-serif';
+  ctx.fillText('FGBB', pad, 132);
+  ctx.fillStyle = '#8FB0A6'; ctx.font = '500 26px system-ui, "Segoe UI", sans-serif';
+  ctx.fillText('Fédération Guinéenne de Basket-Ball', pad, 170);
+
+  // badge / logo (haut-droite)
+  const bs = 132, bx = S - pad - bs, by = 66;
+  const logo = await loadShareImage(spec.logoUrl);
+  ctx.save(); roundRectPath(ctx, bx, by, bs, bs, 30); ctx.clip();
+  ctx.fillStyle = accent; ctx.fillRect(bx, by, bs, bs);
+  if (logo) ctx.drawImage(logo, bx, by, bs, bs);
+  else if (spec.badgeText) { ctx.fillStyle = '#06201C'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '800 52px system-ui, sans-serif'; ctx.fillText(spec.badgeText, bx + bs / 2, by + bs / 2 + 2); }
+  else { // ballon de basket stylisé (carte fédération sans logo)
+    const cx = bx + bs / 2, cy = by + bs / 2, rr = bs * 0.30;
+    ctx.strokeStyle = '#06201C'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - rr, cy); ctx.lineTo(cx + rr, cy); ctx.moveTo(cx, cy - rr); ctx.lineTo(cx, cy + rr); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - rr, cy, rr, -0.9, 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + rr, cy, rr, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // étiquette de type
+  ctx.fillStyle = accent; ctx.font = '700 30px system-ui, sans-serif';
+  ctx.fillText(String(spec.badge || '').toUpperCase(), pad, 296);
+
+  if (spec.score) {
+    const s = spec.score;
+    if (spec.meta) { ctx.fillStyle = '#8FB0A6'; ctx.font = '500 30px system-ui, sans-serif'; ctx.fillText(fitLine(ctx, spec.meta, S - pad * 2), pad, 352); }
+    const hw = Number(s.home) > Number(s.away), aw = Number(s.away) > Number(s.home);
+    const rows = [{ name: s.homeName, sc: s.home, win: hw }, { name: s.awayName, sc: s.away, win: aw }];
+    let y = 540;
+    for (const r of rows) {
+      ctx.textAlign = 'right'; ctx.font = '800 132px system-ui, sans-serif'; ctx.fillStyle = r.win ? accent : '#EAF3EE';
+      ctx.fillText(String(r.sc), S - pad, y);
+      ctx.textAlign = 'left'; ctx.font = '700 54px system-ui, sans-serif'; ctx.fillStyle = r.win ? '#EAF3EE' : '#9FB8AE';
+      ctx.fillText(fitLine(ctx, r.name, S - pad * 2 - 230), pad, y - 34);
+      y += 196;
+    }
+  } else {
+    ctx.fillStyle = '#EAF3EE'; ctx.font = '800 60px system-ui, sans-serif';
+    let y = 384;
+    for (const ln of wrapLines(ctx, spec.title, S - pad * 2, 2)) { ctx.fillText(ln, pad, y); y += 74; }
+    if (spec.subtitle) { ctx.fillStyle = '#8FB0A6'; ctx.font = '500 30px system-ui, sans-serif'; ctx.fillText(fitLine(ctx, spec.subtitle, S - pad * 2), pad, y + 4); y += 60; }
+    if (spec.body) {
+      ctx.fillStyle = '#CFE0D8'; ctx.font = '500 42px system-ui, sans-serif';
+      y += 26;
+      for (const ln of wrapLines(ctx, spec.body, S - pad * 2, spec.bodyMax || 6)) { ctx.fillText(ln, pad, y); y += 60; }
+    }
+    if (spec.stat) {
+      ctx.fillStyle = '#8FB0A6'; ctx.font = '500 26px system-ui, sans-serif'; ctx.fillText(spec.statLabel || '', pad, S - 196);
+      ctx.fillStyle = accent; ctx.font = '800 48px system-ui, sans-serif'; ctx.fillText(spec.stat, pad, S - 148);
+    }
+  }
+  // pied
+  ctx.textAlign = 'left'; ctx.fillStyle = accent; ctx.font = '700 30px system-ui, sans-serif';
+  ctx.fillText('fgbb.ink', pad, S - 64);
+  return cvs;
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+async function shareCanvas(cvs, filename, text) {
+  let blob; try { blob = await new Promise((res) => cvs.toBlob(res, 'image/png')); } catch { blob = null; }
+  if (!blob) { toast('Génération impossible'); return; }
+  const file = new File([blob], filename, { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], text }); } catch {} // annulé par l'utilisateur : rien à faire
+    return;
+  }
+  downloadBlob(blob, filename);
+  toast('Image téléchargée — partagez-la sur WhatsApp ou Facebook');
+}
+async function openShareCard(spec) {
+  let ov = document.getElementById('shareModal');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'shareModal'; ov.className = 'share-modal'; document.body.appendChild(ov); }
+  ov.innerHTML = `<div class="share-box"><button class="share-x" aria-label="Fermer">✕</button><div class="share-prev">${loadingHtml()}</div><div class="share-actions"><button class="btn" id="shDo">${SHARE_ICON}Partager</button><button class="btn btn-ghost" id="shDl">Télécharger</button></div></div>`;
+  ov.classList.add('open');
+  const close = () => ov.classList.remove('open');
+  ov.onclick = (e) => { if (e.target === ov) close(); };
+  ov.querySelector('.share-x').onclick = close;
+  let cvs;
+  try { cvs = await drawShareCard(spec); } catch { ov.querySelector('.share-prev').innerHTML = '<p class="view-sub" style="padding:20px">Aperçu indisponible.</p>'; return; }
+  if (!ov.classList.contains('open')) return; // fermé pendant le dessin
+  let dataUrl = ''; try { dataUrl = cvs.toDataURL('image/png'); } catch {}
+  ov.querySelector('.share-prev').innerHTML = dataUrl ? `<img src="${dataUrl}" alt="Aperçu de la carte de partage">` : '<p class="view-sub" style="padding:20px">Aperçu indisponible.</p>';
+  $('#shDo').onclick = () => shareCanvas(cvs, spec.filename, spec.shareText);
+  $('#shDl').onclick = () => cvs.toBlob((b) => { if (b) downloadBlob(b, spec.filename); else toast('Génération impossible'); }, 'image/png');
+}
+
+// -- constructeurs de « spec » de carte
+function teamShareSpec(t, standing) {
+  const rec = standing ? `${standing.wins} V · ${standing.losses} D · ${standing.points} pts` : null;
+  return {
+    badge: 'Le club', title: t.name, accent: t.color, logoUrl: t.logo_url, badgeText: initials(t.short_name || t.name),
+    subtitle: [labelOf(TEAM_GENDERS, t.gender), t.city, t.founded_year ? 'depuis ' + t.founded_year : null].filter(Boolean).join(' · '),
+    body: t.presentation || 'Suivez toute l\'actualité du club sur FGBB.', bodyMax: rec ? 4 : 6,
+    stat: rec, statLabel: rec ? 'Bilan en championnat' : '',
+    filename: `fgbb-${slugForFile(t.name)}.png`, shareText: `${t.name} — sur FGBB · https://fgbb.ink`,
+  };
+}
+function postShareSpec(t, p) {
+  return {
+    badge: 'Actu du club', title: t.name, accent: t.color, logoUrl: t.logo_url, badgeText: initials(t.short_name || t.name),
+    subtitle: fmtFullDate(p.created_at), body: p.body || '', bodyMax: 7,
+    filename: `fgbb-actu-${slugForFile(t.name)}.png`,
+    shareText: `${t.name} — ${String(p.body || '').replace(/\s+/g, ' ').slice(0, 140)} · https://fgbb.ink`,
+  };
+}
+function matchShareSpec(m) {
+  return {
+    badge: m.status === 'live' ? 'Score en direct' : 'Résultat', accent: '#3BD61B', logoUrl: null,
+    meta: [m.competition?.name, fmtDate(m.scheduled_at)].filter(Boolean).join(' · '),
+    score: { home: m.home_score ?? 0, away: m.away_score ?? 0, homeName: m.home_team?.name || 'Domicile', awayName: m.away_team?.name || 'Extérieur' },
+    filename: 'fgbb-resultat.png',
+    shareText: `${m.home_team?.name || ''} ${m.home_score ?? 0}–${m.away_score ?? 0} ${m.away_team?.name || ''} · https://fgbb.ink`,
+  };
 }
 
 // --------------------------------------------------------------- init
