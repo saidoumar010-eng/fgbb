@@ -1887,3 +1887,33 @@ a.cs-item:hover { border-color: var(--accent); }
 .push-txt b { font-size: 14px; font-weight: 600; display: block; }
 .push-txt span { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
 .push-banner .btn { flex: none; white-space: nowrap; }
+
+/* =========================================================================
+   Vague 3 — Outils du quotidien : disponibilités, scouting, impression
+   ========================================================================= */
+/* disponibilités (feuille de match) */
+.av-list { display: flex; flex-direction: column; gap: 8px; }
+.av-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.av-name { font-size: 13.5px; font-weight: 600; flex: 1; min-width: 120px; }
+.av-seg-wrap { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden; }
+.av-seg { border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 600; padding: 6px 11px; cursor: pointer; border-left: 1px solid var(--border); }
+.av-seg:first-child { border-left: 0; }
+.av-seg.active { color: #fff; }
+.av-seg.active.ok { background: var(--green); }
+.av-seg.active.warn { background: var(--flag-yellow); color: #1a1a1a; }
+.av-seg.active.bad { background: var(--red); }
+.av-seg.active.mut { background: var(--dim); }
+.av-seg[disabled] { opacity: .5; cursor: default; }
+.fe-badge { margin-left: auto; align-self: center; }
+
+/* barre d'outils de la feuille (scouting + impression) */
+.fe-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* scouting de l'adversaire */
+.scout-form { display: flex; gap: 8px; }
+.form-pill { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; }
+.form-pill.W { background: var(--green); }
+.form-pill.L { background: var(--red); }
+.form-pill.N { background: var(--dim); }
+.win-txt { color: var(--green); }
+.loss-txt { color: var(--red); }

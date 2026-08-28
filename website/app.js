@@ -3024,6 +3024,7 @@ function handleHash() {
     ['team/', renderTeam],
     ['news/', renderNewsDetail],
     ['quiz/', renderQuizDetail],
+    ['scouting/', renderScouting],
   ];
   for (const [prefix, fn] of DETAILS) {
     if (h.startsWith(prefix)) {
@@ -3601,48 +3602,66 @@ async function renderClubDiscipline() {
 // -------------------------------------------------------- sous-écran feuille de match
 async function renderClubFeuille() {
   const MAX = 12;
-  view.innerHTML = clubBackHtml() + `<h1 class="view-title">Feuille de match</h1><p class="view-sub">Composez et validez vos 12 pour un match à venir.</p><div id="feBody">${loadingHtml()}</div>`;
+  view.innerHTML = clubBackHtml() + `<h1 class="view-title">Feuille de match</h1><p class="view-sub">Disponibilités, composition des 12, scouting et impression.</p><div id="feBody">${loadingHtml()}</div>`;
   const host = $('#feBody'); if (!host) return;
   const club = session ? await resolveMyClub() : null;
   if (!club) { host.innerHTML = clubGateHtml(); return; }
   const [matches, roster] = await Promise.all([safe(getTeamMatches(club.id), []), safe(getTeamPlayers(club.id), [])]);
   const upcoming = matches.filter((m) => m.status === 'scheduled');
-  const state = { matchId: null, sel: new Set(), validated: false, busy: false };
+  const state = { matchId: null, sel: new Set(), validated: false, avail: new Map(), busy: false };
+  const currentMatch = () => upcoming.find((m) => m.id === state.matchId) || null;
+  const opponentOf = (m) => (m.home_team_id === club.id ? m.away_team : m.home_team);
 
   function pickerHtml() {
     if (!upcoming.length) return '<div class="mc-note" style="margin:0">Aucun match à venir programmé.</div>';
     return upcoming.map((m) => {
       const on = state.matchId === m.id;
-      const opp = m.home_team_id === club.id ? m.away_team : m.home_team;
+      const opp = opponentOf(m);
       return `<button class="fe-pick${on ? ' active' : ''}" data-match="${m.id}">${logoHtml(opp)}<span class="info"><b>contre ${esc(opp?.name || 'Adversaire')}</b><span>${fmtDate(m.scheduled_at)} · ${fmtTime(m.scheduled_at) || '—'}${m.competition?.name ? ' · ' + esc(m.competition.name) : ''}</span></span>${on ? icoSvg('<path d="M6 15l6-6 6 6"/>') : icoSvg('<path d="M6 9l6 6 6-6"/>')}</button>`;
     }).join('');
   }
+  function availHtml() {
+    if (!roster.length) return '';
+    const rows = roster.map((p) => {
+      const st = state.avail.get(p.id) || 'available';
+      const seg = AVAIL.map((a) => `<button class="av-seg${st === a.v ? ' active ' + a.cls : ''}" data-avail="${p.id}" data-status="${a.v}"${state.validated ? ' disabled' : ''}>${a.label}</button>`).join('');
+      return `<div class="av-row"><span class="av-name">${p.number != null ? '#' + p.number + ' ' : ''}${esc(p.full_name)}</span><div class="av-seg-wrap">${seg}</div></div>`;
+    }).join('');
+    return `<div class="block-head mc-sec"><h2>Disponibilités</h2></div><div class="av-list">${rows}</div>`;
+  }
   function sheetHtml() {
     if (!state.matchId) return '';
+    const m = currentMatch();
+    const opp = opponentOf(m);
     const validatedBanner = state.validated ? `<div class="fe-validated">${icoSvg('<path d="M20 6L9 17l-5-5"/>')}<span>Feuille validée. Déverrouillez pour la modifier.</span></div>` : '';
     const players = roster.length
       ? roster.map((p) => {
           const on = state.sel.has(p.id);
-          return `<button class="fe-player${on ? ' on' : ''}" data-player="${p.id}"${state.validated ? ' disabled' : ''}><span class="fe-check">${icoSvg('<path d="M20 6L9 17l-5-5"/>')}</span><span class="fe-info"><b>${p.number != null ? '#' + p.number + ' ' : ''}${esc(p.full_name)}</b><span>${esc(p.position || 'Poste non précisé')}</span></span></button>`;
+          const st = state.avail.get(p.id) || 'available';
+          const badge = st !== 'available' ? `<span class="status-pill ${availMeta(st).cls} fe-badge">${availMeta(st).label}</span>` : '';
+          return `<button class="fe-player${on ? ' on' : ''}" data-player="${p.id}"${state.validated ? ' disabled' : ''}><span class="fe-check">${icoSvg('<path d="M20 6L9 17l-5-5"/>')}</span><span class="fe-info"><b>${p.number != null ? '#' + p.number + ' ' : ''}${esc(p.full_name)}</b><span>${esc(p.position || 'Poste non précisé')}</span></span>${badge}</button>`;
         }).join('')
       : '<div class="mc-note" style="margin:0">Ajoutez d\'abord des joueurs à votre effectif.</div>';
     const actions = state.validated
       ? `<button class="btn btn-ghost" data-act="unlock">Déverrouiller</button>`
       : `<button class="btn btn-ghost" data-act="save">Enregistrer</button><button class="btn" data-act="validate">Valider ma feuille</button>`;
-    return `<div class="block-head mc-sec"><h2>Mes 12 (${state.sel.size}/${MAX})</h2></div>${validatedBanner}<div class="fe-players">${players}</div><div class="form-actions" style="margin-top:14px">${actions}</div>`;
+    const tools = `<div class="fe-tools">${opp ? `<a class="btn btn-ghost sm" href="#scouting/${opp.id}">${icoSvg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>')}Scouter l'adversaire</a>` : ''}<button class="btn btn-ghost sm" data-act="print">${icoSvg('<path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>')}Imprimer / PDF</button></div>`;
+    return availHtml() + `<div class="block-head mc-sec"><h2>Mes 12 (${state.sel.size}/${MAX})</h2></div>${validatedBanner}<div class="fe-players">${players}</div><div class="form-actions" style="margin-top:14px">${actions}</div>${tools}`;
   }
   function paint() {
     host.innerHTML = `<div class="block-head mc-sec" style="margin-top:0"><h2>Match à préparer</h2></div><div class="fe-picks">${pickerHtml()}</div>${sheetHtml()}`;
     host.querySelectorAll('.fe-pick').forEach((btn) => btn.addEventListener('click', () => pick(btn.dataset.match)));
     host.querySelectorAll('.fe-player').forEach((btn) => btn.addEventListener('click', () => toggle(btn.dataset.player)));
+    host.querySelectorAll('[data-avail]').forEach((btn) => btn.addEventListener('click', () => setAvail(btn.dataset.avail, btn.dataset.status)));
     host.querySelectorAll('[data-act]').forEach((btn) => btn.addEventListener('click', () => act(btn.dataset.act)));
   }
   async function pick(id) {
     if (state.matchId === id) { state.matchId = null; paint(); return; }
-    state.matchId = id; state.sel = new Set(); state.validated = false; paint();
-    const lu = await safe(getMatchLineup(id, club.id), { playerIds: [], validated: false });
+    state.matchId = id; state.sel = new Set(); state.validated = false; state.avail = new Map(); paint();
+    const [lu, av] = await Promise.all([safe(getMatchLineup(id, club.id), { playerIds: [], validated: false }), safe(getMatchAvailability(id, club.id), [])]);
     if (state.matchId !== id) return; // l'utilisateur a changé de match entre-temps
-    state.sel = new Set(lu.playerIds); state.validated = lu.validated; paint();
+    state.sel = new Set(lu.playerIds); state.validated = lu.validated;
+    state.avail = new Map(av.map((r) => [r.player_id, r.status])); paint();
   }
   function toggle(id) {
     if (state.validated) return;
@@ -3651,7 +3670,15 @@ async function renderClubFeuille() {
     else { toast(`12 joueurs maximum`); return; }
     paint();
   }
+  async function setAvail(playerId, status) {
+    if (state.validated) return;
+    const prev = state.avail.get(playerId);
+    state.avail.set(playerId, status); paint();
+    try { await setPlayerAvailability(state.matchId, club.id, playerId, status); }
+    catch (e) { if (prev) state.avail.set(playerId, prev); else state.avail.delete(playerId); paint(); toast(errMsg(e)); }
+  }
   async function act(kind) {
+    if (kind === 'print') { const sel = roster.filter((p) => state.sel.has(p.id)); printMatchSheet(club, currentMatch(), sel, state.avail); return; }
     if (state.busy || !state.matchId) return;
     state.busy = true;
     try {
@@ -4645,6 +4672,155 @@ function wirePushBanner(enabled) {
     btn.disabled = false;
     if (RENDERERS[currentRoute] === renderFavoris) renderFavoris();
   };
+}
+
+// =========================================================================
+// VAGUE 3 — Outils du quotidien : convocations & disponibilités (table
+// player_availability, dans la Feuille de match), scouting de l'adversaire
+// (réutilise stats + carte des tirs, aucune donnée nouvelle) et impression
+// de la feuille de match (génération côté client, fenêtre imprimable → PDF).
+// =========================================================================
+const AVAIL = [
+  { v: 'available', label: 'Dispo', cls: 'ok' },
+  { v: 'doubtful', label: 'Incertain', cls: 'warn' },
+  { v: 'injured', label: 'Blessé', cls: 'bad' },
+  { v: 'absent', label: 'Absent', cls: 'mut' },
+];
+function availMeta(v) { return AVAIL.find((a) => a.v === v) || AVAIL[0]; }
+
+// -- données : disponibilités
+async function getMatchAvailability(matchId, teamId) {
+  const { data, error } = await sb.from('player_availability').select('player_id, status').eq('match_id', matchId).eq('team_id', teamId);
+  if (error) throw error;
+  return data ?? [];
+}
+async function setPlayerAvailability(matchId, teamId, playerId, status) {
+  const { error } = await sb.from('player_availability').upsert(
+    { match_id: matchId, team_id: teamId, player_id: playerId, status, updated_at: new Date().toISOString() },
+    { onConflict: 'match_id,player_id' },
+  );
+  if (error) throw error;
+}
+
+// -- données : scouting (lecture publique)
+async function listTeamShots(teamId) {
+  const { data, error } = await sb.from('shots').select('*, player:players(id, full_name, number)').eq('team_id', teamId).order('created_at', { ascending: false }).limit(1000);
+  if (error) throw error;
+  return data ?? [];
+}
+async function getTeamTopScorers(teamId, n) {
+  const { data, error } = await sb.from('player_season_stats').select('*').eq('team_id', teamId).order('ppg', { ascending: false }).limit(n);
+  if (error) throw error;
+  return data ?? [];
+}
+function teamFormFrom(matches, teamId) {
+  return matches.filter((m) => m.status === 'finished').sort((a, b) => tOf(b.scheduled_at) - tOf(a.scheduled_at)).slice(0, 5).map((m) => {
+    const isHome = m.home_team_id === teamId;
+    const my = isHome ? m.home_score : m.away_score;
+    const other = isHome ? m.away_score : m.home_score;
+    const opp = isHome ? m.away_team : m.home_team;
+    const res = my > other ? 'W' : my < other ? 'L' : 'N';
+    return { res, my, other, opp, m };
+  });
+}
+
+// -- scouting de l'adversaire
+async function renderScouting(teamId) {
+  view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
+  const [t, matches, scorers, shots] = await Promise.all([
+    safe(getTeam(teamId), null), safe(getTeamMatches(teamId), []), safe(getTeamTopScorers(teamId, 6), []), safe(listTeamShots(teamId), []),
+  ]);
+  if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+  const form = teamFormFrom(matches, teamId);
+  let html = backBtnHtml();
+  html += `<div class="profile">
+    <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">Scouting · aperçu avant match</div></div>
+  </div>`;
+  // forme récente
+  if (form.length) {
+    html += `<div class="block"><div class="block-head"><h2>Forme récente</h2></div><div class="scout-form">${form.map((f) => `<span class="form-pill ${f.res}" title="${esc(f.opp?.name || '')} ${f.my}-${f.other}">${f.res === 'W' ? 'V' : f.res === 'L' ? 'D' : 'N'}</span>`).join('')}</div>
+      <div class="roster" style="margin-top:10px">${form.map((f) => `<div class="roster-row"><span class="rr-name">${esc(f.opp?.name || 'Adversaire')}</span><span class="rr-pos"><b class="${f.res === 'W' ? 'win-txt' : f.res === 'L' ? 'loss-txt' : ''}">${f.my}–${f.other}</b> · ${fmtDate(f.m.scheduled_at)}</span></div>`).join('')}</div></div>`;
+  }
+  // meilleurs marqueurs
+  const sc = scorers.filter((s) => Number(s.ppg) > 0);
+  if (sc.length) {
+    html += `<div class="block"><div class="block-head"><h2>Joueurs à surveiller</h2></div><div class="roster">${sc.map((s) => `<a class="roster-row" href="#player/${s.player_id}"><span class="rr-name">${esc(s.full_name || 'Joueur')}</span><span class="rr-pos"><b style="color:var(--accent)">${Number(s.ppg).toFixed(1)}</b> pts${s.rpg ? ' · ' + Number(s.rpg).toFixed(1) + ' reb' : ''}${s.apg ? ' · ' + Number(s.apg).toFixed(1) + ' pd' : ''}</span></a>`).join('')}</div></div>`;
+  }
+  html += `<div id="scoutShots"></div>`;
+  if (!form.length && !sc.length && !shots.length) html += emptyHtml('Pas encore de données', 'Cet adversaire n\'a pas encore de match, de statistique ni de tir enregistré.', 'ball');
+  view.innerHTML = html; wireBack();
+  fillTeamShotChart(shots, '#scoutShots');
+}
+function fillTeamShotChart(shots, slotSel) {
+  const slot = document.querySelector(slotSel); if (!slot) return;
+  if (!shots.length) return;
+  const ALLV = 'all';
+  const state = { player: ALLV };
+  const court = courtSvg();
+  function paint() {
+    const shown = state.player === ALLV ? shots : shots.filter((s) => s.player && s.player.id === state.player);
+    const seen = new Map();
+    shots.forEach((s) => { if (s.player && s.player.id) seen.set(s.player.id, `${s.player.number != null ? '#' + s.player.number + ' ' : ''}${s.player.full_name || ''}`.trim()); });
+    const playerChips = seen.size > 1
+      ? `<div class="segmented sc-seg" data-kind="player"><button class="seg ${state.player === ALLV ? 'active' : ''}" data-v="${ALLV}">Tous</button>${[...seen.entries()].map(([id, l]) => `<button class="seg ${state.player === id ? 'active' : ''}" data-v="${id}">${esc(l)}</button>`).join('')}</div>`
+      : '';
+    const dots = shown.map((s) => `<span class="shot-dot ${s.made ? 'made' : 'miss'}" style="left:${Number(s.x)}%;top:${Number(s.y)}%"></span>`).join('');
+    const made = shown.filter((s) => s.made).length;
+    const pct = shown.length ? Math.round((made / shown.length) * 100) : 0;
+    const zones = shotZoneSummary(shown).filter((z) => z.att > 0);
+    const zoneHtml = zones.length ? `<div class="sc-zones">${zones.map((z) => `<div class="zone-row"><span class="zone-lbl">${esc(z.label)}</span><span class="zone-bar"><span class="zone-fill" style="width:${z.pct}%;background:${pctColor(z.pct)}"></span></span><span class="zone-pct">${z.pct}%</span><span class="zone-att">${z.made}/${z.att}</span></div>`).join('')}</div>` : '';
+    slot.innerHTML = `<div class="block"><div class="block-head"><h2>Carte des tirs</h2></div>${playerChips}<div class="court-wrap">${court}<div class="court-dots">${dots}</div></div><div class="sc-legend"><span class="sc-key"><span class="sc-dot made"></span>Réussi</span><span class="sc-key"><span class="sc-dot miss"></span>Manqué</span><span class="sc-total">${made}/${shown.length} · ${pct}%</span></div>${zoneHtml}</div>`;
+    slot.querySelectorAll('.sc-seg .seg').forEach((btn) => btn.addEventListener('click', () => { state.player = btn.dataset.v; paint(); }));
+  }
+  paint();
+}
+
+// -- impression de la feuille de match (fenêtre autonome → « Enregistrer en PDF »)
+function buildMatchSheetHtml(club, m, players, avail) {
+  const opp = m.home_team_id === club.id ? m.away_team : m.home_team;
+  const lieu = m.home_team_id === club.id ? 'Domicile' : 'Extérieur';
+  const meta = [m.competition?.name, m.round ? 'Journée ' + m.round : null, fmtDate(m.scheduled_at), fmtTime(m.scheduled_at), m.venue].filter(Boolean).join(' · ');
+  const rows = players.map((p, i) => {
+    const st = availMeta(avail.get(p.id) || 'available');
+    return `<tr><td class="c">${i + 1}</td><td class="c">${p.number != null ? esc(String(p.number)) : ''}</td><td>${esc(p.full_name)}</td><td>${esc(p.position || '')}</td><td>${esc(st.label)}</td></tr>`;
+  }).join('');
+  const blanks = Math.max(0, 12 - players.length);
+  const empties = Array.from({ length: blanks }, (_, i) => `<tr><td class="c">${players.length + i + 1}</td><td></td><td></td><td></td><td></td></tr>`).join('');
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Feuille de match — ${esc(club.name)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font: 13px -apple-system, "Segoe UI", Roboto, sans-serif; color: #111; margin: 32px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0F7A3D; padding-bottom: 10px; margin-bottom: 6px; }
+  .fed { font-size: 11px; color: #555; }
+  .fed b { display: block; font-size: 18px; color: #0F7A3D; letter-spacing: .5px; }
+  h1 { font-size: 17px; margin: 14px 0 2px; }
+  .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #bbb; padding: 7px 9px; text-align: left; }
+  th { background: #eef3ee; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  td.c { text-align: center; width: 42px; }
+  tr { page-break-inside: avoid; }
+  .sign { display: flex; gap: 40px; margin-top: 40px; }
+  .sign div { flex: 1; border-top: 1px solid #333; padding-top: 6px; font-size: 12px; color: #555; }
+  @media print { body { margin: 12mm; } }
+</style></head><body>
+  <div class="head"><div class="fed"><b>FGBB</b>Fédération Guinéenne de Basket-Ball</div><div class="fed" style="text-align:right">Feuille de match<br>${esc(lieu)}</div></div>
+  <h1>${esc(club.name)} <span style="color:#888;font-weight:400">contre</span> ${esc(opp?.name || 'Adversaire')}</h1>
+  <div class="meta">${esc(meta)}</div>
+  <table><thead><tr><th class="c">#</th><th class="c">N°</th><th>Joueur</th><th>Poste</th><th>Statut</th></tr></thead>
+  <tbody>${rows}${empties}</tbody></table>
+  <div class="sign"><div>Entraîneur — nom &amp; signature</div><div>Officiel de table — visa</div></div>
+  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 150); };<\/script>
+</body></html>`;
+}
+function printMatchSheet(club, m, players, avail) {
+  if (!m) { toast('Sélectionnez un match'); return; }
+  if (!players.length) { toast('Sélectionnez au moins un joueur'); return; }
+  const w = window.open('', '_blank');
+  if (!w) { toast('Autorisez les fenêtres pop-up pour imprimer'); return; }
+  w.document.write(buildMatchSheetHtml(club, m, players, avail));
+  w.document.close();
 }
 
 // --------------------------------------------------------------- init
