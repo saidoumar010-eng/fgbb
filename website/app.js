@@ -65,6 +65,20 @@ function fmtDate(iso) {
     return new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso));
   } catch { return ''; }
 }
+function dayKeyTZ(d) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+// « Aujourd'hui » / « Demain » pour un match proche, sinon la date courte.
+function relativeDayLabel(iso) {
+  if (!iso) return 'À programmer';
+  try {
+    const d = new Date(iso), now = new Date();
+    const kd = dayKeyTZ(d);
+    if (kd === dayKeyTZ(now)) return "Aujourd'hui";
+    if (kd === dayKeyTZ(new Date(now.getTime() + 86400000))) return 'Demain';
+    return fmtDate(iso);
+  } catch { return fmtDate(iso); }
+}
 function logoHtml(team, cls = 'mlogo') {
   const bg = team?.color || 'var(--teal)';
   if (team?.logo_url) {
@@ -697,35 +711,40 @@ function errorHtml() {
   return `<div class="error-banner">Impossible de charger les données pour le moment. Vérifiez votre connexion internet et réessayez.</div>`;
 }
 
+const CLOCK_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>';
+const PIN_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 function matchCardHtml(m) {
   const home = m.home_team, away = m.away_team;
   const live = m.status === 'live';
   const done = m.status === 'finished';
+  const sched = !live && !done;
   const homeWin = done && m.home_score > m.away_score;
   const awayWin = done && m.away_score > m.home_score;
   const comp = m.competition?.name || 'Match';
   const roundTxt = m.round ? ` · J${m.round}` : '';
+  const metaRight = sched ? relativeDayLabel(m.scheduled_at) : fmtDate(m.scheduled_at);
 
   let center;
-  if (live || done) {
-    center = `<div class="mscore"><span class="${awayWin ? 'loser' : ''}">${m.home_score ?? 0}</span><span class="sep">:</span><span class="${homeWin ? 'loser' : ''}">${m.away_score ?? 0}</span></div>`;
+  if (sched) {
+    center = `<div class="mnext"><span class="mvs">VS</span><span class="mkick">${CLOCK_ICO}${fmtTime(m.scheduled_at) || 'à venir'}</span></div>`;
   } else {
-    center = `<div class="mtime">${fmtTime(m.scheduled_at) || '—'}</div>`;
+    center = `<div class="mscore"><span class="${awayWin ? 'loser' : ''}">${m.home_score ?? 0}</span><span class="sep">:</span><span class="${homeWin ? 'loser' : ''}">${m.away_score ?? 0}</span></div>`;
   }
 
-  let status;
+  let status = '';
   if (live) status = `<span class="pill live">Q${m.current_quarter || 1} · En direct</span>`;
   else if (done) status = `<span class="pill done">Terminé</span>`;
-  else status = `<span class="pill next">${fmtDate(m.scheduled_at)}</span>`;
+  const venue = m.venue ? `<span class="mvenue">${PIN_ICO}${esc(m.venue)}</span>` : '';
+  const statusRow = (status || venue) ? `<div class="mstatus">${status}${venue}</div>` : '';
 
-  return `<a class="match" href="#match/${m.id}">
-    <div class="match-meta"><span>${esc(comp)}${roundTxt}</span><span>${live || done ? fmtDate(m.scheduled_at) : ''}</span></div>
+  return `<a class="match${sched ? ' is-next' : ''}" href="#match/${m.id}">
+    <div class="match-meta"><span>${esc(comp)}${roundTxt}</span><span>${esc(metaRight)}</span></div>
     <div class="match-body">
       <div class="mteam">${logoHtml(home)}<span class="mn">${esc(home?.name || 'Équipe')}</span></div>
       ${center}
       <div class="mteam away">${logoHtml(away)}<span class="mn">${esc(away?.name || 'Équipe')}</span></div>
     </div>
-    <div class="mstatus">${status}${m.venue ? `<span style="color:var(--dim);font-size:12px">${esc(m.venue)}</span>` : ''}</div>
+    ${statusRow}
   </a>`;
 }
 
