@@ -1917,3 +1917,24 @@ a.cs-item:hover { border-color: var(--accent); }
 .form-pill.N { background: var(--dim); }
 .win-txt { color: var(--green); }
 .loss-txt { color: var(--red); }
+
+/* événements du club + RSVP (feature 11) */
+.ev-list, .ev-manage-list { display: flex; flex-direction: column; gap: 10px; }
+.ev-card, .ev-manage { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.ev-main, .ev-manage { display: flex; gap: 12px; align-items: flex-start; }
+.ev-ic { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); display: grid; place-items: center; flex: none; }
+.ev-ic svg { width: 20px; height: 20px; color: var(--accent); }
+.ev-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ev-kind { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--accent); }
+.ev-title { font-size: 15px; font-weight: 700; }
+.ev-when { font-size: 12.5px; color: var(--muted); }
+.ev-desc { font-size: 12.5px; color: var(--dim); line-height: 1.45; margin-top: 4px; white-space: pre-wrap; }
+.ev-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ev-count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.ev-rsvp { display: inline-flex; gap: 8px; }
+.ev-btn { border: 1px solid var(--accent); background: none; color: var(--accent); font-size: 12.5px; font-weight: 700; padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.ev-btn.ghost { border-color: var(--border-strong); color: var(--muted); }
+.ev-btn.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.ev-btn.ghost.on { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+.ev-manage .ev-count { display: block; margin-top: 3px; }
+.ev-manage.past { opacity: .62; }

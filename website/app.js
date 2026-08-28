@@ -1149,7 +1149,8 @@ async function renderPlayer(id) {
 async function renderTeam(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
   const uid = session?.user?.id;
-  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), [])]);
+  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos, events, eventCounts, myRsvps] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), []), safe(listClubEvents(id), []), safe(getEventCounts(id), new Map()), uid ? safe(listMyEventRsvps(), new Map()) : Promise.resolve(new Map())]);
+  const upcomingEvents = events.filter((e) => tOf(e.starts_at) >= Date.now() - 3 * 3600 * 1000);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   let html = backBtnHtml();
   html += `<div class="profile">
@@ -1160,6 +1161,7 @@ async function renderTeam(id) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
   }
   if (t.presentation) html += `<div class="block"><div class="block-head"><h2>À propos</h2></div><div class="team-about">${esc(t.presentation).replace(/\n+/g, '<br>')}</div></div>`;
+  html += teamEventsHtml(upcomingEvents, eventCounts, myRsvps);
   if (players.length) {
     const rows = players.map((pl) => `<a class="roster-row" href="#player/${pl.id}"><span class="bx-num">${pl.number ?? ''}</span><span class="rr-name">${esc(pl.full_name)}</span><span class="rr-pos">${esc(pl.position || '')}</span></a>`).join('');
     html += `<div class="block"><div class="block-head"><h2>Effectif</h2></div><div class="roster">${rows}</div></div>`;
@@ -1172,8 +1174,9 @@ async function renderTeam(id) {
   if (posts.length) html += `<div class="block"><div class="block-head"><h2>Publications</h2></div>${posts.map((p) => postCardHtml(p, false)).join('')}</div>`;
   if (activePolls.length) html += `<div class="block"><div class="block-head"><h2>Sondages du club</h2></div><div id="teamPolls"></div></div>`;
   html += teamGalleryHtml(photos) + teamSupportersHtml(ldb) + teamPalmaresHtml(awards) + teamRecordsHtml(highs) + teamSponsorsHtml(sponsors);
-  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length && !photos.length && !t.presentation) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
+  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length && !photos.length && !t.presentation && !upcomingEvents.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
   view.innerHTML = html; wireBack();
+  wireTeamEvents(id, myRsvps);
   if (activePolls.length) { const slot = $('#teamPolls'); for (const p of activePolls) slot.appendChild(await pollCardEl(p, () => renderTeam(id))); }
   if (photos.length) { const urls = photos.map((p) => p.url); view.querySelectorAll('#teamGallery .photo-thumb').forEach((b) => b.addEventListener('click', () => openLightbox(urls, Number(b.dataset.i)))); }
   $('#teamShareBtn')?.addEventListener('click', () => openShareCard(teamShareSpec(t, standing)));
@@ -2981,6 +2984,7 @@ const RENDERERS = {
   'mon-club-sondages': renderClubPolls,
   'mon-club-sponsors': renderClubSponsors,
   'mon-club-galerie': renderClubGallery,
+  'mon-club-evenements': renderClubEvents,
   'inscription-club': renderInscriptionClub,
   'admin-registrations': renderAdminRegistrations,
 };
@@ -3344,6 +3348,7 @@ const CLUB_NAV_ICONS = {
   poll: '<path d="M6 20v-6M12 20V4M18 20v-9"/><path d="M3 20h18"/>',
   sponsor: '<path d="M3 7h18v12H3z"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>',
   gallery: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/>',
+  calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
 };
 function clubBackHtml() {
   return `<a class="back-btn" href="#mon-club">${icoSvg('<path d="M15 18l-6-6 6-6"/>')}Mon club</a>`;
@@ -3426,6 +3431,7 @@ async function renderMonClub() {
     ${clubNavRow('mon-club-sondages', CLUB_NAV_ICONS.poll, 'Sondages', 'Posez des questions à vos abonnés', CHEVRON)}
     ${clubNavRow('mon-club-sponsors', CLUB_NAV_ICONS.sponsor, 'Sponsors', 'Vos partenaires sur la page du club', CHEVRON)}
     ${clubNavRow('mon-club-galerie', CLUB_NAV_ICONS.gallery, 'Galerie photos', 'La vitrine photo de votre club', CHEVRON)}
+    ${clubNavRow('mon-club-evenements', CLUB_NAV_ICONS.calendar, 'Événements', 'Annoncez vos rendez-vous, gérez les inscrits', CHEVRON)}
   </div>`;
 
   // effectif
@@ -4821,6 +4827,143 @@ function printMatchSheet(club, m, players, avail) {
   if (!w) { toast('Autorisez les fenêtres pop-up pour imprimer'); return; }
   w.document.write(buildMatchSheetHtml(club, m, players, avail));
   w.document.close();
+}
+
+// =========================================================================
+// VAGUE 3 (feature 11) — Événements du club + RSVP. Le club annonce des
+// événements (match à domicile, portes ouvertes, détection…) ; les fans
+// s'inscrivent gratuitement (« Je viens » / « Peut-être »). Décomptes publics
+// via la fonction club_event_counts (agrégat, sans exposer les identités).
+// =========================================================================
+const EVENT_KINDS = [
+  { v: 'home_game', label: 'Match à domicile', ic: '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M9 5v15"/>' },
+  { v: 'open_house', label: 'Portes ouvertes', ic: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>' },
+  { v: 'tryout', label: 'Détection', ic: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
+  { v: 'other', label: 'Autre', ic: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>' },
+];
+function eventKind(v) { return EVENT_KINDS.find((k) => k.v === v) || EVENT_KINDS[3]; }
+function eventDateLabel(iso) { const d = fmtDate(iso), t = fmtTime(iso); return t ? d + ' · ' + t : d; }
+
+// -- données : événements & inscriptions
+async function listClubEvents(teamId, order) {
+  const { data, error } = await sb.from('club_events').select('*').eq('team_id', teamId).order('starts_at', { ascending: order !== 'desc' });
+  if (error) throw error;
+  return data ?? [];
+}
+async function getEventCounts(teamId) {
+  const { data, error } = await sb.rpc('club_event_counts', { p_team_id: teamId });
+  if (error) throw error;
+  const map = new Map();
+  (data ?? []).forEach((r) => map.set(r.event_id, { going: Number(r.going || 0), maybe: Number(r.maybe || 0) }));
+  return map;
+}
+async function listMyEventRsvps() {
+  if (!session?.user?.id) return new Map();
+  const { data } = await sb.from('club_event_rsvp').select('event_id, status'); // RLS : uniquement les miennes
+  const map = new Map(); (data ?? []).forEach((r) => map.set(r.event_id, r.status)); return map;
+}
+async function setEventRsvp(eventId, status) {
+  const uid = session?.user?.id; if (!uid) throw new Error('Connectez-vous');
+  const { error } = await sb.from('club_event_rsvp').upsert({ event_id: eventId, user_id: uid, status }, { onConflict: 'event_id,user_id' });
+  if (error) throw error;
+}
+async function removeEventRsvp(eventId) {
+  const uid = session?.user?.id; if (!uid) return;
+  const { error } = await sb.from('club_event_rsvp').delete().eq('event_id', eventId).eq('user_id', uid);
+  if (error) throw error;
+}
+async function createClubEvent(teamId, patch) {
+  const { error } = await sb.from('club_events').insert({ team_id: teamId, created_by: session?.user?.id, ...patch });
+  if (error) throw error;
+}
+async function updateClubEvent(id, patch) {
+  const { error } = await sb.from('club_events').update(patch).eq('id', id);
+  if (error) throw error;
+}
+async function deleteClubEvent(id) {
+  const { error } = await sb.from('club_events').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// -- bloc public (fiche équipe) : événements à venir + inscription
+function teamEventsHtml(events, counts, mine) {
+  if (!events.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Événements à venir</h2></div><div class="ev-list">${events.map((e) => {
+    const k = eventKind(e.kind);
+    const c = counts.get(e.id) || { going: 0, maybe: 0 };
+    const my = mine.get(e.id) || null;
+    const countTxt = `${c.going} inscrit${c.going > 1 ? 's' : ''}${c.maybe ? ` · ${c.maybe} peut-être` : ''}`;
+    return `<div class="ev-card"><div class="ev-main"><span class="ev-ic">${icoSvg(k.ic)}</span><div class="ev-body"><span class="ev-kind">${esc(k.label)}</span><b class="ev-title">${esc(e.title)}</b><span class="ev-when">${esc(eventDateLabel(e.starts_at))}${e.location ? ' · ' + esc(e.location) : ''}</span>${e.description ? `<span class="ev-desc">${esc(e.description)}</span>` : ''}</div></div><div class="ev-foot"><span class="ev-count">${countTxt}</span><div class="ev-rsvp"><button class="ev-btn${my === 'going' ? ' on' : ''}" data-rsvp="going" data-ev="${e.id}">Je viens</button><button class="ev-btn ghost${my === 'maybe' ? ' on' : ''}" data-rsvp="maybe" data-ev="${e.id}">Peut-être</button></div></div></div>`;
+  }).join('')}</div></div>`;
+}
+function wireTeamEvents(teamId, mine) {
+  view.querySelectorAll('[data-rsvp]').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!session?.user?.id) return openAuth('login');
+    const eventId = btn.dataset.ev, status = btn.dataset.rsvp;
+    try {
+      if (mine.get(eventId) === status) { await removeEventRsvp(eventId); toast('Inscription annulée'); }
+      else { await setEventRsvp(eventId, status); toast(status === 'going' ? 'Vous êtes inscrit !' : 'Noté : peut-être'); }
+      renderTeam(teamId);
+    } catch (e) { toast(errMsg(e)); }
+  }));
+}
+
+// -- sous-écran « Mon club » : gestion des événements
+async function renderClubEvents() {
+  view.innerHTML = clubBackHtml() + `<h1 class="view-title">Événements</h1><p class="view-sub">Annoncez vos rendez-vous ; les fans s'inscrivent gratuitement.</p><div id="evBody">${loadingHtml()}</div>`;
+  const b = $('#evBody'); if (!b) return;
+  const club = session ? await resolveMyClub() : null;
+  if (!club) { b.innerHTML = clubGateHtml(); return; }
+  const [events, counts] = await Promise.all([safe(listClubEvents(club.id), []), safe(getEventCounts(club.id), new Map())]);
+  const now = Date.now();
+  const rowsHtml = events.length
+    ? events.map((e) => {
+        const k = eventKind(e.kind), c = counts.get(e.id) || { going: 0, maybe: 0 };
+        const past = tOf(e.starts_at) < now;
+        return `<div class="ev-manage${past ? ' past' : ''}"><span class="ev-ic">${icoSvg(k.ic)}</span><div class="ev-body"><span class="ev-kind">${esc(k.label)}${past ? ' · passé' : ''}</span><b class="ev-title">${esc(e.title)}</b><span class="ev-when">${esc(eventDateLabel(e.starts_at))}${e.location ? ' · ' + esc(e.location) : ''}</span><span class="ev-count">${c.going} inscrit${c.going > 1 ? 's' : ''}${c.maybe ? ` · ${c.maybe} peut-être` : ''}</span></div><span class="rr-actions"><button class="mini-btn" data-edit="${e.id}" aria-label="Modifier">${icoSvg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>')}</button><button class="mini-del" data-del="${e.id}" aria-label="Supprimer">✕</button></span></div>`;
+      }).join('')
+    : `<p class="view-sub" style="font-size:12.5px;margin:0">Aucun événement pour le moment.</p>`;
+  b.innerHTML = `<div class="form-actions" style="margin:0 0 14px"><button class="btn" id="evAdd">+ Nouvel événement</button></div><div class="ev-manage-list">${rowsHtml}</div>`;
+  $('#evAdd').addEventListener('click', () => openClubEvent(club, null));
+  b.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openClubEvent(club, events.find((x) => x.id === btn.dataset.edit))));
+  b.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', async () => {
+    if (!window.confirm('Supprimer cet événement ?\nLes inscriptions seront perdues.')) return;
+    try { await deleteClubEvent(btn.dataset.del); toast('Événement supprimé'); renderClubEvents(); } catch (e) { toast(errMsg(e)); }
+  }));
+}
+function openClubEvent(club, ev) {
+  const editing = !!ev;
+  const fields = [
+    { k: 'title', type: 'text', label: 'Titre', required: true, placeholder: 'Ex. FGBB — Portes ouvertes' },
+    { k: 'kind', type: 'select', label: 'Type', options: EVENT_KINDS.map((x) => ({ value: x.v, label: x.label })), required: true, default: 'home_game' },
+    { k: 'starts_at', type: 'datetime', label: 'Date & heure', required: true },
+    { k: 'location', type: 'text', label: 'Lieu', placeholder: 'Ex. Palais des Sports de Conakry' },
+    { k: 'description', type: 'textarea', rows: 4, label: 'Description (optionnel)', placeholder: 'Programme, infos pratiques…' },
+    { k: 'cover_url', type: 'image', folder: 'events', label: 'Visuel (optionnel)' },
+  ];
+  view.innerHTML = `<a class="back-btn" id="evBack" role="button" tabindex="0">${icoSvg('<path d="M15 18l-6-6 6-6"/>')}Événements</a>
+    <h1 class="view-title">${editing ? 'Modifier' : 'Nouvel'} · événement</h1>
+    <form class="admin-form" id="evForm" novalidate>${fields.map((f) => adminFieldHtml(f, editing ? ev[f.k] : undefined)).join('')}
+      <div class="form-actions"><button type="button" class="btn btn-ghost" id="evCancel">Annuler</button><button type="submit" class="btn">${editing ? 'Enregistrer' : 'Publier'}</button></div>
+    </form>`;
+  $('#evBack').addEventListener('click', renderClubEvents);
+  $('#evBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); renderClubEvents(); } });
+  $('#evCancel').addEventListener('click', renderClubEvents);
+  const form = $('#evForm');
+  form.querySelectorAll('.image-field').forEach(wireImageField);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const patch = collectCrudForm(fields, form);
+    if (!patch.title) { toast('Le titre est obligatoire'); return; }
+    if (!patch.starts_at) { toast('La date est obligatoire'); return; }
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true; const o = btn.textContent; btn.textContent = 'Enregistrement…';
+    try {
+      const body = { title: patch.title, kind: patch.kind || 'other', starts_at: patch.starts_at, location: patch.location || null, description: patch.description || null, cover_url: patch.cover_url || null };
+      if (editing) await updateClubEvent(ev.id, body); else await createClubEvent(club.id, body);
+      toast(editing ? 'Événement modifié' : 'Événement publié');
+      renderClubEvents();
+    } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = o; }
+  });
 }
 
 // --------------------------------------------------------------- init
