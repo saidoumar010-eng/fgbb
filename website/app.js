@@ -1041,13 +1041,10 @@ async function renderMatchDetail(id) {
   if (!m) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
 
   const live = m.status === 'live', done = m.status === 'finished';
+  const scheduled = !live && !done;
   const homeWin = done && m.home_score > m.away_score;
   const awayWin = done && m.away_score > m.home_score;
   const scoreShown = live || done;
-  const statusPill = live
-    ? `<span class="pill live">Q${m.current_quarter || 1} · En direct</span>`
-    : done ? `<span class="pill done">Terminé</span>`
-    : `<span class="pill next">${fmtDate(m.scheduled_at)} · ${fmtTime(m.scheduled_at)}</span>`;
 
   let qs = '';
   if (Array.isArray(m.quarter_scores) && m.quarter_scores.length) {
@@ -1062,22 +1059,34 @@ async function renderMatchDetail(id) {
       </tbody></table></div>`;
   }
 
-  const meta = [m.competition?.name, m.round ? 'Journée ' + m.round : null, fmtDate(m.scheduled_at), m.venue].filter(Boolean).join(' · ');
+  // en-tête : compétition + journée seules (date/lieu passent dans la ligne d'infos,
+  // même langage visuel que les cartes de la liste des matchs — jour relatif, pastille
+  // horaire, icône de lieu).
+  const compLine = [m.competition?.name, m.round ? 'Journée ' + m.round : null].filter(Boolean).join(' · ') || 'Match';
+  let infoHtml;
+  if (scheduled) {
+    infoHtml = `<span class="md-kick">${CLOCK_ICO}<b>${esc(relativeDayLabel(m.scheduled_at))}</b>${fmtTime(m.scheduled_at) ? ' · ' + esc(fmtTime(m.scheduled_at)) : ''}</span>`;
+  } else if (live) {
+    infoHtml = `<span class="pill live">Q${m.current_quarter || 1} · En direct</span>`;
+  } else {
+    infoHtml = `<span class="pill done">Terminé</span><span class="md-when">${esc(fmtDate(m.scheduled_at))}</span>`;
+  }
+  const venueHtml = m.venue ? `<span class="mvenue">${PIN_ICO}${esc(m.venue)}</span>` : '';
 
   let html = backBtnHtml();
   html += `<div class="md-board">
-    <div class="md-meta">${esc(meta)}</div>
+    <div class="md-comp">${esc(compLine)}</div>
     <div class="md-teams">
       <a class="md-team" href="#team/${m.home_team_id}">${logoHtml(m.home_team, 'mlogo')}<span class="md-tn ${awayWin ? 'loser' : ''}">${esc(m.home_team?.name || '')}</span></a>
       <div class="md-center">
         ${scoreShown
           ? `<div class="md-score"><span class="${awayWin ? 'loser' : ''}">${m.home_score ?? 0}</span><span class="sep">:</span><span class="${homeWin ? 'loser' : ''}">${m.away_score ?? 0}</span></div>`
           : `<div class="md-vs">VS</div>`}
-        <div class="md-status">${statusPill}</div>
       </div>
       <a class="md-team" href="#team/${m.away_team_id}">${logoHtml(m.away_team, 'mlogo')}<span class="md-tn ${homeWin ? 'loser' : ''}">${esc(m.away_team?.name || '')}</span></a>
     </div>
     ${qs}
+    <div class="md-info">${infoHtml}${venueHtml}</div>
     <div class="md-actions">
       ${m.video_url ? `<a class="btn sm" href="${esc(m.video_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>Voir la vidéo</a>` : ''}
       ${scoreShown ? `<button class="btn btn-ghost sm" id="matchShareBtn">${SHARE_ICON}Partager le résultat</button>` : ''}

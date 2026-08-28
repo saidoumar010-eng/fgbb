@@ -1088,14 +1088,14 @@ a.featured:hover {
   border: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 26px;
 }
-.md-meta {
+.md-comp {
   text-align: center;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 12.5px;
-  font-weight: 600;
-  margin-bottom: 18px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 20px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 .md-teams {
   display: grid;
@@ -1115,6 +1115,10 @@ a.featured:hover {
   height: 64px;
   border-radius: 16px;
   font-size: 20px;
+  transition: transform 0.18s ease;
+}
+.md-team:hover .mlogo {
+  transform: translateY(-3px);
 }
 .md-tn {
   color: #fff;
@@ -1139,6 +1143,7 @@ a.featured:hover {
   color: #fff;
   letter-spacing: -0.02em;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .md-score .sep {
   color: rgba(255, 255, 255, 0.5);
@@ -1153,6 +1158,42 @@ a.featured:hover {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* ligne d'infos pratiques : quand / où — même langage que la carte de match */
+.md-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.md-info .mvenue {
+  color: rgba(255, 255, 255, 0.68);
+}
+.md-when {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.md-kick {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--accent-2);
+  font-weight: 800;
+  font-size: 14px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.md-kick svg {
+  width: 14px;
+  height: 14px;
+}
+
 .qscores {
   width: 100%;
   border-collapse: collapse;
@@ -1160,6 +1201,7 @@ a.featured:hover {
   font-size: 13px;
   color: #fff;
   max-width: 420px;
+  font-variant-numeric: tabular-nums;
 }
 .qscores th,
 .qscores td {
