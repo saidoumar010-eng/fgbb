@@ -198,6 +198,20 @@ body.app-body {
 }
 .block-head h2 {
   font-size: 21px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.bh-ic {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  flex: none;
+  display: inline-flex;
+}
+.bh-ic svg {
+  width: 100%;
+  height: 100%;
 }
 .block-head .more {
   font-size: 13.5px;
@@ -1352,7 +1366,7 @@ a.featured:hover {
 /* ============================ vues ajoutées (joueur, club, actu, plus, fan zone) */
 .profile {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 18px;
   margin-bottom: 26px;
 }
@@ -1374,6 +1388,58 @@ a.featured:hover {
 .profile-info h1 { font-size: clamp(24px, 4vw, 34px); }
 .profile-sub { color: var(--muted); font-size: 15px; margin-top: 6px; }
 .chip-link { display: inline-block; margin-top: 10px; color: var(--accent); font-weight: 600; font-size: 14px; }
+
+/* écusson du club — badge arrondi (au lieu d'un avatar circulaire), avec une
+   fine auréole dans la couleur du club pour personnaliser sans changer le
+   contraste du sigle/logo. */
+.crest-badge {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  font-weight: 800;
+  color: #fff;
+  overflow: hidden;
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.crest-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* bande d'identité du club (points/V/D/joués) — intégrée à l'en-tête plutôt
+   qu'un bloc séparé, pour lire le club comme une seule carte cohérente. */
+.club-stats {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 14px;
+  max-width: 380px;
+}
+.club-stat {
+  flex: 1 1 0;
+  min-width: 70px;
+  text-align: center;
+  padding: 10px 6px;
+  border-right: 1px solid var(--border);
+}
+.club-stat:last-child { border-right: 0; }
+.club-stat b {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.club-stat span {
+  color: var(--muted);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }

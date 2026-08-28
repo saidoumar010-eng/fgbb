@@ -44,6 +44,13 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]),
   );
 }
+// hex (#rrggbb) → rgba(...) ; repli sur l'accent de la marque si la couleur est absente/invalide.
+function hexA(hex, alpha) {
+  const h = String(hex || '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return `rgba(59, 214, 27, ${alpha})`;
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 function initials(name) {
   return (name || '?')
     .trim()
@@ -1130,6 +1137,11 @@ function statTile(v, label, isInt) {
   const val = isInt ? (v ?? 0) : Number(v ?? 0).toFixed(1);
   return `<div class="stat-tile"><b>${val}</b><span>${label}</span></div>`;
 }
+// cellule de la bande d'identité du club (points/V/D/joués) — plus compacte que .stat-tile,
+// pensée pour s'intégrer à l'en-tête plutôt que d'ouvrir un bloc séparé.
+function clubStat(v, label) {
+  return `<div class="club-stat"><b>${v ?? 0}</b><span>${esc(label)}</span></div>`;
+}
 async function renderPlayer(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
   const uid = session?.user?.id;
@@ -1181,28 +1193,27 @@ async function renderTeam(id) {
   const upcomingEvents = events.filter((e) => tOf(e.starts_at) >= Date.now() - 3 * 3600 * 1000);
   const badges = computeClubBadges(id, matches, allTeamStats);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
+  const crestColor = t.color || '#0E5F58';
+  const statsHtml = standing ? `<div class="club-stats">${clubStat(standing.points, 'Points')}${clubStat(standing.wins, 'Victoires')}${clubStat(standing.losses, 'Défaites')}${clubStat(standing.played, 'Joués')}</div>` : '';
   let html = backBtnHtml();
   html += `<div class="profile">
-    <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[labelOf(TEAM_GENDERS, t.gender), esc(t.city), t.founded_year ? 'Depuis ' + t.founded_year : null, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div><div class="profile-actions">${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}<button class="btn btn-ghost sm" id="teamShareBtn">${SHARE_ICON}Partager</button></div>${socialLinksHtml(t, TEAM_SOCIALS)}</div>
+    <div class="crest-badge" style="background:${esc(crestColor)};box-shadow:0 0 0 4px ${hexA(crestColor, 0.16)}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : `<span>${esc(t.short_name || initials(t.name))}</span>`}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[labelOf(TEAM_GENDERS, t.gender), esc(t.city), t.founded_year ? 'Depuis ' + t.founded_year : null, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${statsHtml}<div class="profile-actions">${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}<button class="btn btn-ghost sm" id="teamShareBtn">${SHARE_ICON}Partager</button></div>${socialLinksHtml(t, TEAM_SOCIALS)}</div>
   </div>`;
-  if (standing) {
-    html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
-  }
   html += teamBadgesHtml(badges);
-  if (t.presentation) html += `<div class="block"><div class="block-head"><h2>À propos</h2></div><div class="team-about">${esc(t.presentation).replace(/\n+/g, '<br>')}</div></div>`;
+  if (t.presentation) html += `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="9"/>')}À propos</h2></div><div class="team-about">${esc(t.presentation).replace(/\n+/g, '<br>')}</div></div>`;
   html += teamEventsHtml(upcomingEvents, eventCounts, myRsvps);
   if (players.length) {
     const rows = players.map((pl) => `<a class="roster-row" href="#player/${pl.id}"><span class="bx-num">${pl.number ?? ''}</span><span class="rr-name">${esc(pl.full_name)}</span><span class="rr-pos">${esc(pl.position || '')}</span></a>`).join('');
-    html += `<div class="block"><div class="block-head"><h2>Effectif</h2></div><div class="roster">${rows}</div></div>`;
+    html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>')}Effectif</h2></div><div class="roster">${rows}</div></div>`;
   }
   const live = matches.filter((m) => m.status === 'live');
   const upcoming = matches.filter((m) => m.status === 'scheduled');
   const done = matches.filter((m) => m.status === 'finished');
   const show = [...live, ...upcoming.slice(0, 5), ...done.slice(-5).reverse()];
-  if (show.length) html += `<div class="block"><div class="block-head"><h2>Matchs</h2></div>${show.map(matchCardHtml).join('')}</div>`;
-  if (posts.length) html += `<div class="block"><div class="block-head"><h2>Publications</h2></div>${posts.map((p) => postCardHtml(p, false)).join('')}</div>`;
-  if (activePolls.length) html += `<div class="block"><div class="block-head"><h2>Sondages du club</h2></div><div id="teamPolls"></div></div>`;
+  if (show.length) html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18M5 6c4 3 10 3 14 0M5 18c4-3 10-3 14 0"/>')}Matchs</h2></div>${show.map(matchCardHtml).join('')}</div>`;
+  if (posts.length) html += `<div class="block"><div class="block-head"><h2>${bhIco(CLUB_NAV_ICONS.megaphone)}Publications</h2></div>${posts.map((p) => postCardHtml(p, false)).join('')}</div>`;
+  if (activePolls.length) html += `<div class="block"><div class="block-head"><h2>${bhIco(CLUB_NAV_ICONS.poll)}Sondages du club</h2></div><div id="teamPolls"></div></div>`;
   html += teamGalleryHtml(photos) + teamSupportersHtml(ldb) + teamPalmaresHtml(awards) + teamRecordsHtml(highs) + teamSponsorsHtml(sponsors);
   if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length && !photos.length && !t.presentation && !upcomingEvents.length && !badges.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
   view.innerHTML = html; wireBack();
@@ -3231,6 +3242,10 @@ const POSITIONS_WEB = ['Meneur', 'Arrière', 'Ailier', 'Ailier fort', 'Pivot'];
 function icoSvg(inner) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
+// petite icône devant un titre de section (.block-head h2) — repère visuel, purement additif.
+function bhIco(path) {
+  return `<span class="bh-ic">${icoSvg(path)}</span>`;
+}
 function fmtFullDate(iso) {
   if (!iso) return '';
   try { return new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso)); }
@@ -4251,20 +4266,20 @@ async function deleteClubSponsor(id) {
 // -- blocs publics (fiche équipe)
 function teamSupportersHtml(rows) {
   if (!rows.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Classement des supporters</h2></div><div class="roster">${rows.map((r) => `<div class="roster-row${r.is_me ? ' me' : ''}"><span class="lrank" style="width:28px">${r.position_no}</span><span class="rr-name">${esc(r.name)}${r.is_me ? ' <b style="color:var(--accent)">(vous)</b>' : ''}</span><span class="rr-pos"><b style="color:var(--accent)">${r.points}</b> pts</span></div>`).join('')}</div></div>`;
+  return `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 14.2c2.8.3 5 2.7 5 5.8"/>')}Classement des supporters</h2></div><div class="roster">${rows.map((r) => `<div class="roster-row${r.is_me ? ' me' : ''}"><span class="lrank" style="width:28px">${r.position_no}</span><span class="rr-name">${esc(r.name)}${r.is_me ? ' <b style="color:var(--accent)">(vous)</b>' : ''}</span><span class="rr-pos"><b style="color:var(--accent)">${r.points}</b> pts</span></div>`).join('')}</div></div>`;
 }
 function teamPalmaresHtml(awards) {
   if (!awards.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Palmarès</h2></div><div class="roster">${awards.map((a) => `<div class="roster-row"><span class="award-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}</span><span class="rr-name"><b>${esc(AWARD_LABELS[a.kind] || 'Distinction')}</b>${a.player ? ' — ' + esc(a.player.full_name) : a.label ? ' — ' + esc(a.label) : ''}${a.note ? `<span style="display:block;color:var(--dim);font-size:12.5px">${esc(a.note)}</span>` : ''}</span><span class="rr-pos">${a.awarded_at ? fmtDate(a.awarded_at) : ''}</span></div>`).join('')}</div></div>`;
+  return `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}Palmarès</h2></div><div class="roster">${awards.map((a) => `<div class="roster-row"><span class="award-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}</span><span class="rr-name"><b>${esc(AWARD_LABELS[a.kind] || 'Distinction')}</b>${a.player ? ' — ' + esc(a.player.full_name) : a.label ? ' — ' + esc(a.label) : ''}${a.note ? `<span style="display:block;color:var(--dim);font-size:12.5px">${esc(a.note)}</span>` : ''}</span><span class="rr-pos">${a.awarded_at ? fmtDate(a.awarded_at) : ''}</span></div>`).join('')}</div></div>`;
 }
 function teamRecordsHtml(highs) {
   const recs = teamRecordsFrom(highs);
   if (!recs.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Records du club</h2></div><div class="rec-grid">${recs.map((c) => `<a class="rec-mini" href="#player/${c.row.player_id}"><span class="rec-mini-ic">${icoSvg(c.ic)}</span><span class="rec-mini-val">${c.row[c.key]}<small>${esc(c.unit)}</small></span><span class="rec-mini-lbl">${esc(c.label)}</span><span class="rec-mini-who">${esc(c.row.full_name)}</span></a>`).join('')}</div></div>`;
+  return `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/>')}Records du club</h2></div><div class="rec-grid">${recs.map((c) => `<a class="rec-mini" href="#player/${c.row.player_id}"><span class="rec-mini-ic">${icoSvg(c.ic)}</span><span class="rec-mini-val">${c.row[c.key]}<small>${esc(c.unit)}</small></span><span class="rec-mini-lbl">${esc(c.label)}</span><span class="rec-mini-who">${esc(c.row.full_name)}</span></a>`).join('')}</div></div>`;
 }
 function teamSponsorsHtml(sponsors) {
   if (!sponsors.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Partenaires du club</h2></div><div class="club-sponsors">${sponsors.map((s) => {
+  return `<div class="block"><div class="block-head"><h2>${bhIco(CLUB_NAV_ICONS.sponsor)}Partenaires du club</h2></div><div class="club-sponsors">${sponsors.map((s) => {
     const inner = s.logo_url ? `<img src="${esc(s.logo_url)}" alt="${esc(s.name)}" loading="lazy">` : `<span class="cs-name">${esc(s.name)}</span>`;
     const url = externalUrlWeb(s.url);
     return url ? `<a class="cs-item" href="${esc(url)}" target="_blank" rel="noopener nofollow">${inner}</a>` : `<span class="cs-item">${inner}</span>`;
@@ -4388,7 +4403,7 @@ async function deleteTeamPhoto(id) {
 // -- bloc public : galerie (fiche équipe) ; câblage lightbox fait par renderTeam
 function teamGalleryHtml(photos) {
   if (!photos.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Galerie</h2></div><div class="photo-grid" id="teamGallery">${photos.map((p, i) => `<button class="photo-thumb" data-i="${i}"><img src="${esc(p.url)}" alt="${esc(p.caption || '')}" loading="lazy"></button>`).join('')}</div></div>`;
+  return `<div class="block"><div class="block-head"><h2>${bhIco(CLUB_NAV_ICONS.gallery)}Galerie</h2></div><div class="photo-grid" id="teamGallery">${photos.map((p, i) => `<button class="photo-thumb" data-i="${i}"><img src="${esc(p.url)}" alt="${esc(p.caption || '')}" loading="lazy"></button>`).join('')}</div></div>`;
 }
 
 // -- sous-écran « Mon club » : gestion de la galerie
@@ -4768,9 +4783,10 @@ async function renderScouting(teamId) {
   ]);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   const form = teamFormFrom(matches, teamId);
+  const scoutColor = t.color || '#0E5F58';
   let html = backBtnHtml();
   html += `<div class="profile">
-    <div class="profile-ava" style="border-radius:16px;background:${esc(t.color || 'var(--teal)')}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : esc(t.short_name || initials(t.name))}</div>
+    <div class="crest-badge" style="background:${esc(scoutColor)};box-shadow:0 0 0 4px ${hexA(scoutColor, 0.16)}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : `<span>${esc(t.short_name || initials(t.name))}</span>`}</div>
     <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">Scouting · aperçu avant match</div></div>
   </div>`;
   // forme récente
@@ -4918,7 +4934,7 @@ async function deleteClubEvent(id) {
 // -- bloc public (fiche équipe) : événements à venir + inscription
 function teamEventsHtml(events, counts, mine) {
   if (!events.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Événements à venir</h2></div><div class="ev-list">${events.map((e) => {
+  return `<div class="block"><div class="block-head"><h2>${bhIco(CLUB_NAV_ICONS.calendar)}Événements à venir</h2></div><div class="ev-list">${events.map((e) => {
     const k = eventKind(e.kind);
     const c = counts.get(e.id) || { going: 0, maybe: 0 };
     const my = mine.get(e.id) || null;
@@ -5060,7 +5076,7 @@ function computeClubBadges(teamId, matches, allStats) {
 }
 function teamBadgesHtml(badges) {
   if (!badges.length) return '';
-  return `<div class="block"><div class="block-head"><h2>Trophées & distinctions</h2></div><div class="badge-grid">${badges.map((b) => `<div class="badge-card"><span class="badge-ic">${icoSvg(b.ic)}</span><b class="badge-lbl">${esc(b.label)}</b><span class="badge-detail">${b.detail}</span></div>`).join('')}</div></div>`;
+  return `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M3 7l4 4 5-6 5 6 4-4v11H3z"/>')}Trophées & distinctions</h2></div><div class="badge-grid">${badges.map((b) => `<div class="badge-card"><span class="badge-ic">${icoSvg(b.ic)}</span><b class="badge-lbl">${esc(b.label)}</b><span class="badge-detail">${b.detail}</span></div>`).join('')}</div></div>`;
 }
 
 // --------------------------------------------------------------- init
