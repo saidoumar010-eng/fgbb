@@ -1938,3 +1938,11 @@ a.cs-item:hover { border-color: var(--accent); }
 .ev-btn.ghost.on { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 .ev-manage .ev-count { display: block; margin-top: 3px; }
 .ev-manage.past { opacity: .62; }
+
+/* trophées & badges du club (feature 12) */
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.badge-card { display: flex; flex-direction: column; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.badge-ic { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); display: grid; place-items: center; margin-bottom: 5px; }
+.badge-ic svg { width: 19px; height: 19px; color: var(--accent); }
+.badge-lbl { font-size: 13.5px; font-weight: 700; }
+.badge-detail { font-size: 12px; color: var(--muted); line-height: 1.4; }

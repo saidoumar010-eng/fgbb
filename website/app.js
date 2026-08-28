@@ -1149,8 +1149,9 @@ async function renderPlayer(id) {
 async function renderTeam(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
   const uid = session?.user?.id;
-  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos, events, eventCounts, myRsvps] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), []), safe(listClubEvents(id), []), safe(getEventCounts(id), new Map()), uid ? safe(listMyEventRsvps(), new Map()) : Promise.resolve(new Map())]);
+  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos, events, eventCounts, myRsvps, allTeamStats] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), []), safe(listClubEvents(id), []), safe(getEventCounts(id), new Map()), uid ? safe(listMyEventRsvps(), new Map()) : Promise.resolve(new Map()), safe(listAllTeamStats(), [])]);
   const upcomingEvents = events.filter((e) => tOf(e.starts_at) >= Date.now() - 3 * 3600 * 1000);
+  const badges = computeClubBadges(id, matches, allTeamStats);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   let html = backBtnHtml();
   html += `<div class="profile">
@@ -1160,6 +1161,7 @@ async function renderTeam(id) {
   if (standing) {
     html += `<div class="block"><div class="stat-grid">${statTile(standing.points, 'Points', true)}${statTile(standing.wins, 'Victoires', true)}${statTile(standing.losses, 'Défaites', true)}${statTile(standing.played, 'Joués', true)}</div></div>`;
   }
+  html += teamBadgesHtml(badges);
   if (t.presentation) html += `<div class="block"><div class="block-head"><h2>À propos</h2></div><div class="team-about">${esc(t.presentation).replace(/\n+/g, '<br>')}</div></div>`;
   html += teamEventsHtml(upcomingEvents, eventCounts, myRsvps);
   if (players.length) {
@@ -1174,7 +1176,7 @@ async function renderTeam(id) {
   if (posts.length) html += `<div class="block"><div class="block-head"><h2>Publications</h2></div>${posts.map((p) => postCardHtml(p, false)).join('')}</div>`;
   if (activePolls.length) html += `<div class="block"><div class="block-head"><h2>Sondages du club</h2></div><div id="teamPolls"></div></div>`;
   html += teamGalleryHtml(photos) + teamSupportersHtml(ldb) + teamPalmaresHtml(awards) + teamRecordsHtml(highs) + teamSponsorsHtml(sponsors);
-  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length && !photos.length && !t.presentation && !upcomingEvents.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
+  if (!players.length && !matches.length && !standing && !posts.length && !activePolls.length && !ldb.length && !awards.length && !highs.length && !sponsors.length && !photos.length && !t.presentation && !upcomingEvents.length && !badges.length) html += emptyHtml('Fiche à compléter', 'Les informations de ce club seront publiées prochainement.', 'ball');
   view.innerHTML = html; wireBack();
   wireTeamEvents(id, myRsvps);
   if (activePolls.length) { const slot = $('#teamPolls'); for (const p of activePolls) slot.appendChild(await pollCardEl(p, () => renderTeam(id))); }
@@ -4964,6 +4966,73 @@ function openClubEvent(club, ev) {
       renderClubEvents();
     } catch (err) { toast(errMsg(err)); btn.disabled = false; btn.textContent = o; }
   });
+}
+
+// =========================================================================
+// VAGUE 4 (feature 12) — Trophées & badges du club. Distinctions calculées
+// automatiquement à partir des matchs et des statistiques (séries, forteresse
+// à domicile, plus large victoire, meilleure attaque/défense du championnat).
+// Aucune donnée nouvelle : tout est dérivé de l'existant (matches +
+// team_season_stats). Les distinctions décernées par la fédération restent
+// gérées via la table awards (bloc « Palmarès »).
+// =========================================================================
+async function listAllTeamStats() {
+  const { data, error } = await sb.from('team_season_stats').select('team_id, competition_id, games, wins, losses, pts_for, pts_against, diff');
+  if (error) throw error;
+  return data ?? [];
+}
+function computeClubBadges(teamId, matches, allStats) {
+  const B = {
+    flame: '<path d="M12 2C9 6 8 9 12 13c4-4 3-7 0-11z"/><path d="M6.5 12.5a5.5 5.5 0 1011 0c0-2-1-3.6-2.2-4.6"/>',
+    trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    bolt: '<path d="M13 2L3 14h7l-1 8 10-12h-7z"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+    crown: '<path d="M3 7l4 4 5-6 5 6 4-4v11H3z"/>',
+  };
+  const badges = [];
+  const finished = (matches || []).filter((m) => m.status === 'finished').sort((a, b) => tOf(a.scheduled_at) - tOf(b.scheduled_at));
+  const results = finished.map((m) => {
+    const home = m.home_team_id === teamId;
+    const my = home ? m.home_score : m.away_score;
+    const opp = home ? m.away_score : m.home_score;
+    return { win: my > opp, margin: my - opp, home, oppTeam: home ? m.away_team : m.home_team };
+  });
+  // série en cours
+  let cur = 0; for (let i = results.length - 1; i >= 0; i--) { if (results[i].win) cur++; else break; }
+  if (cur >= 2) badges.push({ ic: B.flame, label: 'En feu', detail: `${cur} victoires de suite` });
+  // meilleure série de la saison
+  let best = 0, run = 0; results.forEach((r) => { if (r.win) { run++; best = Math.max(best, run); } else run = 0; });
+  if (best >= 3) badges.push({ ic: B.trend, label: 'Série record', detail: `${best} victoires consécutives` });
+  // forteresse (invaincu à domicile)
+  const homeGames = results.filter((r) => r.home);
+  if (homeGames.length >= 2 && homeGames.every((r) => r.win)) badges.push({ ic: B.shield, label: 'Forteresse', detail: `Invaincu à domicile (${homeGames.length} matchs)` });
+  // plus large victoire
+  const wins = results.filter((r) => r.win);
+  if (wins.length) {
+    const bw = wins.slice().sort((a, b) => b.margin - a.margin)[0];
+    if (bw.margin >= 15) badges.push({ ic: B.bolt, label: 'Démonstration', detail: `+${bw.margin} contre ${esc(bw.oppTeam?.short_name || bw.oppTeam?.name || 'un adversaire')}` });
+  }
+  // classements du championnat (meilleure attaque / défense / différentiel)
+  const stats = allStats || [];
+  const myRows = stats.filter((s) => s.team_id === teamId && Number(s.games) >= 2);
+  const myStat = myRows.slice().sort((a, b) => Number(b.games) - Number(a.games))[0] || null;
+  if (myStat) {
+    const league = stats.filter((s) => s.competition_id === myStat.competition_id && Number(s.games) >= 2);
+    if (league.length >= 2) {
+      if (league.slice().sort((a, b) => Number(b.pts_for) - Number(a.pts_for))[0].team_id === teamId)
+        badges.push({ ic: B.target, label: 'Meilleure attaque', detail: `${round1(Number(myStat.pts_for))} pts marqués/match` });
+      if (league.slice().sort((a, b) => Number(a.pts_against) - Number(b.pts_against))[0].team_id === teamId)
+        badges.push({ ic: B.shield, label: 'Meilleure défense', detail: `${round1(Number(myStat.pts_against))} pts encaissés/match` });
+      if (league.slice().sort((a, b) => Number(b.diff) - Number(a.diff))[0].team_id === teamId)
+        badges.push({ ic: B.crown, label: 'Meilleur différentiel', detail: `+${round1(Number(myStat.diff))} de moyenne` });
+    }
+  }
+  return badges;
+}
+function teamBadgesHtml(badges) {
+  if (!badges.length) return '';
+  return `<div class="block"><div class="block-head"><h2>Trophées & distinctions</h2></div><div class="badge-grid">${badges.map((b) => `<div class="badge-card"><span class="badge-ic">${icoSvg(b.ic)}</span><b class="badge-lbl">${esc(b.label)}</b><span class="badge-detail">${b.detail}</span></div>`).join('')}</div></div>`;
 }
 
 // --------------------------------------------------------------- init
