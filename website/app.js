@@ -1975,7 +1975,7 @@ async function renderAdminPlayoffs() {
   const [teams, matches] = await Promise.all([safe(listTeams(), []), safe(listPlayoffMatches(adminComp), [])]);
   const teamOpts = '<option value="">— Choisir —</option>' + teams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
   const list = matches.length
-    ? matches.map((m) => `<div class="roster-row"><span class="rr-name"><b>${playoffRoundLabel(m.playoff_round)}</b> · ${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}</span><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></div>`).join('')
+    ? matches.map(playoffAdminRowHtml).join('')
     : '<p class="view-sub" style="padding:6px 2px">Aucun match de playoff pour l\'instant.</p>';
   $('#apoBody').innerHTML = `
     <form class="social-form" id="poForm">
@@ -2003,6 +2003,10 @@ async function renderAdminPlayoffs() {
       renderAdminPlayoffs();
     } catch (err) { toast(errMsg(err)); btn.disabled = false; }
   });
+  const poBackOpts = { back: renderAdminPlayoffs, backLabel: 'Playoffs' };
+  $('#apoBody').querySelectorAll('[data-box]').forEach((b) => b.addEventListener('click', () => openBoxScore(b.dataset.box, poBackOpts)));
+  $('#apoBody').querySelectorAll('[data-officials]').forEach((b) => b.addEventListener('click', () => openMatchOfficials(b.dataset.officials, poBackOpts)));
+  $('#apoBody').querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openMatchEdit(b.dataset.edit, poBackOpts)));
   $('#apoBody').querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
     try { await deleteMatch(b.dataset.del); toast('Match supprimé'); renderAdminPlayoffs(); }
@@ -2016,10 +2020,17 @@ function matchStatusBadge(m) {
   if (m.status === 'finished') return '<span class="pill done">Terminé</span>';
   return `<span class="pill next">${m.scheduled_at ? fmtDate(m.scheduled_at) + ' · ' + fmtTime(m.scheduled_at) : 'À programmer'}</span>`;
 }
+function matchAdminActionsHtml(m) {
+  return `<span class="alr-actions"><button class="mini-btn" data-box="${m.id}" aria-label="Feuille de match" title="Feuille de match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3H8z"/><path d="M6 4H5v16h14V4h-1M8 12h8M8 16h5"/></svg></button><button class="mini-btn" data-officials="${m.id}" aria-label="Officiels" title="Officiels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="13" r="5"/><path d="M14 11l7-3-1.2 4.2"/></svg></button><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span>`;
+}
 function matchAdminRowHtml(m) {
   const score = (m.status === 'finished' || m.status === 'live') ? ` <b>${m.home_score ?? 0}–${m.away_score ?? 0}</b>` : '';
   const jour = m.round != null ? 'J' + esc(String(m.round)) + ' · ' : '';
-  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span><span class="alr-actions"><button class="mini-btn" data-box="${m.id}" aria-label="Feuille de match" title="Feuille de match"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3H8z"/><path d="M6 4H5v16h14V4h-1M8 12h8M8 16h5"/></svg></button><button class="mini-btn" data-officials="${m.id}" aria-label="Officiels" title="Officiels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="13" r="5"/><path d="M14 11l7-3-1.2 4.2"/></svg></button><button class="mini-btn" data-edit="${m.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button><button class="mini-del" data-del="${m.id}" aria-label="Supprimer">✕</button></span></div>`;
+  return `<div class="roster-row"><span class="rr-name">${jour}${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span>${matchAdminActionsHtml(m)}</div>`;
+}
+function playoffAdminRowHtml(m) {
+  const score = (m.status === 'finished' || m.status === 'live') ? ` <b>${m.home_score ?? 0}–${m.away_score ?? 0}</b>` : '';
+  return `<div class="roster-row"><span class="rr-name"><b>${esc(playoffRoundLabel(m.playoff_round))}</b> · ${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${score}<br><span class="rr-sub">${matchStatusBadge(m)}</span></span>${matchAdminActionsHtml(m)}</div>`;
 }
 async function renderAdminMatches() {
   if (!isAdmin()) return renderAdminDenied();
@@ -2075,8 +2086,10 @@ async function renderAdminMatches() {
     catch (err) { toast(errMsg(err)); b.disabled = false; }
   }));
 }
-async function openMatchEdit(id) {
+async function openMatchEdit(id, opts = {}) {
   if (!isAdmin()) return renderAdminDenied();
+  const backFn = opts.back || renderAdminMatches;
+  const backLabel = opts.backLabel || 'Matchs';
   view.innerHTML = adminBackHtml() + loadingHtml();
   const [m, teams] = await Promise.all([safe(getMatch(id), null), safe(listTeams(), [])]);
   if (!m) { view.innerHTML = adminBackHtml() + errorHtml(); return; }
@@ -2084,7 +2097,7 @@ async function openMatchEdit(id) {
   const dtLocal = m.scheduled_at ? m.scheduled_at.slice(0, 16) : '';
   const STATUSES = [['scheduled', 'À venir'], ['live', 'En direct'], ['finished', 'Terminé']];
   view.innerHTML = `
-    <a class="back-btn" id="amBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Matchs</a>
+    <a class="back-btn" id="amBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>${esc(backLabel)}</a>
     <h1 class="view-title">Modifier le match</h1>
     <form class="admin-form" id="amEdit" novalidate>
       <div class="field"><label>Journée (optionnel)</label><input name="round" value="${m.round != null ? esc(String(m.round)) : ''}" inputmode="numeric" placeholder="Ex. 1" /></div>
@@ -2099,7 +2112,7 @@ async function openMatchEdit(id) {
       </div>
       <div class="form-actions"><button type="button" class="btn btn-ghost" id="amCancel">Annuler</button><button type="submit" class="btn">Enregistrer</button></div>
     </form>`;
-  const back = () => renderAdminMatches();
+  const back = backFn;
   $('#amBack').addEventListener('click', back);
   $('#amBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
   $('#amCancel').addEventListener('click', back);
@@ -2124,7 +2137,7 @@ async function openMatchEdit(id) {
         away_score: parseInt(fd.get('away_score'), 10) || 0,
       });
       toast('Match mis à jour');
-      renderAdminMatches();
+      backFn();
     } catch (err) { toast(errMsg(err)); btn.disabled = false; }
   });
 }
@@ -2155,8 +2168,10 @@ function boxTeamHtml(team, players, byPlayer) {
   return `<div class="block"><div class="block-head"><h2>${esc(team?.name || '')}</h2></div>
     <div class="boxscore-wrap"><table class="boxscore"><thead><tr><th class="bs-name">Joueur</th>${BOX_COLS.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
-async function openBoxScore(matchId) {
+async function openBoxScore(matchId, opts = {}) {
   if (!isAdmin()) return renderAdminDenied();
+  const backFn = opts.back || renderAdminMatches;
+  const backLabel = opts.backLabel || 'Matchs';
   view.innerHTML = adminBackHtml() + loadingHtml();
   const m = await safe(getMatch(matchId), null);
   if (!m) { view.innerHTML = adminBackHtml() + errorHtml(); return; }
@@ -2171,13 +2186,13 @@ async function openBoxScore(matchId) {
   homeP.forEach((p) => { teamOf[p.id] = m.home_team_id; });
   awayP.forEach((p) => { teamOf[p.id] = m.away_team_id; });
   view.innerHTML = `
-    <a class="back-btn" id="bsBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Matchs</a>
+    <a class="back-btn" id="bsBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>${esc(backLabel)}</a>
     <h1 class="view-title">Feuille de match</h1>
     <p class="view-sub">${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${m.status === 'finished' ? ` · ${m.home_score}–${m.away_score}` : ''}. Saisissez les statistiques par joueur, puis enregistrez.</p>
     ${boxTeamHtml(m.home_team, homeP, byPlayer)}
     ${boxTeamHtml(m.away_team, awayP, byPlayer)}
     <div class="form-actions"><button class="btn btn-ghost" id="bsBack2" type="button">Retour</button><button class="btn" id="bsSave" type="button">Enregistrer la feuille</button></div>`;
-  const back = () => renderAdminMatches();
+  const back = backFn;
   $('#bsBack').addEventListener('click', back);
   $('#bsBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
   $('#bsBack2').addEventListener('click', back);
@@ -2799,8 +2814,10 @@ async function listRefereesLite() { const { data, error } = await sb.from('refer
 async function getMatchOfficials(matchId) { const { data, error } = await sb.from('match_officials').select('*, referee:referees(full_name)').eq('match_id', matchId); if (error) throw error; return data ?? []; }
 async function addMatchOfficial(row) { const { error } = await sb.from('match_officials').upsert(row, { onConflict: 'match_id,referee_id' }); if (error) throw error; }
 async function removeMatchOfficial(matchId, refereeId) { const { error } = await sb.from('match_officials').delete().eq('match_id', matchId).eq('referee_id', refereeId); if (error) throw error; }
-async function openMatchOfficials(matchId) {
+async function openMatchOfficials(matchId, opts = {}) {
   if (!isAdmin()) return renderAdminDenied();
+  const backFn = opts.back || renderAdminMatches;
+  const backLabel = opts.backLabel || 'Matchs';
   view.innerHTML = adminBackHtml() + loadingHtml();
   const [m, referees, officials] = await Promise.all([safe(getMatch(matchId), null), safe(listRefereesLite(), []), safe(getMatchOfficials(matchId), [])]);
   if (!m) { view.innerHTML = adminBackHtml() + errorHtml(); return; }
@@ -2810,7 +2827,7 @@ async function openMatchOfficials(matchId) {
     ? `<div class="roster">${officials.map((o) => `<div class="roster-row"><span class="rr-name">${esc(o.referee?.full_name || '?')}<br><span class="rr-sub">${esc(labelOf(OFFICIAL_ROLES, o.role))}</span></span><button class="mini-del" data-del="${o.referee_id}" aria-label="Retirer">✕</button></div>`).join('')}</div>`
     : '<p class="view-sub" style="padding:6px 2px">Aucun officiel désigné.</p>';
   view.innerHTML = `
-    <a class="back-btn" id="moBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Matchs</a>
+    <a class="back-btn" id="moBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>${esc(backLabel)}</a>
     <h1 class="view-title">Officiels du match</h1>
     <p class="view-sub">${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}. Arbitres, délégués et table de marque.${referees.length ? '' : ' Ajoutez d’abord des arbitres dans « Arbitres ».'}</p>
     <form class="social-form" id="moForm">
@@ -2819,7 +2836,7 @@ async function openMatchOfficials(matchId) {
       <button class="btn" type="submit">Désigner</button>
     </form>
     <div class="block" style="margin-top:20px"><div class="block-head"><h2>Désignés</h2></div>${list}</div>`;
-  const back = () => renderAdminMatches();
+  const back = backFn;
   $('#moBack').addEventListener('click', back);
   $('#moBack').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); back(); } });
   const form = $('#moForm');
@@ -2828,12 +2845,12 @@ async function openMatchOfficials(matchId) {
     const fd = new FormData(form); const ref = fd.get('referee_id');
     if (!ref) return toast('Choisissez un officiel');
     const btn = form.querySelector('button'); btn.disabled = true;
-    try { await addMatchOfficial({ match_id: matchId, referee_id: ref, role: fd.get('role') }); toast('Officiel désigné'); openMatchOfficials(matchId); }
+    try { await addMatchOfficial({ match_id: matchId, referee_id: ref, role: fd.get('role') }); toast('Officiel désigné'); openMatchOfficials(matchId, opts); }
     catch (err) { toast(errMsg(err)); btn.disabled = false; }
   });
   view.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     b.disabled = true;
-    try { await removeMatchOfficial(matchId, b.dataset.del); toast('Officiel retiré'); openMatchOfficials(matchId); }
+    try { await removeMatchOfficial(matchId, b.dataset.del); toast('Officiel retiré'); openMatchOfficials(matchId, opts); }
     catch (err) { toast(errMsg(err)); b.disabled = false; }
   }));
 }
