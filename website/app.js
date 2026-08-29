@@ -1941,9 +1941,77 @@ async function renderAdminSocials() {
   }
 }
 
+// --- Tableau des playoffs (bracket) --------------------------------------
+const PO_TROPHY = '<svg class="po-tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>';
+const PO_MEDAL = '<svg class="po-mico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14.5" r="6"/><path d="M8.5 8.5L6 3M15.5 8.5L18 3M9.5 3h5"/></svg>';
+// Côté vainqueur d'un match terminé ('home' | 'away' | null si non joué / égalité).
+function playoffWinnerSide(m) {
+  if (m.status !== 'finished') return null;
+  const h = m.home_score ?? 0, a = m.away_score ?? 0;
+  if (h > a) return 'home';
+  if (a > h) return 'away';
+  return null;
+}
+function playoffTeamRow(team, score, isWinner, showScore) {
+  return `<span class="po-team${isWinner ? ' win' : ''}">${logoHtml(team, 'po-logo')}<span class="po-nm">${esc(team?.name || 'À déterminer')}</span><span class="po-sc">${showScore ? (score ?? 0) : ''}</span></span>`;
+}
+// Cellule compacte du tableau : deux équipes, score, vainqueur mis en avant.
+function playoffCellHtml(m) {
+  const live = m.status === 'live', done = m.status === 'finished';
+  const show = live || done;
+  const win = playoffWinnerSide(m);
+  let foot;
+  if (live) foot = `<span class="po-live">EN DIRECT · Q${m.current_quarter || 1}</span>`;
+  else if (done) foot = `<span class="po-foot">Terminé · ${esc(fmtDate(m.scheduled_at))}</span>`;
+  else foot = `<span class="po-foot">${m.scheduled_at ? esc(relativeDayLabel(m.scheduled_at)) + ' · ' + esc(fmtTime(m.scheduled_at)) : 'À programmer'}</span>`;
+  const venue = (!show && m.venue) ? `<span class="po-venue">${PIN_ICO}${esc(m.venue)}</span>` : '';
+  return `<a class="po-cell${done ? ' is-done' : ''}${live ? ' is-live' : ''}" href="#match/${m.id}">
+    ${playoffTeamRow(m.home_team, m.home_score, win === 'home', show)}
+    ${playoffTeamRow(m.away_team, m.away_score, win === 'away', show)}
+    <span class="po-cell-foot">${foot}${venue}</span>
+  </a>`;
+}
+function playoffColumnHtml(key, list) {
+  const slots = list.map((m) => `<div class="po-slot">${playoffCellHtml(m)}</div>`).join('');
+  return `<div class="po-round" data-round="${esc(key)}"><div class="po-round-head">${esc(playoffRoundLabel(key))}</div><div class="po-round-body">${slots}</div></div>`;
+}
+// Assemble le tableau : colonnes quarts → demies → finale → champion (+ 3e place).
+function playoffBracketHtml(matches) {
+  const byRound = {};
+  matches.forEach((m) => { const k = m.playoff_round || 'autre'; (byRound[k] = byRound[k] || []).push(m); });
+  const path = ['quart', 'demi', 'finale'].filter((k) => byRound[k] && byRound[k].length);
+
+  const finale = (byRound.finale || [])[0];
+  let champ = null;
+  if (finale && finale.status === 'finished') {
+    const w = playoffWinnerSide(finale);
+    champ = w === 'home' ? finale.home_team : w === 'away' ? finale.away_team : null;
+  }
+
+  let out = '';
+  if (champ) out += `<div class="po-banner">${PO_TROPHY}<span>Champion&nbsp;— <b>${esc(champ.name)}</b></span></div>`;
+
+  if (path.length) {
+    const cols = path.map((k) => playoffColumnHtml(k, byRound[k])).join('');
+    const champInner = champ
+      ? `${logoHtml(champ, 'po-logo lg')}<b class="po-champ-nm">${esc(champ.name)}</b>`
+      : '<span class="po-champ-tbd">À déterminer</span>';
+    const champCol = `<div class="po-round po-champ-col"><div class="po-round-head">Champion</div><div class="po-round-body"><div class="po-slot"><div class="po-champ${champ ? ' is-set' : ''}">${PO_TROPHY}${champInner}</div></div></div></div>`;
+    out += `<div class="po-scroll"><div class="po-bracket">${cols}${champCol}</div></div><p class="po-hint">Faites défiler horizontalement pour voir tout le tableau.</p>`;
+  }
+
+  if (byRound.petite_finale && byRound.petite_finale.length) {
+    out += `<div class="po-extra"><div class="po-extra-head">${PO_MEDAL}Match pour la 3ᵉ place</div><div class="po-extra-body">${byRound.petite_finale.map(playoffCellHtml).join('')}</div></div>`;
+  }
+  if (byRound.autre && byRound.autre.length) {
+    out += `<div class="po-extra"><div class="po-extra-head">Autres rencontres</div><div class="po-extra-body">${byRound.autre.map(playoffCellHtml).join('')}</div></div>`;
+  }
+  return out || emptyHtml('Playoffs à venir', 'Le tableau final apparaîtra une fois les matchs programmés.', 'trophy');
+}
+
 let poComp;
 async function renderPlayoffs() {
-  view.innerHTML = `<h1 class="view-title">Playoffs</h1><p class="view-sub">Le tableau final : les 4 premiers de chaque poule.</p><div id="poFilter"></div><div id="poBody">${loadingHtml()}</div>`;
+  view.innerHTML = `<h1 class="view-title">Playoffs</h1><p class="view-sub">Le tableau final : la route vers le titre, des quarts jusqu'au sacre du champion.</p><div id="poFilter"></div><div id="poBody">${loadingHtml()}</div>`;
   const comps = await safe(listCompetitions(), []);
   if (poComp === undefined || (comps.length && !comps.find((c) => c.id === poComp))) poComp = comps.length ? comps[0].id : null;
   const f = $('#poFilter');
@@ -1956,11 +2024,10 @@ async function renderPlayoffs() {
   const body = $('#poBody');
   if (!body) return;
   if (!matches.length) { body.innerHTML = emptyHtml('Playoffs à venir', 'Le tableau final apparaîtra une fois les matchs programmés.', 'trophy'); return; }
-  const byRound = {};
-  matches.forEach((m) => { const k = m.playoff_round || 'autre'; (byRound[k] = byRound[k] || []).push(m); });
-  let html = PLAYOFF_ROUNDS.filter((r) => byRound[r.key]).map((r) => `<div class="block"><div class="block-head"><h2>${r.label}</h2></div>${byRound[r.key].map(matchCardHtml).join('')}</div>`).join('');
-  if (byRound.autre) html += `<div class="block"><div class="block-head"><h2>Autres matchs</h2></div>${byRound.autre.map(matchCardHtml).join('')}</div>`;
-  body.innerHTML = html;
+  body.innerHTML = playoffBracketHtml(matches);
+  // N'afficher l'indication de défilement que si le tableau déborde réellement.
+  const sc = body.querySelector('.po-scroll'), hint = body.querySelector('.po-hint');
+  if (sc && hint && sc.scrollWidth > sc.clientWidth + 4) hint.style.display = 'block';
 }
 async function renderAdminPlayoffs() {
   if (!isAdmin()) return renderAdminDenied();

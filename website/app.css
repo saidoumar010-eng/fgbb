@@ -2103,3 +2103,148 @@ a.cs-item:hover { border-color: var(--accent); }
 .badge-ic svg { width: 19px; height: 19px; color: var(--accent); }
 .badge-lbl { font-size: 13.5px; font-weight: 700; }
 .badge-detail { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+/* =======================================================================
+   Playoffs — tableau des rencontres (bracket)
+   Colonnes quarts → demies → finale → champion, reliées par un rail.
+   Robuste à un nombre variable de matchs par tour (données saisies admin).
+   ======================================================================= */
+.po-banner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; margin-bottom: 24px;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, rgba(224, 177, 0, 0.18), transparent 78%);
+  font-size: 16px;
+}
+.po-banner b { color: var(--text); }
+.po-banner .po-tico { width: 26px; height: 26px; color: var(--warning); flex: none; }
+
+.po-scroll {
+  overflow-x: auto; overflow-y: hidden;
+  padding: 4px 2px 12px; margin: 0 -2px;
+  -webkit-overflow-scrolling: touch;
+}
+.po-bracket {
+  --po-gap: 44px;
+  --po-line: var(--border-strong);
+  display: flex;
+  gap: var(--po-gap);
+  align-items: stretch;
+  min-width: min-content;
+  padding-top: 2px;
+}
+.po-round { flex: 0 0 auto; width: 212px; display: flex; flex-direction: column; }
+.po-champ-col { width: 200px; }
+.po-round-head {
+  font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted);
+  text-align: center; padding: 8px 10px; margin-bottom: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+.po-round-body {
+  position: relative; flex: 1 1 auto;
+  display: flex; flex-direction: column; justify-content: space-around;
+  gap: 16px; min-height: 128px;
+}
+.po-slot { position: relative; display: flex; }
+.po-slot > .po-cell, .po-slot > .po-champ { width: 100%; }
+
+/* Rail vertical dans la gouttière de droite + antennes horizontales */
+.po-round:not(:last-child) .po-round-body::after {
+  content: ""; position: absolute; top: 14px; bottom: 14px;
+  right: calc(var(--po-gap) / -2); width: 2px;
+  background: var(--po-line); border-radius: 2px;
+}
+.po-round:not(:last-child) .po-slot::after,
+.po-round:not(:first-child) .po-slot::before {
+  content: ""; position: absolute; top: 50%; height: 2px;
+  width: calc(var(--po-gap) / 2); background: var(--po-line);
+  transform: translateY(-1px);
+}
+.po-round:not(:last-child) .po-slot::after { right: calc(var(--po-gap) / -2); }
+.po-round:not(:first-child) .po-slot::before { left: calc(var(--po-gap) / -2); }
+
+/* Cellule de match */
+.po-cell {
+  display: block; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 11px; text-decoration: none; color: inherit;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.po-cell:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.po-cell.is-live { border-color: var(--red); }
+.po-team {
+  display: grid; grid-template-columns: 26px 1fr auto;
+  align-items: center; gap: 9px; padding: 5px 0;
+  min-width: 0; color: var(--muted);
+}
+.po-team + .po-team { border-top: 1px solid var(--border); }
+.po-team.win { color: var(--text); }
+.po-logo {
+  width: 26px; height: 26px; border-radius: 7px; flex: none;
+  display: grid; place-items: center; font-size: 9.5px; font-weight: 800;
+  color: #fff; overflow: hidden;
+}
+.po-logo img { width: 100%; height: 100%; object-fit: cover; }
+.po-logo.lg { width: 48px; height: 48px; border-radius: 13px; font-size: 16px; }
+.po-nm { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.po-team.win .po-nm { font-weight: 800; }
+.po-sc {
+  font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;
+  min-width: 20px; text-align: right; color: var(--dim);
+}
+.po-team.win .po-sc { color: var(--accent); }
+.po-cell-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 7px; padding-top: 6px; border-top: 1px dashed var(--border);
+}
+.po-foot { font-size: 11px; color: var(--dim); font-weight: 600; }
+.po-live {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  color: #fff; background: var(--red); padding: 2px 8px; border-radius: 999px;
+}
+.po-venue {
+  font-size: 11px; color: var(--dim); display: inline-flex; align-items: center;
+  gap: 3px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.po-venue svg { width: 12px; height: 12px; flex: none; }
+
+/* Champion */
+.po-champ {
+  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  text-align: center; padding: 22px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.po-champ.is-set {
+  border-color: var(--warning);
+  background: linear-gradient(180deg, rgba(224, 177, 0, 0.16), var(--surface));
+}
+.po-tico { width: 30px; height: 30px; color: var(--warning); }
+.po-champ-nm { font-size: 15px; line-height: 1.25; }
+.po-champ-tbd { font-size: 12.5px; color: var(--dim); font-weight: 600; }
+
+.po-hint { font-size: 12px; color: var(--dim); margin: 4px 2px 0; display: none; }
+
+/* 3e place / autres rencontres */
+.po-extra { margin-top: 32px; max-width: 470px; }
+.po-extra-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 800; color: var(--muted); margin-bottom: 12px;
+}
+.po-mico { width: 19px; height: 19px; color: #cd7f32; flex: none; }
+.po-extra-body .po-cell { margin-bottom: 10px; }
+
+/* Empilement vertical sur mobile : lisible, sans rails */
+@media (max-width: 720px) {
+  .po-scroll { overflow: visible; padding-bottom: 0; margin: 0; }
+  .po-bracket { flex-direction: column; gap: 24px; min-width: 0; }
+  .po-round, .po-champ-col { width: 100%; }
+  .po-round-body { min-height: 0; gap: 12px; }
+  .po-round-body::after, .po-slot::before, .po-slot::after { display: none; }
+  .po-round-head { text-align: left; padding-left: 15px; }
+  .po-champ { padding: 18px 14px; }
+  .po-extra { max-width: none; }
+}
