@@ -1985,7 +1985,7 @@ function playoffTeamRow(team, score, isWinner, showScore) {
 }
 // Cellule d'une confrontation : deux équipes + score de la série (victoires),
 // vainqueur (1er à 2) mis en avant.
-function playoffTieCellHtml(tie) {
+function playoffTieCellHtml(tie, mirror) {
   const { teamA, teamB, numA, numB, anyPlayed, allFinished, decided, winner, multi, legs } = tie;
   const live = legs.find((m) => m.status === 'live');
   const nextLeg = legs.find((m) => m.status !== 'finished' && m.status !== 'live');
@@ -1997,21 +1997,22 @@ function playoffTieCellHtml(tie) {
   else if (anyPlayed) foot = `<span class="po-foot">${multi ? 'Série · ' : ''}Manche suivante : ${nextLeg ? esc(relativeDayLabel(nextLeg.scheduled_at)) : 'à venir'}</span>`;
   else foot = `<span class="po-foot">${multi ? 'Série (1er à 2) · ' : ''}${legs[0].scheduled_at ? esc(relativeDayLabel(legs[0].scheduled_at)) + ' · ' + esc(fmtTime(legs[0].scheduled_at)) : 'À programmer'}</span>`;
   const tag = multi && anyPlayed ? `<span class="po-legtag">série</span>` : '';
-  return `<a class="po-cell${decided ? ' is-done' : ''}${live ? ' is-live' : ''}" href="#match/${target.id}">
+  return `<a class="po-cell${decided ? ' is-done' : ''}${live ? ' is-live' : ''}${mirror ? ' mirror' : ''}" href="#match/${target.id}">
     ${playoffTeamRow(teamA, numA, decided && winner === 'A', anyPlayed)}
     ${playoffTeamRow(teamB, numB, decided && winner === 'B', anyPlayed)}
     <span class="po-cell-foot">${foot}${tag}</span>
   </a>`;
 }
 // Case vide « À déterminer » (tour futur pas encore programmé).
-function playoffTbdCellHtml() {
+function playoffTbdCellHtml(mirror) {
   const row = `<span class="po-team is-tbd-row"><span class="po-logo po-logo-tbd"></span><span class="po-nm">À déterminer</span><span class="po-sc"></span></span>`;
-  return `<div class="po-cell is-tbd">${row}${row}</div>`;
+  return `<div class="po-cell is-tbd${mirror ? ' mirror' : ''}">${row}${row}</div>`;
 }
 // Rend les cases d'un tour : confrontations réelles + « À déterminer » jusqu'à n.
-function poCells(tieList, n) {
+// `mirror` = colonnes de droite (logo à droite, façon NBA).
+function poCells(tieList, n, mirror) {
   const out = [];
-  for (let i = 0; i < n; i++) out.push(i < tieList.length ? playoffTieCellHtml(tieList[i]) : playoffTbdCellHtml());
+  for (let i = 0; i < n; i++) out.push(i < tieList.length ? playoffTieCellHtml(tieList[i], mirror) : playoffTbdCellHtml(mirror));
   return out;
 }
 // Une colonne = un tour. `conn` = classes connecteurs (rail-*/ant-*), `side` = side-l|side-r.
@@ -2052,7 +2053,7 @@ function playoffBracketHtml(matches) {
       const expected = Math.max(1, Math.ceil(base / Math.pow(2, idx)));
       const total = Math.max(expected, ties[k].length);
       const leftN = Math.ceil(total / 2);
-      split[k] = { left: poCells(ties[k].slice(0, leftN), leftN), right: poCells(ties[k].slice(leftN), total - leftN) };
+      split[k] = { left: poCells(ties[k].slice(0, leftN), leftN, false), right: poCells(ties[k].slice(leftN), total - leftN, true) };
     });
 
     if (!preKeys.length) {

@@ -2271,3 +2271,13 @@ a.cs-item:hover { border-color: var(--accent); }
 .po-center .po-round-body { flex: 0 0 auto; justify-content: center; min-height: 0; }
 .po-center .po-round-head { color: var(--warning); border-color: var(--warning); }
 .po-center-champ { margin-top: 16px; }
+
+/* Miroir du côté droit (style NBA) — logo à droite, texte aligné à droite.
+   Uniquement en tableau « deux côtés » (desktop) ; en pile mobile, rien. */
+@media (min-width: 721px) {
+  .po-cell.mirror .po-team { grid-template-columns: auto 1fr 26px; }
+  .po-cell.mirror .po-logo { order: 3; }
+  .po-cell.mirror .po-nm { order: 2; text-align: right; }
+  .po-cell.mirror .po-sc { order: 1; text-align: left; }
+  .po-cell.mirror .po-cell-foot { flex-direction: row-reverse; }
+}
