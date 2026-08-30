@@ -2151,20 +2151,23 @@ a.cs-item:hover { border-color: var(--accent); }
 .po-slot { position: relative; display: flex; }
 .po-slot > .po-cell, .po-slot > .po-champ { width: 100%; }
 
-/* Rail vertical dans la gouttière de droite + antennes horizontales */
-.po-round:not(:last-child) .po-round-body::after {
+/* Connecteurs pilotés par classe : rail vertical dans une gouttière (droite
+   OU gauche, pour converger vers le centre) + antennes horizontales. */
+.po-round.rail-r .po-round-body::after,
+.po-round.rail-l .po-round-body::before {
   content: ""; position: absolute; top: 14px; bottom: 14px;
-  right: calc(var(--po-gap) / -2); width: 2px;
-  background: var(--po-line); border-radius: 2px;
+  width: 2px; background: var(--po-line); border-radius: 2px;
 }
-.po-round:not(:last-child) .po-slot::after,
-.po-round:not(:first-child) .po-slot::before {
+.po-round.rail-r .po-round-body::after { right: calc(var(--po-gap) / -2); }
+.po-round.rail-l .po-round-body::before { left: calc(var(--po-gap) / -2); }
+.po-round.ant-r .po-slot::after,
+.po-round.ant-l .po-slot::before {
   content: ""; position: absolute; top: 50%; height: 2px;
   width: calc(var(--po-gap) / 2); background: var(--po-line);
   transform: translateY(-1px);
 }
-.po-round:not(:last-child) .po-slot::after { right: calc(var(--po-gap) / -2); }
-.po-round:not(:first-child) .po-slot::before { left: calc(var(--po-gap) / -2); }
+.po-round.ant-r .po-slot::after { right: calc(var(--po-gap) / -2); }
+.po-round.ant-l .po-slot::before { left: calc(var(--po-gap) / -2); }
 
 /* Cellule de match */
 .po-cell {
@@ -2243,10 +2246,17 @@ a.cs-item:hover { border-color: var(--accent); }
   .po-bracket { flex-direction: column; gap: 24px; min-width: 0; }
   .po-round, .po-champ-col { width: 100%; }
   .po-round-body { min-height: 0; gap: 12px; }
-  .po-round-body::after, .po-slot::before, .po-slot::after { display: none; }
+  .po-round-body::after, .po-round-body::before, .po-slot::before, .po-slot::after { display: none; }
   .po-round-head { text-align: left; padding-left: 15px; }
   .po-champ { padding: 18px 14px; }
   .po-extra { max-width: none; }
+  /* Tableau « deux côtés » : on regroupe par tour et on centre en pile. */
+  .po-bracket.is-2sided .po-round[data-round="quart"] { order: 1; }
+  .po-bracket.is-2sided .po-round[data-round="demi"] { order: 2; }
+  .po-bracket.is-2sided .po-center { order: 3; }
+  .po-bracket.is-2sided .side-r .po-round-head { display: none; } /* évite l'en-tête en double */
+  .po-center { justify-content: flex-start; }
+  .po-center-champ { margin-top: 14px; }
 }
 
 /* Confrontations aller-retour (cumulé) + cases « À déterminer » (squelette) */
@@ -2255,3 +2265,9 @@ a.cs-item:hover { border-color: var(--accent); }
 .po-cell.is-tbd:hover { transform: none; border-color: var(--border); }
 .po-team.is-tbd-row { color: var(--dim); }
 .po-logo-tbd { background: var(--surface-2); border: 1px dashed var(--border-strong); }
+
+/* Tableau « deux côtés » (style NBA) : colonne centrale Finale + Champion */
+.po-center { justify-content: center; }
+.po-center .po-round-body { flex: 0 0 auto; justify-content: center; min-height: 0; }
+.po-center .po-round-head { color: var(--warning); border-color: var(--warning); }
+.po-center-champ { margin-top: 16px; }

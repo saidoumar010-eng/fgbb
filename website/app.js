@@ -1998,21 +1998,28 @@ function playoffTbdCellHtml() {
   const row = `<span class="po-team is-tbd-row"><span class="po-logo po-logo-tbd"></span><span class="po-nm">À déterminer</span><span class="po-sc"></span></span>`;
   return `<div class="po-cell is-tbd">${row}${row}</div>`;
 }
-// Une colonne = un tour ; complète avec des cases vides jusqu'au nb attendu.
-function playoffRoundColumn(key, ties, expected) {
-  const count = Math.max(expected, ties.length);
-  const slots = [];
-  for (let i = 0; i < count; i++) slots.push(`<div class="po-slot">${i < ties.length ? playoffTieCellHtml(ties[i]) : playoffTbdCellHtml()}</div>`);
-  return `<div class="po-round" data-round="${esc(key)}"><div class="po-round-head">${esc(playoffRoundLabel(key))}</div><div class="po-round-body">${slots.join('')}</div></div>`;
+// Rend les cases d'un tour : confrontations réelles + « À déterminer » jusqu'à n.
+function poCells(tieList, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(i < tieList.length ? playoffTieCellHtml(tieList[i]) : playoffTbdCellHtml());
+  return out;
 }
-function playoffChampionColumn(champ) {
+// Une colonne = un tour. `conn` = classes connecteurs (rail-*/ant-*), `side` = side-l|side-r.
+function poColumnHtml(key, cellsHtml, conn, side) {
+  const body = cellsHtml.map((c) => `<div class="po-slot">${c}</div>`).join('');
+  return `<div class="po-round ${conn} ${side || ''}" data-round="${esc(key)}"><div class="po-round-head">${esc(playoffRoundLabel(key))}</div><div class="po-round-body">${body}</div></div>`;
+}
+// Colonne centrale : la finale + le champion, au cœur du tableau (style NBA).
+function poCenterColumnHtml(finaleTies, champ, conn) {
+  const cells = poCells(finaleTies, Math.max(1, finaleTies.length));
+  const body = cells.map((c) => `<div class="po-slot">${c}</div>`).join('');
   const inner = champ
     ? `${logoHtml(champ, 'po-logo lg')}<b class="po-champ-nm">${esc(champ.name)}</b>`
     : '<span class="po-champ-tbd">À déterminer</span>';
-  return `<div class="po-round po-champ-col"><div class="po-round-head">Champion</div><div class="po-round-body"><div class="po-slot"><div class="po-champ${champ ? ' is-set' : ''}">${PO_TROPHY}${inner}</div></div></div></div>`;
+  return `<div class="po-round po-center ${conn}" data-round="finale"><div class="po-round-head">Finale</div><div class="po-round-body">${body}</div><div class="po-center-champ"><div class="po-champ${champ ? ' is-set' : ''}">${PO_TROPHY}${inner}</div></div></div>`;
 }
-// Assemble le tableau : squelette complet quarts → demies → finale → champion
-// (cases « À déterminer » pour les tours à venir) + 3e place / autres à part.
+// Assemble le tableau « deux côtés » : quarts/demies à gauche → Finale + Champion
+// au centre → demies/quarts à droite, connecteurs convergeant vers le centre.
 function playoffBracketHtml(matches) {
   const byRound = {};
   matches.forEach((m) => { const k = m.playoff_round || 'autre'; (byRound[k] = byRound[k] || []).push(m); });
@@ -2029,13 +2036,24 @@ function playoffBracketHtml(matches) {
   const firstIdx = PATH.findIndex((k) => ties[k].length > 0);
   if (firstIdx !== -1) {
     const base = ties[PATH[firstIdx]].length; // nb de confrontations du 1er tour rempli
-    const cols = [];
-    for (let i = firstIdx; i < PATH.length; i++) {
-      const expected = Math.max(1, Math.ceil(base / Math.pow(2, i - firstIdx)));
-      cols.push(playoffRoundColumn(PATH[i], ties[PATH[i]], expected));
+    const preKeys = PATH.slice(firstIdx, 2); // tours d'avant-finale à scinder (quart/demi)
+    const split = {};
+    preKeys.forEach((k, idx) => {
+      const expected = Math.max(1, Math.ceil(base / Math.pow(2, idx)));
+      const total = Math.max(expected, ties[k].length);
+      const leftN = Math.ceil(total / 2);
+      split[k] = { left: poCells(ties[k].slice(0, leftN), leftN), right: poCells(ties[k].slice(leftN), total - leftN) };
+    });
+
+    if (!preKeys.length) {
+      out += `<div class="po-scroll"><div class="po-bracket is-2sided">${poCenterColumnHtml(ties.finale, champ, '')}</div></div>`;
+    } else {
+      const leftCols = preKeys.map((k, j) => poColumnHtml(k, split[k].left, 'rail-r ant-r' + (j > 0 ? ' ant-l' : ''), 'side-l')).join('');
+      const rightKeys = [...preKeys].reverse();
+      const rightCols = rightKeys.map((k, j) => poColumnHtml(k, split[k].right, 'rail-l ant-l' + (j < rightKeys.length - 1 ? ' ant-r' : ''), 'side-r')).join('');
+      const center = poCenterColumnHtml(ties.finale, champ, 'ant-l ant-r');
+      out += `<div class="po-scroll"><div class="po-bracket is-2sided">${leftCols}${center}${rightCols}</div></div><p class="po-hint">Faites défiler horizontalement pour voir tout le tableau.</p>`;
     }
-    cols.push(playoffChampionColumn(champ));
-    out += `<div class="po-scroll"><div class="po-bracket">${cols.join('')}</div></div><p class="po-hint">Faites défiler horizontalement pour voir tout le tableau.</p>`;
   }
 
   const petite = groupTies(byRound.petite_finale);
