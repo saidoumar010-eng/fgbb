@@ -1949,9 +1949,11 @@ const PO_MEDAL = '<svg class="po-mico" viewBox="0 0 24 24" fill="none" stroke="c
 function tieKey(m) {
   return [m.home_team?.id || '', m.away_team?.id || ''].sort().join('~');
 }
-// Regroupe les matchs d'un tour en confrontations (1 match = 1 manche ; un
-// aller-retour = 2 manches). Score cumulé, vainqueur = plus grand cumul une
-// fois toutes les manches jouées.
+// Regroupe les matchs d'un tour en confrontations (série : plusieurs manches
+// entre deux mêmes équipes). Le vainqueur est le PREMIER À 2 VICTOIRES ; un
+// match unique se tranche au vainqueur de ce match. On affiche le score de la
+// série (victoires) pour une série, ou les points pour un match unique.
+const PO_CLINCH = 2; // premier à 2 victoires
 function groupTies(list) {
   const map = new Map();
   (list || []).forEach((m) => { const k = tieKey(m); if (!map.has(k)) map.set(k, []); map.get(k).push(m); });
@@ -1959,37 +1961,45 @@ function groupTies(list) {
     legs.sort((a, b) => String(a.scheduled_at || '').localeCompare(String(b.scheduled_at || '')));
     const teamA = legs[0].home_team, teamB = legs[0].away_team;
     const scoreFor = (m, t) => (m.home_team?.id === t?.id ? m.home_score : m.away_score) ?? 0;
-    let aggA = 0, aggB = 0, anyPlayed = false, anyLive = false, allFinished = true;
+    let winsA = 0, winsB = 0, anyPlayed = false, anyLive = false, allFinished = true, lastPlayed = null;
     legs.forEach((m) => {
-      const played = m.status === 'finished' || m.status === 'live';
-      if (played) { anyPlayed = true; aggA += scoreFor(m, teamA); aggB += scoreFor(m, teamB); }
-      if (m.status === 'live') anyLive = true;
-      if (m.status !== 'finished') allFinished = false;
+      if (m.status === 'finished') {
+        const sa = scoreFor(m, teamA), sb = scoreFor(m, teamB);
+        if (sa > sb) winsA++; else if (sb > sa) winsB++;
+        anyPlayed = true; lastPlayed = m;
+      } else { allFinished = false; }
+      if (m.status === 'live') { anyLive = true; anyPlayed = true; lastPlayed = m; }
     });
-    const decided = anyPlayed && allFinished && aggA !== aggB;
-    const winner = decided ? (aggA > aggB ? 'A' : 'B') : null;
-    return { legs, teamA, teamB, aggA, aggB, anyPlayed, anyLive, allFinished, decided, winner, multi: legs.length > 1 };
+    const multi = legs.length > 1;
+    // Tranché : un camp atteint 2 victoires, OU toutes les manches jouées avec un écart.
+    const decided = Math.max(winsA, winsB) >= PO_CLINCH || (allFinished && anyPlayed && winsA !== winsB);
+    const winner = decided ? (winsA > winsB ? 'A' : 'B') : null;
+    // Nombre affiché : victoires (série) ou points de la manche (match unique).
+    const ptsA = lastPlayed ? scoreFor(lastPlayed, teamA) : 0, ptsB = lastPlayed ? scoreFor(lastPlayed, teamB) : 0;
+    const numA = multi ? winsA : ptsA, numB = multi ? winsB : ptsB;
+    return { legs, teamA, teamB, multi, winsA, winsB, numA, numB, anyPlayed, anyLive, allFinished, decided, winner };
   });
 }
 function playoffTeamRow(team, score, isWinner, showScore) {
   return `<span class="po-team${isWinner ? ' win' : ''}">${logoHtml(team, 'po-logo')}<span class="po-nm">${esc(team?.name || 'À déterminer')}</span><span class="po-sc">${showScore ? score : ''}</span></span>`;
 }
-// Cellule d'une confrontation : deux équipes, cumul, vainqueur mis en avant.
+// Cellule d'une confrontation : deux équipes + score de la série (victoires),
+// vainqueur (1er à 2) mis en avant.
 function playoffTieCellHtml(tie) {
-  const { teamA, teamB, aggA, aggB, anyPlayed, decided, winner, multi, legs } = tie;
+  const { teamA, teamB, numA, numB, anyPlayed, allFinished, decided, winner, multi, legs } = tie;
   const live = legs.find((m) => m.status === 'live');
   const nextLeg = legs.find((m) => m.status !== 'finished' && m.status !== 'live');
   const target = live || nextLeg || legs[legs.length - 1];
   let foot;
   if (live) foot = `<span class="po-live">EN DIRECT${live.current_quarter ? ' · Q' + live.current_quarter : ''}</span>`;
   else if (decided) foot = `<span class="po-foot">${multi ? 'Qualifié·e : ' + esc((winner === 'A' ? teamA : teamB)?.name || '') : 'Terminé · ' + esc(fmtDate(legs[0].scheduled_at))}</span>`;
-  else if (tie.allFinished) foot = `<span class="po-foot">À départager</span>`;
-  else if (anyPlayed) foot = `<span class="po-foot">${multi ? 'Aller-retour · ' : ''}Manche suivante : ${nextLeg ? esc(relativeDayLabel(nextLeg.scheduled_at)) : 'à venir'}</span>`;
-  else foot = `<span class="po-foot">${multi ? 'Aller-retour · ' : ''}${legs[0].scheduled_at ? esc(relativeDayLabel(legs[0].scheduled_at)) + ' · ' + esc(fmtTime(legs[0].scheduled_at)) : 'À programmer'}</span>`;
-  const tag = multi ? `<span class="po-legtag">cumulé</span>` : '';
+  else if (allFinished && anyPlayed) foot = `<span class="po-foot">${multi ? 'Série à égalité · belle à jouer' : 'À départager'}</span>`;
+  else if (anyPlayed) foot = `<span class="po-foot">${multi ? 'Série · ' : ''}Manche suivante : ${nextLeg ? esc(relativeDayLabel(nextLeg.scheduled_at)) : 'à venir'}</span>`;
+  else foot = `<span class="po-foot">${multi ? 'Série (1er à 2) · ' : ''}${legs[0].scheduled_at ? esc(relativeDayLabel(legs[0].scheduled_at)) + ' · ' + esc(fmtTime(legs[0].scheduled_at)) : 'À programmer'}</span>`;
+  const tag = multi && anyPlayed ? `<span class="po-legtag">série</span>` : '';
   return `<a class="po-cell${decided ? ' is-done' : ''}${live ? ' is-live' : ''}" href="#match/${target.id}">
-    ${playoffTeamRow(teamA, aggA, decided && winner === 'A', anyPlayed)}
-    ${playoffTeamRow(teamB, aggB, decided && winner === 'B', anyPlayed)}
+    ${playoffTeamRow(teamA, numA, decided && winner === 'A', anyPlayed)}
+    ${playoffTeamRow(teamB, numB, decided && winner === 'B', anyPlayed)}
     <span class="po-cell-foot">${foot}${tag}</span>
   </a>`;
 }
