@@ -2248,3 +2248,10 @@ a.cs-item:hover { border-color: var(--accent); }
   .po-champ { padding: 18px 14px; }
   .po-extra { max-width: none; }
 }
+
+/* Confrontations aller-retour (cumulé) + cases « À déterminer » (squelette) */
+.po-legtag { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); background: var(--surface-2); border-radius: 999px; padding: 2px 7px; flex: none; }
+.po-cell.is-tbd { border-style: dashed; background: transparent; cursor: default; }
+.po-cell.is-tbd:hover { transform: none; border-color: var(--border); }
+.po-team.is-tbd-row { color: var(--dim); }
+.po-logo-tbd { background: var(--surface-2); border: 1px dashed var(--border-strong); }

@@ -1944,67 +1944,107 @@ async function renderAdminSocials() {
 // --- Tableau des playoffs (bracket) --------------------------------------
 const PO_TROPHY = '<svg class="po-tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>';
 const PO_MEDAL = '<svg class="po-mico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14.5" r="6"/><path d="M8.5 8.5L6 3M15.5 8.5L18 3M9.5 3h5"/></svg>';
-// Côté vainqueur d'un match terminé ('home' | 'away' | null si non joué / égalité).
-function playoffWinnerSide(m) {
-  if (m.status !== 'finished') return null;
-  const h = m.home_score ?? 0, a = m.away_score ?? 0;
-  if (h > a) return 'home';
-  if (a > h) return 'away';
-  return null;
+// Clé d'une confrontation : paire d'équipes (non ordonnée) → regroupe l'aller
+// et le retour d'un même duel en une seule case du tableau.
+function tieKey(m) {
+  return [m.home_team?.id || '', m.away_team?.id || ''].sort().join('~');
+}
+// Regroupe les matchs d'un tour en confrontations (1 match = 1 manche ; un
+// aller-retour = 2 manches). Score cumulé, vainqueur = plus grand cumul une
+// fois toutes les manches jouées.
+function groupTies(list) {
+  const map = new Map();
+  (list || []).forEach((m) => { const k = tieKey(m); if (!map.has(k)) map.set(k, []); map.get(k).push(m); });
+  return [...map.values()].map((legs) => {
+    legs.sort((a, b) => String(a.scheduled_at || '').localeCompare(String(b.scheduled_at || '')));
+    const teamA = legs[0].home_team, teamB = legs[0].away_team;
+    const scoreFor = (m, t) => (m.home_team?.id === t?.id ? m.home_score : m.away_score) ?? 0;
+    let aggA = 0, aggB = 0, anyPlayed = false, anyLive = false, allFinished = true;
+    legs.forEach((m) => {
+      const played = m.status === 'finished' || m.status === 'live';
+      if (played) { anyPlayed = true; aggA += scoreFor(m, teamA); aggB += scoreFor(m, teamB); }
+      if (m.status === 'live') anyLive = true;
+      if (m.status !== 'finished') allFinished = false;
+    });
+    const decided = anyPlayed && allFinished && aggA !== aggB;
+    const winner = decided ? (aggA > aggB ? 'A' : 'B') : null;
+    return { legs, teamA, teamB, aggA, aggB, anyPlayed, anyLive, allFinished, decided, winner, multi: legs.length > 1 };
+  });
 }
 function playoffTeamRow(team, score, isWinner, showScore) {
-  return `<span class="po-team${isWinner ? ' win' : ''}">${logoHtml(team, 'po-logo')}<span class="po-nm">${esc(team?.name || 'À déterminer')}</span><span class="po-sc">${showScore ? (score ?? 0) : ''}</span></span>`;
+  return `<span class="po-team${isWinner ? ' win' : ''}">${logoHtml(team, 'po-logo')}<span class="po-nm">${esc(team?.name || 'À déterminer')}</span><span class="po-sc">${showScore ? score : ''}</span></span>`;
 }
-// Cellule compacte du tableau : deux équipes, score, vainqueur mis en avant.
-function playoffCellHtml(m) {
-  const live = m.status === 'live', done = m.status === 'finished';
-  const show = live || done;
-  const win = playoffWinnerSide(m);
+// Cellule d'une confrontation : deux équipes, cumul, vainqueur mis en avant.
+function playoffTieCellHtml(tie) {
+  const { teamA, teamB, aggA, aggB, anyPlayed, decided, winner, multi, legs } = tie;
+  const live = legs.find((m) => m.status === 'live');
+  const nextLeg = legs.find((m) => m.status !== 'finished' && m.status !== 'live');
+  const target = live || nextLeg || legs[legs.length - 1];
   let foot;
-  if (live) foot = `<span class="po-live">EN DIRECT · Q${m.current_quarter || 1}</span>`;
-  else if (done) foot = `<span class="po-foot">Terminé · ${esc(fmtDate(m.scheduled_at))}</span>`;
-  else foot = `<span class="po-foot">${m.scheduled_at ? esc(relativeDayLabel(m.scheduled_at)) + ' · ' + esc(fmtTime(m.scheduled_at)) : 'À programmer'}</span>`;
-  const venue = (!show && m.venue) ? `<span class="po-venue">${PIN_ICO}${esc(m.venue)}</span>` : '';
-  return `<a class="po-cell${done ? ' is-done' : ''}${live ? ' is-live' : ''}" href="#match/${m.id}">
-    ${playoffTeamRow(m.home_team, m.home_score, win === 'home', show)}
-    ${playoffTeamRow(m.away_team, m.away_score, win === 'away', show)}
-    <span class="po-cell-foot">${foot}${venue}</span>
+  if (live) foot = `<span class="po-live">EN DIRECT${live.current_quarter ? ' · Q' + live.current_quarter : ''}</span>`;
+  else if (decided) foot = `<span class="po-foot">${multi ? 'Qualifié·e : ' + esc((winner === 'A' ? teamA : teamB)?.name || '') : 'Terminé · ' + esc(fmtDate(legs[0].scheduled_at))}</span>`;
+  else if (tie.allFinished) foot = `<span class="po-foot">À départager</span>`;
+  else if (anyPlayed) foot = `<span class="po-foot">${multi ? 'Aller-retour · ' : ''}Manche suivante : ${nextLeg ? esc(relativeDayLabel(nextLeg.scheduled_at)) : 'à venir'}</span>`;
+  else foot = `<span class="po-foot">${multi ? 'Aller-retour · ' : ''}${legs[0].scheduled_at ? esc(relativeDayLabel(legs[0].scheduled_at)) + ' · ' + esc(fmtTime(legs[0].scheduled_at)) : 'À programmer'}</span>`;
+  const tag = multi ? `<span class="po-legtag">cumulé</span>` : '';
+  return `<a class="po-cell${decided ? ' is-done' : ''}${live ? ' is-live' : ''}" href="#match/${target.id}">
+    ${playoffTeamRow(teamA, aggA, decided && winner === 'A', anyPlayed)}
+    ${playoffTeamRow(teamB, aggB, decided && winner === 'B', anyPlayed)}
+    <span class="po-cell-foot">${foot}${tag}</span>
   </a>`;
 }
-function playoffColumnHtml(key, list) {
-  const slots = list.map((m) => `<div class="po-slot">${playoffCellHtml(m)}</div>`).join('');
-  return `<div class="po-round" data-round="${esc(key)}"><div class="po-round-head">${esc(playoffRoundLabel(key))}</div><div class="po-round-body">${slots}</div></div>`;
+// Case vide « À déterminer » (tour futur pas encore programmé).
+function playoffTbdCellHtml() {
+  const row = `<span class="po-team is-tbd-row"><span class="po-logo po-logo-tbd"></span><span class="po-nm">À déterminer</span><span class="po-sc"></span></span>`;
+  return `<div class="po-cell is-tbd">${row}${row}</div>`;
 }
-// Assemble le tableau : colonnes quarts → demies → finale → champion (+ 3e place).
+// Une colonne = un tour ; complète avec des cases vides jusqu'au nb attendu.
+function playoffRoundColumn(key, ties, expected) {
+  const count = Math.max(expected, ties.length);
+  const slots = [];
+  for (let i = 0; i < count; i++) slots.push(`<div class="po-slot">${i < ties.length ? playoffTieCellHtml(ties[i]) : playoffTbdCellHtml()}</div>`);
+  return `<div class="po-round" data-round="${esc(key)}"><div class="po-round-head">${esc(playoffRoundLabel(key))}</div><div class="po-round-body">${slots.join('')}</div></div>`;
+}
+function playoffChampionColumn(champ) {
+  const inner = champ
+    ? `${logoHtml(champ, 'po-logo lg')}<b class="po-champ-nm">${esc(champ.name)}</b>`
+    : '<span class="po-champ-tbd">À déterminer</span>';
+  return `<div class="po-round po-champ-col"><div class="po-round-head">Champion</div><div class="po-round-body"><div class="po-slot"><div class="po-champ${champ ? ' is-set' : ''}">${PO_TROPHY}${inner}</div></div></div></div>`;
+}
+// Assemble le tableau : squelette complet quarts → demies → finale → champion
+// (cases « À déterminer » pour les tours à venir) + 3e place / autres à part.
 function playoffBracketHtml(matches) {
   const byRound = {};
   matches.forEach((m) => { const k = m.playoff_round || 'autre'; (byRound[k] = byRound[k] || []).push(m); });
-  const path = ['quart', 'demi', 'finale'].filter((k) => byRound[k] && byRound[k].length);
+  const PATH = ['quart', 'demi', 'finale'];
+  const ties = {}; PATH.forEach((k) => { ties[k] = groupTies(byRound[k]); });
 
-  const finale = (byRound.finale || [])[0];
-  let champ = null;
-  if (finale && finale.status === 'finished') {
-    const w = playoffWinnerSide(finale);
-    champ = w === 'home' ? finale.home_team : w === 'away' ? finale.away_team : null;
-  }
+  // Champion = vainqueur d'une finale tranchée.
+  const finaleTie = ties.finale.find((t) => t.decided);
+  const champ = finaleTie ? (finaleTie.winner === 'A' ? finaleTie.teamA : finaleTie.teamB) : null;
 
   let out = '';
   if (champ) out += `<div class="po-banner">${PO_TROPHY}<span>Champion&nbsp;— <b>${esc(champ.name)}</b></span></div>`;
 
-  if (path.length) {
-    const cols = path.map((k) => playoffColumnHtml(k, byRound[k])).join('');
-    const champInner = champ
-      ? `${logoHtml(champ, 'po-logo lg')}<b class="po-champ-nm">${esc(champ.name)}</b>`
-      : '<span class="po-champ-tbd">À déterminer</span>';
-    const champCol = `<div class="po-round po-champ-col"><div class="po-round-head">Champion</div><div class="po-round-body"><div class="po-slot"><div class="po-champ${champ ? ' is-set' : ''}">${PO_TROPHY}${champInner}</div></div></div></div>`;
-    out += `<div class="po-scroll"><div class="po-bracket">${cols}${champCol}</div></div><p class="po-hint">Faites défiler horizontalement pour voir tout le tableau.</p>`;
+  const firstIdx = PATH.findIndex((k) => ties[k].length > 0);
+  if (firstIdx !== -1) {
+    const base = ties[PATH[firstIdx]].length; // nb de confrontations du 1er tour rempli
+    const cols = [];
+    for (let i = firstIdx; i < PATH.length; i++) {
+      const expected = Math.max(1, Math.ceil(base / Math.pow(2, i - firstIdx)));
+      cols.push(playoffRoundColumn(PATH[i], ties[PATH[i]], expected));
+    }
+    cols.push(playoffChampionColumn(champ));
+    out += `<div class="po-scroll"><div class="po-bracket">${cols.join('')}</div></div><p class="po-hint">Faites défiler horizontalement pour voir tout le tableau.</p>`;
   }
 
-  if (byRound.petite_finale && byRound.petite_finale.length) {
-    out += `<div class="po-extra"><div class="po-extra-head">${PO_MEDAL}Match pour la 3ᵉ place</div><div class="po-extra-body">${byRound.petite_finale.map(playoffCellHtml).join('')}</div></div>`;
+  const petite = groupTies(byRound.petite_finale);
+  if (petite.length) {
+    out += `<div class="po-extra"><div class="po-extra-head">${PO_MEDAL}Match pour la 3ᵉ place</div><div class="po-extra-body">${petite.map(playoffTieCellHtml).join('')}</div></div>`;
   }
-  if (byRound.autre && byRound.autre.length) {
-    out += `<div class="po-extra"><div class="po-extra-head">Autres rencontres</div><div class="po-extra-body">${byRound.autre.map(playoffCellHtml).join('')}</div></div>`;
+  const autre = groupTies(byRound.autre);
+  if (autre.length) {
+    out += `<div class="po-extra"><div class="po-extra-head">Autres rencontres</div><div class="po-extra-body">${autre.map(playoffTieCellHtml).join('')}</div></div>`;
   }
   return out || emptyHtml('Playoffs à venir', 'Le tableau final apparaîtra une fois les matchs programmés.', 'trophy');
 }
