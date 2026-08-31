@@ -964,7 +964,7 @@ async function renderClassement() {
       <a class="sub-link" href="#stats-equipes">${icoSvg('<path d="M18 20V10M12 20V4M6 20v-6"/>')}Stats équipes</a>
       <a class="sub-link" href="#stats-avancees">${icoSvg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>')}Stats avancées</a>
     </div>
-    <div id="clsFilter"></div><div id="clsBody">${loadingHtml()}</div>`;
+    <div id="clsFilter"></div><div id="clsBody">${loadingHtml()}</div><div id="clsPlayoffs"></div>`;
 
   const comps = await safe(listCompetitions(), []);
   if (compFilter === undefined) compFilter = comps.length ? comps[0].id : null;
@@ -995,6 +995,15 @@ async function renderClassement() {
   } else {
     const rows = await safe(listStandings(compFilter || undefined), null);
     $('#clsBody').innerHTML = rows === null ? errorHtml() : standingsHtml(rows, { full: true });
+  }
+
+  // Tableau des playoffs sous le classement (uniquement s'il existe des matchs).
+  const poMatches = await safe(listPlayoffMatches(compFilter || undefined), []);
+  const poEl = $('#clsPlayoffs');
+  if (poEl && poMatches.length) {
+    poEl.innerHTML = `<div class="block" style="margin-top:40px"><div class="block-head"><h2><span class="bh-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/>')}</span>Tableau des playoffs</h2><a class="more" href="#playoffs">Page complète →</a></div>${playoffBracketHtml(poMatches)}</div>`;
+    const sc = poEl.querySelector('.po-scroll'), hint = poEl.querySelector('.po-hint');
+    if (sc && hint && sc.scrollWidth > sc.clientWidth + 4) hint.style.display = 'block';
   }
 }
 
