@@ -720,6 +720,61 @@ function errorHtml() {
 
 const CLOCK_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>';
 const PIN_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+const STAR_ICO = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+// Phase lisible d'un match (playoff → tour ; championnat → journée).
+function matchPhaseLabel(m) {
+  if (m.phase === 'playoff') return m.playoff_round ? playoffRoundLabel(m.playoff_round) : 'Playoffs';
+  return m.round != null ? 'Journée ' + m.round : '';
+}
+// Grande affiche du match à la une (accueil) : « choc » entre les deux clubs —
+// fond bicolore aux couleurs des équipes, grands écussons face à face, VS/score.
+function afficheHtml(m) {
+  const isLive = m.status === 'live', isDone = m.status === 'finished';
+  const homeWin = isDone && (m.home_score ?? 0) > (m.away_score ?? 0);
+  const awayWin = isDone && (m.away_score ?? 0) > (m.home_score ?? 0);
+  const phase = matchPhaseLabel(m);
+  const compLine = [m.competition?.name || 'Championnat', phase].filter(Boolean).join(' · ');
+  // Fond « rivalité » : couleur domicile à gauche, couleur extérieur à droite,
+  // sur une base sombre pour garder le texte lisible.
+  const bg = `background:linear-gradient(118deg, ${hexA(m.home_team?.color, 0.82)}, ${hexA(m.home_team?.color, 0.14)} 33%, transparent 50%), linear-gradient(242deg, ${hexA(m.away_team?.color, 0.82)}, ${hexA(m.away_team?.color, 0.14)} 33%, transparent 50%), linear-gradient(160deg, var(--teal), var(--teal-deep))`;
+
+  let status, center;
+  if (isLive) {
+    status = `<span class="af-status is-live"><i></i>EN DIRECT · Q${m.current_quarter || 1}</span>`;
+    center = `<div class="af-score"><span>${m.home_score ?? 0}</span><i>:</i><span>${m.away_score ?? 0}</span></div>`;
+  } else if (isDone) {
+    status = `<span class="af-status is-done">Terminé</span>`;
+    center = `<div class="af-score"><span class="${awayWin ? 'lo' : ''}">${m.home_score ?? 0}</span><i>:</i><span class="${homeWin ? 'lo' : ''}">${m.away_score ?? 0}</span></div>`;
+  } else {
+    status = `<span class="af-status">À venir</span>`;
+    center = `<div class="af-vs">VS</div>`;
+  }
+  const dt = isDone ? fmtDate(m.scheduled_at) : `${relativeDayLabel(m.scheduled_at)}${fmtTime(m.scheduled_at) ? ' · ' + fmtTime(m.scheduled_at) : ''}`;
+  const foot = `<span class="af-info">${CLOCK_ICO}${esc(dt)}</span>${m.venue ? `<span class="af-info">${PIN_ICO}${esc(m.venue)}</span>` : ''}`;
+
+  return `<a class="affiche${isLive ? ' is-live' : ''}${isDone ? ' is-done' : ''}" style="${bg}" href="#match/${m.id}">
+    <div class="af-top"><span class="af-eyebrow">${STAR_ICO}Le choc à la une</span>${status}</div>
+    ${compLine ? `<div class="af-comp">${esc(compLine)}</div>` : ''}
+    <div class="af-main">
+      <div class="af-team${awayWin ? ' dim' : ''}">${logoHtml(m.home_team, 'af-crest')}<span class="af-tn">${esc(m.home_team?.name || 'Équipe')}</span></div>
+      ${center}
+      <div class="af-team${homeWin ? ' dim' : ''}">${logoHtml(m.away_team, 'af-crest')}<span class="af-tn">${esc(m.away_team?.name || 'Équipe')}</span></div>
+    </div>
+    <div class="af-foot">${foot}</div>
+  </a>`;
+}
+// Vedettes : meilleurs joueurs (par points) des dernières rencontres jouées.
+// N'apparaît que si des box scores existent (vue game_highs).
+function vedettesHtml(rows) {
+  const cards = rows.slice(0, 3).map((r) => {
+    const ava = r.photo_url
+      ? `<span class="ved-ava" style="background:${esc(r.team_color || 'var(--teal)')}"><img src="${esc(r.photo_url)}" alt="" loading="lazy"></span>`
+      : `<span class="ved-ava" style="background:${esc(r.team_color || 'var(--teal)')}">${esc(initials(r.full_name))}</span>`;
+    const sub = [r.team_short, r.opponent ? 'vs ' + r.opponent : null].filter(Boolean).join(' · ');
+    return `<a class="ved-card" href="#player/${r.player_id}">${ava}<span class="ved-info"><b>${esc(r.full_name)}</b><span>${esc(sub)}</span></span><span class="ved-val"><b>${r.points}</b><span>pts</span></span></a>`;
+  }).join('');
+  return `<div class="vedettes"><div class="ved-head">${STAR_ICO}<b>Ils ont brillé</b><span>meilleurs joueurs des dernières rencontres</span></div><div class="ved-row">${cards}</div></div>`;
+}
 function matchCardHtml(m) {
   const home = m.home_team, away = m.away_team;
   const live = m.status === 'live';
@@ -815,10 +870,11 @@ function leaderRowHtml(p, i, unit, teamsMap) {
 // --------------------------------------------------------------- vues
 async function renderAccueil() {
   view.innerHTML = loadingHtml();
-  const [matches, standings, news] = await Promise.all([
+  const [matches, standings, news, topPerf] = await Promise.all([
     safe(listMatches(), []),
     safe(listStandings(), []),
     safe(listNews(), []),
+    safe(listGameHighs('points', 3), []),
   ]);
 
   const live = matches.filter((m) => m.status === 'live');
@@ -838,32 +894,20 @@ async function renderAccueil() {
   let html = `<h1 class="view-title">Bonjour${profile?.full_name ? ' ' + esc(profile.full_name.split(' ')[0]) : ''}</h1>
     <p class="view-sub">Voici l'essentiel du basket guinéen aujourd'hui.</p>`;
 
-  if (featured) {
-    const f = featured;
-    const isLive = f.status === 'live';
-    const isDone = f.status === 'finished';
-    const centre = isLive || isDone
-      ? `<div class="fscore">${f.home_score ?? 0} <span class="vs">:</span> ${f.away_score ?? 0}</div>`
-      : `<div class="fscore"><span class="vs">VS</span></div>`;
-    const label = isLive ? `<span class="pill live">En direct</span>` : isDone ? 'Terminé' : `${fmtDate(f.scheduled_at)} · ${fmtTime(f.scheduled_at)}`;
-    html += `<a class="featured" href="#match/${f.id}">
-      <div class="fh">Match à la une${f.competition?.name ? ' · ' + esc(f.competition.name) : ''}</div>
-      <div class="fbody">
-        <div class="fteam">${logoHtml(f.home_team, 'mlogo')}<span class="fn">${esc(f.home_team?.name || '')}</span></div>
-        ${centre}
-        <div class="fteam">${logoHtml(f.away_team, 'mlogo')}<span class="fn">${esc(f.away_team?.name || '')}</span></div>
-      </div>
-      <div class="fmeta">${label}</div>
-    </a>`;
-  }
+  if (featured) html += afficheHtml(featured);
+  if (topPerf.length) html += vedettesHtml(topPerf);
 
-  // Prochains / derniers matchs (max 4)
-  const feedList = [...live, ...upcoming.slice(0, 3), ...finished.slice(-3).reverse()]
-    .filter((m) => m !== featured)
-    .slice(0, 4);
-  if (feedList.length) {
-    html += `<div class="block"><div class="block-head"><h2>Matchs</h2><button class="more" data-go="matchs">Tout voir →</button></div>${feedList.map(matchCardHtml).join('')}</div>`;
-  }
+  // Rencontres regroupées : en direct · à venir · derniers résultats.
+  const liveRest = live.filter((m) => m !== featured);
+  const nextUp = upcoming.filter((m) => m !== featured).slice(0, 4);
+  const results = finished.filter((m) => m !== featured).slice(-3).reverse();
+  const ICO_LIVE = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>';
+  const ICO_CAL = '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
+  const ICO_BALL = '<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18M5 6c4 3 10 3 14 0M5 18c4-3 10-3 14 0"/>';
+  const rencSection = (icon, title, list) => `<div class="block"><div class="block-head"><h2><span class="bh-ic">${icoSvg(icon)}</span>${title}</h2><button class="more" data-go="matchs">Tout voir →</button></div>${list.map(matchCardHtml).join('')}</div>`;
+  if (liveRest.length) html += rencSection(ICO_LIVE, 'En direct', liveRest);
+  if (nextUp.length) html += rencSection(ICO_CAL, 'Prochaines rencontres', nextUp);
+  if (results.length) html += rencSection(ICO_BALL, 'Derniers résultats', results);
 
   if (standings.length) {
     html += `<div class="block"><div class="block-head"><h2>Classement</h2><button class="more" data-go="classement">Tout voir →</button></div>${standingsHtml(standings.slice(0, 5))}</div>`;
