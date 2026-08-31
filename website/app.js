@@ -249,6 +249,17 @@ async function createPlayoffMatch(m) {
   const { error } = await sb.from('matches').insert({ ...m, phase: 'playoff', status: 'scheduled' });
   if (error) throw error;
 }
+// La phase de poules (championnat) est-elle encore en cours ? Vrai s'il reste
+// au moins un match de championnat (phase 'regular' ou null) non terminé.
+async function groupStageOngoing(competitionId) {
+  let q = sb.from('matches').select('id', { count: 'exact', head: true })
+    .or('phase.eq.regular,phase.is.null')
+    .in('status', ['scheduled', 'live']);
+  if (competitionId) q = q.eq('competition_id', competitionId);
+  const { count, error } = await q;
+  if (error) throw error;
+  return (count || 0) > 0;
+}
 async function deleteMatch(id) {
   const { error } = await sb.from('matches').delete().eq('id', id);
   if (error) throw error;
@@ -997,10 +1008,14 @@ async function renderClassement() {
     $('#clsBody').innerHTML = rows === null ? errorHtml() : standingsHtml(rows, { full: true });
   }
 
-  // Tableau des playoffs sous le classement (uniquement s'il existe des matchs).
-  const poMatches = await safe(listPlayoffMatches(compFilter || undefined), []);
+  // Tableau des playoffs sous le classement : seulement une fois la phase de
+  // poules terminée (aucun match de championnat programmé/en direct restant).
+  const [poMatches, poulesEnCours] = await Promise.all([
+    safe(listPlayoffMatches(compFilter || undefined), []),
+    safe(groupStageOngoing(compFilter || undefined), false),
+  ]);
   const poEl = $('#clsPlayoffs');
-  if (poEl && poMatches.length) {
+  if (poEl && poMatches.length && !poulesEnCours) {
     poEl.innerHTML = `<div class="block" style="margin-top:40px"><div class="block-head"><h2><span class="bh-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/>')}</span>Tableau des playoffs</h2><a class="more" href="#playoffs">Page complète →</a></div>${playoffBracketHtml(poMatches)}</div>`;
     const sc = poEl.querySelector('.po-scroll'), hint = poEl.querySelector('.po-hint');
     if (sc && hint && sc.scrollWidth > sc.clientWidth + 4) hint.style.display = 'block';
