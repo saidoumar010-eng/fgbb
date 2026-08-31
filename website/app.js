@@ -260,6 +260,12 @@ async function groupStageOngoing(competitionId) {
   if (error) throw error;
   return (count || 0) > 0;
 }
+// Marqueur admin : phase de poules terminée (true) / en cours (false) pour une
+// compétition (migration 0041). Pilote l'affichage des playoffs sur le classement.
+async function setGroupStageDone(competitionId, done) {
+  const { error } = await sb.from('competitions').update({ group_stage_done: done }).eq('id', competitionId);
+  if (error) throw error;
+}
 async function deleteMatch(id) {
   const { error } = await sb.from('matches').delete().eq('id', id);
   if (error) throw error;
@@ -1014,8 +1020,12 @@ async function renderClassement() {
     safe(listPlayoffMatches(compFilter || undefined), []),
     safe(groupStageOngoing(compFilter || undefined), false),
   ]);
+  // Marqueur admin prioritaire (migration 0041) ; repli sur la détection auto.
+  const selComp = compFilter ? comps.find((c) => c.id === compFilter) : null;
+  const flag = selComp ? selComp.group_stage_done : null;
+  const poulesFinies = flag === true ? true : flag === false ? false : !poulesEnCours;
   const poEl = $('#clsPlayoffs');
-  if (poEl && poMatches.length && !poulesEnCours) {
+  if (poEl && poMatches.length && poulesFinies) {
     poEl.innerHTML = `<div class="block" style="margin-top:40px"><div class="block-head"><h2><span class="bh-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/>')}</span>Tableau des playoffs</h2><a class="more" href="#playoffs">Page complète →</a></div>${playoffBracketHtml(poMatches)}</div>`;
     const sc = poEl.querySelector('.po-scroll'), hint = poEl.querySelector('.po-hint');
     if (sc && hint && sc.scrollWidth > sc.clientWidth + 4) hint.style.display = 'block';
@@ -2181,7 +2191,10 @@ async function renderAdminPlayoffs() {
   const list = matches.length
     ? matches.map(playoffAdminRowHtml).join('')
     : '<p class="view-sub" style="padding:6px 2px">Aucun match de playoff pour l\'instant.</p>';
-  $('#apoBody').innerHTML = `
+  const comp = comps.find((c) => c.id === adminComp);
+  const done = comp?.group_stage_done === true;
+  const phaseHtml = `<div class="admin-phase${done ? ' is-done' : ''}"><div class="ap-info"><b>Phase de poules ${done ? '· terminée' : '· en cours'}</b><span>${done ? 'Le tableau des playoffs est visible sur la page Classement.' : "Le tableau des playoffs n'apparaît pas encore sur le Classement."}</span></div><button class="btn${done ? ' btn-ghost' : ''}" id="poulesToggle">${done ? 'Rouvrir les poules' : 'Marquer les poules terminées'}</button></div>`;
+  $('#apoBody').innerHTML = phaseHtml + `
     <form class="social-form" id="poForm">
       <div class="field"><label>Tour</label><select name="playoff_round">${PLAYOFF_ROUNDS.map((r) => `<option value="${r.key}">${r.label}</option>`).join('')}</select></div>
       <div class="field"><label>Équipe A (domicile)</label><select name="home_team_id" required>${teamOpts}</select></div>
@@ -2206,6 +2219,11 @@ async function renderAdminPlayoffs() {
       toast('Match de playoff créé');
       renderAdminPlayoffs();
     } catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  });
+  $('#poulesToggle')?.addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    try { await setGroupStageDone(adminComp, !done); toast(done ? 'Poules rouvertes' : 'Poules marquées terminées'); renderAdminPlayoffs(); }
+    catch (err) { toast(errMsg(err)); e.target.disabled = false; }
   });
   const poBackOpts = { back: renderAdminPlayoffs, backLabel: 'Playoffs' };
   $('#apoBody').querySelectorAll('[data-box]').forEach((b) => b.addEventListener('click', () => openBoxScore(b.dataset.box, poBackOpts)));

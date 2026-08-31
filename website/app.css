@@ -2310,3 +2310,15 @@ a.cs-item:hover { border-color: var(--accent); }
   .po-cell.mirror .po-sc { order: 1; text-align: left; }
   .po-cell.mirror .po-cell-foot { flex-direction: row-reverse; }
 }
+
+/* Admin — bascule « phase de poules terminée » (écran Playoffs) */
+.admin-phase {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 14px 16px; margin-bottom: 20px;
+}
+.admin-phase.is-done { border-color: var(--success); background: var(--success-soft); }
+.admin-phase .ap-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.admin-phase .ap-info b { font-size: 14.5px; }
+.admin-phase .ap-info span { font-size: 12.5px; color: var(--muted); }
+.admin-phase .btn { flex: none; }
