@@ -202,6 +202,17 @@ async function listAdminPlayers() {
   if (error) throw error;
   return data ?? [];
 }
+// Insertion en masse (import Excel) — par lots de 200 pour rester sous les limites.
+async function bulkCreatePlayers(rows) {
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200);
+    const { error } = await sb.from('players').insert(chunk);
+    if (error) throw error;
+    inserted += chunk.length;
+  }
+  return inserted;
+}
 async function createCompetition(patch) {
   const { data, error } = await sb.from('competitions').insert(patch).select('id').single();
   if (error) throw error;
@@ -1902,6 +1913,7 @@ function renderAdmin() {
     { r: 'admin-teams', label: 'Clubs', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/>' },
     { r: 'admin-registrations', label: 'Inscriptions', ic: '<path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h8"/><path d="M9 12l2.5 2.5L21 5"/>' },
     { r: 'admin-players', label: 'Joueurs', ic: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0114 0"/>' },
+    { r: 'admin-import-players', label: 'Import joueurs', ic: '<path d="M12 3v11"/><path d="M8 10l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>' },
     { r: 'admin-competitions', label: 'Compétitions', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-matches', label: 'Matchs', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
@@ -2437,6 +2449,294 @@ async function openBoxScore(matchId, opts = {}) {
     catch (e) { toast(errMsg(e)); }
     btn.disabled = false; btn.textContent = orig;
   });
+}
+
+// ------------------------------------------------- Import de joueurs (coller depuis Excel)
+// Colle un tableau copié depuis Excel / Google Sheets (cellules séparées par des
+// tabulations). L'écran devine les colonnes, laisse l'admin les réassocier, montre un
+// aperçu ligne par ligne avec un statut, puis insère les joueurs en une fois.
+function deburr(s) { return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function normKey(s) { return deburr(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function pad2(x) { return String(x).padStart(2, '0'); }
+
+// Champs importables (ordre d'affichage de l'aperçu).
+const IMPORT_FIELDS = [
+  { k: 'full_name', label: 'Nom complet' },
+  { k: 'team', label: 'Club' },
+  { k: 'number', label: 'Numéro' },
+  { k: 'position', label: 'Poste' },
+  { k: 'height_cm', label: 'Taille (cm)' },
+  { k: 'birth_date', label: 'Naissance' },
+  { k: 'nationality', label: 'Nationalité' },
+];
+// Synonymes d'en-têtes (normalisés) → clé de champ.
+const IMPORT_HEADER_SYNS = {
+  full_name: ['nom', 'nom complet', 'nom et prenom', 'nom prenom', 'prenom nom', 'joueur', 'joueuse', 'player', 'name'],
+  team: ['club', 'equipe', 'team', 'formation'],
+  number: ['numero', 'num', 'no', 'n', 'dossard', 'maillot', 'number', 'jersey'],
+  position: ['poste', 'position', 'pos'],
+  height_cm: ['taille', 'taille cm', 'height', 'cm'],
+  birth_date: ['naissance', 'date de naissance', 'date naissance', 'ne le', 'nee le', 'birth', 'dob', 'anniversaire'],
+  nationality: ['nationalite', 'pays', 'nationality', 'country'],
+};
+function headerFieldFor(cell) {
+  const key = normKey(cell);
+  if (!key) return null;
+  for (const field of Object.keys(IMPORT_HEADER_SYNS)) if (IMPORT_HEADER_SYNS[field].includes(key)) return field;
+  return null;
+}
+function looksLikeHeader(row) {
+  if (!row || !row.length) return false;
+  let hits = 0;
+  row.forEach((c) => { if (headerFieldFor(c)) hits++; });
+  return hits >= Math.max(2, Math.ceil(row.length / 2));
+}
+function guessColumnMapping(headerRow, colCount) {
+  const map = {};
+  for (let i = 0; i < colCount; i++) map[i] = 'ignore';
+  if (headerRow) {
+    const used = new Set();
+    headerRow.forEach((c, i) => { const f = headerFieldFor(c); if (f && !used.has(f)) { map[i] = f; used.add(f); } });
+  } else { map[0] = 'full_name'; }
+  return map;
+}
+// Découpe une ligne en cellules ; respecte les guillemets doubles pour le repli CSV.
+function splitLine(line, delim) {
+  if (delim === '\t') return line.split('\t');
+  const out = []; let cur = ''; let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+// Le presse-papiers d'Excel/Sheets est séparé par des tabulations ; repli sur « ; » puis « , ».
+function splitPastedTable(text) {
+  const clean = String(text ?? '').replace(/\r\n?/g, '\n').trim();
+  if (!clean) return { delim: '\t', rows: [] };
+  const lines = clean.split('\n').filter((l) => l.trim() !== '');
+  const delim = lines.some((l) => l.includes('\t')) ? '\t' : lines.some((l) => l.includes(';')) ? ';' : ',';
+  const rows = lines.map((l) => splitLine(l, delim).map((c) => c.trim()));
+  return { delim, rows };
+}
+// Poste : libellé libre → l'un des POSITIONS canoniques (accents/casse/abréviations/numéros).
+const IMPORT_POS_MAP = (() => {
+  const m = {};
+  const add = (canon, keys) => keys.forEach((k) => { m[normKey(k)] = canon; });
+  add('Meneur', ['meneur', 'meneuse', 'meneur de jeu', 'pg', 'point guard', '1']);
+  add('Arrière', ['arriere', 'arriere shooteur', 'sg', 'shooting guard', 'guard', '2']);
+  add('Ailier', ['ailier', 'sf', 'small forward', 'forward', '3']);
+  add('Ailier fort', ['ailier fort', 'aile forte', 'pf', 'power forward', '4']);
+  add('Pivot', ['pivot', 'centre', 'center', 'c', '5']);
+  return m;
+})();
+function normImportPosition(str) { const key = normKey(str); return key ? (IMPORT_POS_MAP[key] || null) : null; }
+function normImportNumber(str) { const n = parseInt(String(str ?? '').replace(/[^\d-]/g, ''), 10); return Number.isFinite(n) ? n : null; }
+function normImportHeight(str) {
+  const v = String(str ?? '').replace(',', '.').replace(/[^\d.]/g, '');
+  if (!v) return null;
+  let n = parseFloat(v);
+  if (!Number.isFinite(n)) return null;
+  if (n > 0 && n < 3) n *= 100; // mètres → cm (1.90 → 190)
+  return Math.round(n);
+}
+function normImportDate(str) {
+  const s = String(str ?? '').trim();
+  if (!s) return null;
+  let y, mo, d, m;
+  if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/))) { d = +m[1]; mo = +m[2]; y = +m[3]; } // JJ/MM/AAAA
+  else return null;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 1900 || y > 2100) return null;
+  return `${y}-${pad2(mo)}-${pad2(d)}`;
+}
+function matchImportTeam(str, teams) {
+  const key = normKey(str);
+  if (!key) return null;
+  let best = null;
+  for (const t of teams) {
+    const nm = normKey(t.name), sh = normKey(t.short_name);
+    if (nm === key || (sh && sh === key)) return t;
+    if (!best && (nm.startsWith(key) || key.startsWith(nm) || (key.length >= 3 && nm.includes(key)))) best = t;
+  }
+  return best;
+}
+function dupKey(name, teamId) { return normKey(name) + '|' + (teamId || ''); }
+// Construit les lignes prêtes à insérer + leur statut (ok / warn / dup / skip).
+function buildImportRows(parsedRows, mapping, headerPresent, teams, existing, defaultTeamId) {
+  const inv = {}; // champ → index de colonne
+  Object.keys(mapping).forEach((i) => { const f = mapping[i]; if (f !== 'ignore' && inv[f] == null) inv[f] = Number(i); });
+  const dataRows = headerPresent ? parsedRows.slice(1) : parsedRows;
+  const existingSet = new Set((existing || []).map((p) => dupKey(p.full_name, p.team_id)));
+  const cell = (row, f) => (inv[f] != null ? String(row[inv[f]] ?? '').trim() : '');
+  const defaultTeam = teams.find((t) => t.id === defaultTeamId) || null;
+  return dataRows.map((row) => {
+    const name = cell(row, 'full_name');
+    const warnings = [];
+    const patch = {};
+    if (name) patch.full_name = name;
+    let team = null;
+    const clubRaw = cell(row, 'team');
+    if (clubRaw) { team = matchImportTeam(clubRaw, teams); if (!team && !defaultTeam) warnings.push(`club « ${clubRaw} » introuvable`); }
+    if (!team && defaultTeam) team = defaultTeam;
+    if (team) patch.team_id = team.id;
+    const numRaw = cell(row, 'number');
+    if (numRaw) { const n = normImportNumber(numRaw); if (n != null) patch.number = n; else warnings.push(`numéro « ${numRaw} » ignoré`); }
+    const posRaw = cell(row, 'position');
+    if (posRaw) { const p = normImportPosition(posRaw); if (p) patch.position = p; else warnings.push(`poste « ${posRaw} » non reconnu`); }
+    const hRaw = cell(row, 'height_cm');
+    if (hRaw) { const h = normImportHeight(hRaw); if (h != null) patch.height_cm = h; else warnings.push('taille non reconnue'); }
+    const bRaw = cell(row, 'birth_date');
+    if (bRaw) { const dd = normImportDate(bRaw); if (dd) patch.birth_date = dd; else warnings.push('date non reconnue'); }
+    const natRaw = cell(row, 'nationality');
+    if (natRaw) patch.nationality = natRaw;
+
+    let status;
+    if (!name) status = 'skip';
+    else if (existingSet.has(dupKey(name, team ? team.id : null))) { status = 'dup'; warnings.unshift('déjà présent'); }
+    else status = warnings.length ? 'warn' : 'ok';
+    return { status, warnings, patch, display: {
+      full_name: name || '—',
+      team: team ? (team.short_name || team.name) : (clubRaw || ''),
+      number: patch.number != null ? patch.number : '',
+      position: patch.position || (posRaw ? '?' : ''),
+      height_cm: patch.height_cm != null ? patch.height_cm : '',
+      birth_date: patch.birth_date || (bRaw ? '?' : ''),
+      nationality: patch.nationality || '',
+    } };
+  });
+}
+
+async function renderAdminImportPlayers() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + `
+    <div class="admin-head"><div>
+      <h1 class="view-title">Import de joueurs</h1>
+      <p class="view-sub">Collez un tableau depuis Excel ou Google Sheets — une ligne par joueur. Les colonnes sont détectées automatiquement ; vous pouvez les réassocier avant d'importer.</p>
+    </div></div>
+    <div class="imp-help">
+      <b>Colonnes reconnues :</b> Nom complet · Club · Numéro · Poste · Taille (cm) · Naissance (AAAA-MM-JJ ou JJ/MM/AAAA) · Nationalité.
+      <span class="imp-help-sub">Astuce : sélectionnez les cellules dans Excel, copiez (Ctrl+C), puis collez ci-dessous.</span>
+    </div>
+    <div class="field"><label for="impText">Données collées</label>
+      <textarea id="impText" rows="8" spellcheck="false"></textarea>
+    </div>
+    <div class="imp-tools">
+      <label class="imp-check"><input type="checkbox" id="impHeader" checked> La première ligne contient les en-têtes</label>
+      <label class="imp-defteam"><span>Club par défaut</span>
+        <select id="impDefaultTeam"><option value="">— Aucun —</option></select>
+      </label>
+    </div>
+    <div class="form-actions" style="justify-content:flex-start">
+      <button class="btn" id="impAnalyze" type="button">Analyser</button>
+      <button class="btn btn-ghost" id="impClear" type="button">Effacer</button>
+    </div>
+    <div id="impResult"></div>`;
+
+  $('#impText').placeholder = 'Nom\tNuméro\tPoste\tTaille\nMamadou Diallo\t7\tMeneur\t185\nSékou Camara\t12\tPivot\t201';
+  const teams = await safe(listTeams(), []);
+  const teamSel = $('#impDefaultTeam');
+  teams.forEach((t) => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; teamSel.appendChild(o); });
+  let existing = null; // chargé paresseusement à la 1re analyse (détection des doublons)
+  let parsed = null;   // { delim, rows }
+  let mapping = null;  // { colIndex: field }
+
+  const analyze = async () => {
+    parsed = splitPastedTable($('#impText').value);
+    if (!parsed.rows.length) { $('#impResult').innerHTML = emptyHtml('Rien à analyser', 'Collez d’abord un tableau dans le champ ci-dessus.', 'inbox'); return; }
+    if (existing === null) existing = await safe(listAdminPlayers(), []);
+    const colCount = Math.max(...parsed.rows.map((r) => r.length));
+    mapping = guessColumnMapping($('#impHeader').checked ? parsed.rows[0] : null, colCount);
+    renderResult();
+  };
+
+  const renderResult = () => {
+    const colCount = Math.max(...parsed.rows.map((r) => r.length));
+    const headerPresent = $('#impHeader').checked;
+    const headerRow = headerPresent ? parsed.rows[0] : null;
+    const fieldOpts = (selected) => [['ignore', '— Ignorer —'], ...IMPORT_FIELDS.map((f) => [f.k, f.label])]
+      .map(([v, l]) => `<option value="${v}" ${selected === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
+    let cols = '';
+    for (let i = 0; i < colCount; i++) {
+      let sample = '';
+      for (let ri = headerPresent ? 1 : 0; ri < parsed.rows.length; ri++) { if (parsed.rows[ri][i]) { sample = parsed.rows[ri][i]; break; } }
+      const head = headerRow && headerRow[i] ? esc(headerRow[i]) : `Colonne ${i + 1}`;
+      cols += `<div class="imp-map-row"><div class="imp-map-col"><b>${head}</b><span>${esc(String(sample).slice(0, 28))}</span></div>
+        <select class="imp-map-sel" data-col="${i}">${fieldOpts(mapping[i])}</select></div>`;
+    }
+    const built = buildImportRows(parsed.rows, mapping, headerPresent, teams, existing, teamSel.value);
+    const count = (s) => built.filter((b) => b.status === s).length;
+    const nOk = count('ok'), nWarn = count('warn'), nDup = count('dup'), nSkip = count('skip');
+    const includeDup = $('#impIncludeDup') ? $('#impIncludeDup').checked : false;
+    const importable = built.filter((b) => b.status === 'ok' || b.status === 'warn' || (includeDup && b.status === 'dup'));
+    const badge = (s) => s === 'ok' ? '<span class="status-pill ok">Prêt</span>'
+      : s === 'warn' ? '<span class="status-pill warn">Attention</span>'
+      : s === 'dup' ? '<span class="status-pill mut">Doublon</span>'
+      : '<span class="status-pill bad">Ignoré</span>';
+    const rowsHtml = built.map((b, i) => {
+      const d = b.display;
+      const w = b.warnings.length ? `<div class="imp-warn">${esc(b.warnings.join(' · '))}</div>` : '';
+      return `<tr class="imp-r-${b.status}"><td class="imp-idx">${i + 1}</td>
+        <td class="imp-name">${esc(d.full_name)}${w}</td>
+        <td>${esc(String(d.team))}</td><td>${esc(String(d.number))}</td><td>${esc(String(d.position))}</td>
+        <td>${esc(String(d.height_cm))}</td><td>${esc(String(d.birth_date))}</td><td>${esc(String(d.nationality))}</td>
+        <td>${badge(b.status)}</td></tr>`;
+    }).join('');
+    const plural = (n) => n > 1 ? 's' : '';
+    $('#impResult').innerHTML = `
+      <div class="block"><div class="block-head"><h2>1 · Colonnes</h2></div>
+        <p class="view-sub" style="margin:0 0 12px">Associez chaque colonne collée au bon champ.</p>
+        <div class="imp-map">${cols}</div></div>
+      <div class="block"><div class="block-head"><h2>2 · Aperçu</h2></div>
+        <div class="imp-summary">
+          <span class="status-pill ok">${nOk} prêt${plural(nOk)}</span>
+          <span class="status-pill warn">${nWarn} attention</span>
+          <span class="status-pill mut">${nDup} doublon${plural(nDup)}</span>
+          <span class="status-pill bad">${nSkip} ignoré${plural(nSkip)}</span>
+        </div>
+        ${nDup ? `<label class="imp-check" style="margin:12px 0 2px"><input type="checkbox" id="impIncludeDup" ${includeDup ? 'checked' : ''}> Importer aussi les doublons (${nDup})</label>` : ''}
+        <div class="imp-wrap"><table class="imp-table">
+          <thead><tr><th>#</th><th class="imp-name">Nom</th><th>Club</th><th>N°</th><th>Poste</th><th>Taille</th><th>Naissance</th><th>Nat.</th><th>Statut</th></tr></thead>
+          <tbody>${rowsHtml}</tbody></table></div></div>
+      <div class="form-actions" style="justify-content:flex-start">
+        <button class="btn" id="impDoImport" type="button" ${importable.length ? '' : 'disabled'}>Importer ${importable.length} joueur${plural(importable.length)}</button>
+      </div>`;
+    $('#impResult').querySelectorAll('.imp-map-sel').forEach((sel) => sel.addEventListener('change', () => {
+      const col = Number(sel.dataset.col), val = sel.value;
+      if (val !== 'ignore') Object.keys(mapping).forEach((k) => { if (mapping[k] === val && Number(k) !== col) mapping[k] = 'ignore'; });
+      mapping[col] = val;
+      renderResult();
+    }));
+    const incDup = $('#impIncludeDup');
+    if (incDup) incDup.addEventListener('change', renderResult);
+    const doBtn = $('#impDoImport');
+    if (doBtn) doBtn.addEventListener('click', () => doImport(importable));
+  };
+
+  const doImport = async (list) => {
+    if (!list.length) return;
+    const btn = $('#impDoImport'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Import en cours…';
+    try {
+      const n = await bulkCreatePlayers(list.map((b) => b.patch));
+      toast(`${n} joueur${n > 1 ? 's' : ''} importé${n > 1 ? 's' : ''}`);
+      existing = null;
+      $('#impResult').innerHTML = `<div class="imp-done"><div class="imp-done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h3>${n} joueur${n > 1 ? 's' : ''} importé${n > 1 ? 's' : ''}</h3>
+        <p class="view-sub">Retrouvez-les dans « Joueurs ». Pour allumer les classements et les records, saisissez ensuite leurs statistiques via « Matchs » → feuille de match.</p>
+        <div class="form-actions" style="justify-content:flex-start"><a class="btn" href="#admin-players">Voir les joueurs</a><button class="btn btn-ghost" id="impAgain" type="button">Importer d'autres joueurs</button></div></div>`;
+      $('#impText').value = '';
+      const again = $('#impAgain'); if (again) again.addEventListener('click', () => renderAdminImportPlayers());
+    } catch (e) { toast(errMsg(e)); btn.disabled = false; btn.textContent = orig; }
+  };
+
+  $('#impAnalyze').addEventListener('click', analyze);
+  $('#impClear').addEventListener('click', () => { $('#impText').value = ''; $('#impResult').innerHTML = ''; parsed = null; });
+  $('#impHeader').addEventListener('change', () => { if (parsed) analyze(); });
+  $('#impDefaultTeam').addEventListener('change', () => { if (parsed) renderResult(); });
 }
 
 // --------------------------------------------------------------- CRUD admin générique
@@ -3209,6 +3509,7 @@ const RENDERERS = {
   admin: renderAdmin,
   'admin-teams': () => renderAdminCrud(CRUD_TEAMS),
   'admin-players': () => renderAdminCrud(CRUD_PLAYERS),
+  'admin-import-players': renderAdminImportPlayers,
   'admin-competitions': () => renderAdminCrud(CRUD_COMPS),
   'admin-matches': renderAdminMatches,
   'admin-news': () => renderAdminCrud(CRUD_NEWS),
