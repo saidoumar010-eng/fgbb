@@ -293,6 +293,17 @@ async function scheduleMatch(m) {
   const { error } = await sb.from('matches').insert({ ...m, phase: 'regular', status: 'scheduled' });
   if (error) throw error;
 }
+// Création en masse de matchs de championnat (générateur de calendrier) — lots de 200.
+async function bulkCreateMatches(rows) {
+  let n = 0;
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200).map((m) => ({ ...m, phase: 'regular', status: 'scheduled' }));
+    const { error } = await sb.from('matches').insert(chunk);
+    if (error) throw error;
+    n += chunk.length;
+  }
+  return n;
+}
 async function updateMatch(id, patch) {
   const { error } = await sb.from('matches').update(patch).eq('id', id);
   if (error) throw error;
@@ -1907,6 +1918,165 @@ function renderAdminDenied() {
   view.innerHTML = `<div class="login-prompt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Accès réservé</h3><p>Cet espace est réservé à l'administration de la fédération.</p><button class="btn" id="admLogin">Se connecter</button></div>`;
   $('#admLogin')?.addEventListener('click', () => openAuth('login'));
 }
+// ------------------------------------------------- Générateur de calendrier (championnat)
+// Porté du mobile (src/app/admin/calendar-gen.tsx) — méthode du cercle, JS pur.
+const CAL_BYE = '__bye__';
+const CAL_DAY_MS = 86400000;
+const CAL_WEEKDAYS = [
+  { id: 1, label: 'Lundi' }, { id: 2, label: 'Mardi' }, { id: 3, label: 'Mercredi' },
+  { id: 4, label: 'Jeudi' }, { id: 5, label: 'Vendredi' }, { id: 6, label: 'Samedi' }, { id: 0, label: 'Dimanche' },
+];
+// Tournoi toutes rondes : la 1re équipe reste fixe, les autres tournent d'un cran par
+// journée ; on apparie i avec n-1-i. Effectif impair → une équipe fictive (exempt).
+// Domicile/extérieur inversés une journée sur deux pour équilibrer les réceptions.
+function calRoundRobin(teamIds) {
+  const list = teamIds.slice();
+  if (list.length % 2 === 1) list.push(CAL_BYE);
+  const n = list.length, half = n / 2, rounds = [];
+  const circle = list.slice(1);
+  for (let r = 0; r < n - 1; r++) {
+    const row = [list[0], ...circle];
+    const pairs = [];
+    for (let i = 0; i < half; i++) {
+      const a = row[i], b = row[n - 1 - i];
+      if (a === CAL_BYE || b === CAL_BYE) continue;
+      pairs.push(r % 2 === 0 ? { home: a, away: b } : { home: b, away: a });
+    }
+    rounds.push(pairs);
+    circle.unshift(circle.pop());
+  }
+  return rounds;
+}
+function calBuildRounds(selected, twoLegs) {
+  if (selected.length < 2) return [];
+  const first = calRoundRobin(selected);
+  if (!twoLegs) return first;
+  // Match retour : mêmes affiches, domicile et extérieur inversés.
+  return [...first, ...first.map((pairs) => pairs.map((p) => ({ home: p.away, away: p.home })))];
+}
+// Date d'une journée (UTC — la Guinée est à GMT) : on cale sur le jour de semaine
+// choisi puis on ajoute l'intervalle par journée.
+function calRoundDate(start, weekday, intervalDays, roundIndex, time) {
+  const [y, m, d] = String(start).split('-').map((v) => parseInt(v, 10));
+  const [hh, mm] = String(time).split(':').map((v) => parseInt(v, 10));
+  const base = Date.UTC(y, m - 1, d, hh || 0, mm || 0);
+  const shift = (weekday - new Date(base).getUTCDay() + 7) % 7;
+  return new Date(base + (shift + roundIndex * intervalDays) * CAL_DAY_MS).toISOString();
+}
+
+async function renderAdminCalendar() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + '<h1 class="view-title">Générateur de calendrier</h1>' + loadingHtml();
+  const [comps, teams, season] = await Promise.all([safe(listCompetitions(), []), safe(listTeams(), []), safe(getCurrentSeason(), null)]);
+  if (!comps.length) { view.innerHTML = adminBackHtml() + '<h1 class="view-title">Générateur de calendrier</h1>' + emptyHtml('Aucune compétition', "Créez d'abord une compétition.", 'trophy'); return; }
+  const byId = {}; teams.forEach((t) => { byId[t.id] = t; });
+  const today = new Date().toISOString().slice(0, 10);
+  const calState = { comp: comps[0].id, selected: new Set(), twoLegs: false };
+  view.innerHTML = adminBackHtml() + `
+    <h1 class="view-title">Générateur de calendrier</h1>
+    <p class="view-sub">Génère automatiquement toutes les journées d'un championnat (méthode toutes rondes), avec un aperçu avant création.</p>
+    <div class="cal-form">
+      <div class="field"><label for="calComp">Compétition</label>
+        <select id="calComp">${comps.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+      <p class="cal-note" id="calSeason">${season ? 'Saison en cours : ' + esc(season.name) : 'Aucune saison en cours : les matchs seront créés sans saison.'}</p>
+      <div class="field"><label>Formule</label>
+        <div class="segmented" id="calFormule"><button class="seg active" data-legs="0" type="button">Aller simple</button><button class="seg" data-legs="1" type="button">Aller-retour</button></div></div>
+      <div class="cal-row">
+        <div class="field"><label for="calDate">Date de début</label><input type="date" id="calDate" value="${today}"></div>
+        <div class="field"><label for="calTime">Heure</label><input type="time" id="calTime" value="16:00"></div>
+      </div>
+      <div class="cal-row">
+        <div class="field"><label for="calWeekday">Jour des rencontres</label><select id="calWeekday">${CAL_WEEKDAYS.map((d) => `<option value="${d.id}" ${d.id === 6 ? 'selected' : ''}>${d.label}</option>`).join('')}</select></div>
+        <div class="field"><label for="calInterval">Jours entre journées</label><input type="number" id="calInterval" value="7" min="1"></div>
+      </div>
+      <div class="field"><label for="calVenue">Lieu par défaut (optionnel)</label><input type="text" id="calVenue" placeholder="Ex. Palais des Sports"></div>
+    </div>
+    <div class="admin-head" style="margin:18px 0 8px"><div><h2 style="font-size:16px;margin:0">Équipes participantes</h2></div><button class="btn btn-ghost" id="calAll" type="button">Tout sélectionner</button></div>
+    <div class="cal-teams" id="calTeams"></div>
+    <div id="calPreview"></div>`;
+
+  const updateAllLabel = () => { $('#calAll').textContent = (calState.selected.size === teams.length && teams.length) ? 'Tout désélectionner' : 'Tout sélectionner'; };
+  const renderTeams = () => {
+    const el = $('#calTeams');
+    if (!teams.length) { el.innerHTML = emptyHtml('Aucune équipe', 'Ajoutez des clubs.', 'ball'); return; }
+    el.innerHTML = teams.map((t) => {
+      const on = calState.selected.has(t.id);
+      return `<label class="cal-team ${on ? 'on' : ''}" data-team="${t.id}"><input type="checkbox" ${on ? 'checked' : ''}><span class="ct-name">${esc(t.name)}</span><span class="ct-div">${esc(t.division || '')}</span></label>`;
+    }).join('');
+    el.querySelectorAll('.cal-team').forEach((rowEl) => rowEl.querySelector('input').addEventListener('change', (e) => {
+      const id = rowEl.dataset.team;
+      if (e.target.checked) calState.selected.add(id); else calState.selected.delete(id);
+      rowEl.classList.toggle('on', e.target.checked);
+      updateAllLabel(); renderPreview();
+    }));
+  };
+  const renderPreview = () => {
+    const selected = teams.map((t) => t.id).filter((id) => calState.selected.has(id));
+    const rounds = calBuildRounds(selected, calState.twoLegs);
+    const total = rounds.reduce((s, p) => s + p.length, 0);
+    const el = $('#calPreview');
+    if (selected.length < 2) { el.innerHTML = '<div class="block"><p class="view-sub" style="margin:0">Sélectionnez au moins deux équipes pour voir le calendrier.</p></div>'; return; }
+    const date = $('#calDate').value, time = $('#calTime').value, weekday = parseInt($('#calWeekday').value, 10), interval = parseInt($('#calInterval').value, 10);
+    const showDates = /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{1,2}:\d{2}$/.test(time) && interval >= 1;
+    const roundsHtml = rounds.map((pairs, i) => {
+      const when = showDates ? `<span class="cal-jdate">${esc(fmtDate(calRoundDate(date, weekday, interval, i, time)))}</span>` : '';
+      const lines = pairs.map((p) => `<div class="cal-match"><span class="cal-h">${esc(byId[p.home]?.name || '?')}</span><span class="cal-vs">reçoit</span><span class="cal-a">${esc(byId[p.away]?.name || '?')}</span></div>`).join('');
+      return `<div class="cal-jour"><div class="cal-jhead"><b>Journée ${i + 1}</b>${when}</div>${lines}</div>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="block"><div class="cal-summary">
+        <div><span>Équipes</span><b>${selected.length}</b></div>
+        <div><span>Journées</span><b>${rounds.length}</b></div>
+        <div><span>Total des matchs</span><b class="cal-total">${total}</b></div>
+      </div>${selected.length % 2 === 1 ? '<p class="cal-note" style="margin:8px 0 0">Effectif impair : une équipe est exempte à chaque journée.</p>' : ''}</div>
+      <div class="cal-jours">${roundsHtml}</div>
+      <div class="form-actions" style="justify-content:flex-start"><button class="btn" id="calCreate" type="button" ${total ? '' : 'disabled'}>Créer les ${total} matchs</button></div>
+      <p class="cal-note" style="margin-top:10px">Les matchs sont créés au statut « à venir ». Vous pourrez ensuite ajuster chaque affiche dans « Matchs ».</p>`;
+    const btn = $('#calCreate');
+    if (btn) btn.addEventListener('click', () => createCalendar(rounds, total));
+  };
+  const createCalendar = async (rounds, total) => {
+    const date = $('#calDate').value, time = $('#calTime').value, weekday = parseInt($('#calWeekday').value, 10), interval = parseInt($('#calInterval').value, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return toast('Date de début invalide (AAAA-MM-JJ)');
+    if (!/^\d{1,2}:\d{2}$/.test(time)) return toast('Heure invalide (HH:MM)');
+    if (!(interval >= 1)) return toast("L'intervalle doit être d'au moins un jour");
+    const comp = $('#calComp').value, venue = $('#calVenue').value.trim() || null;
+    if (!window.confirm(`${total} matchs vont être créés sur ${rounds.length} journées. Continuer ?`)) return;
+    const rows = [];
+    rounds.forEach((pairs, i) => {
+      const at = calRoundDate(date, weekday, interval, i, time);
+      pairs.forEach((p) => rows.push({ competition_id: comp || null, season_id: season?.id ?? null, home_team_id: p.home, away_team_id: p.away, round: i + 1, scheduled_at: at, venue }));
+    });
+    const btn = $('#calCreate'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Création…';
+    try {
+      const n = await bulkCreateMatches(rows);
+      toast(`${n} matchs créés`);
+      $('#calPreview').innerHTML = `<div class="imp-done"><div class="imp-done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><h3>${n} matchs créés sur ${rounds.length} journées</h3><p class="view-sub">Du ${esc(fmtDate(rows[0].scheduled_at))} au ${esc(fmtDate(rows[rows.length - 1].scheduled_at))}.</p><div class="form-actions" style="justify-content:flex-start"><a class="btn" href="#admin-matches">Voir les matchs</a><button class="btn btn-ghost" id="calAgain" type="button">Nouveau calendrier</button></div></div>`;
+      const again = $('#calAgain'); if (again) again.addEventListener('click', () => renderAdminCalendar());
+    } catch (e) { toast(errMsg(e)); btn.disabled = false; btn.textContent = orig; }
+  };
+  const applyCompTeams = async (compId) => {
+    const ct = await safe(listCompetitionTeams(compId), []);
+    const ids = ct.map((r) => r.team_id).filter((id) => byId[id]);
+    if (ids.length) { calState.selected = new Set(ids); renderTeams(); updateAllLabel(); }
+    renderPreview();
+  };
+
+  renderTeams(); updateAllLabel(); renderPreview();
+  $('#calComp').addEventListener('change', () => { calState.comp = $('#calComp').value; applyCompTeams(calState.comp); });
+  $('#calFormule').querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => {
+    $('#calFormule').querySelectorAll('.seg').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active'); calState.twoLegs = b.dataset.legs === '1'; renderPreview();
+  }));
+  $('#calAll').addEventListener('click', () => {
+    if (calState.selected.size === teams.length) calState.selected.clear();
+    else calState.selected = new Set(teams.map((t) => t.id));
+    renderTeams(); updateAllLabel(); renderPreview();
+  });
+  ['#calDate', '#calTime', '#calWeekday', '#calInterval', '#calVenue'].forEach((sel) => { const el = $(sel); if (el) el.addEventListener('input', renderPreview); });
+  applyCompTeams(calState.comp); // présélectionne les équipes de la compétition
+}
+
 function renderAdmin() {
   if (!isAdmin()) return renderAdminDenied();
   const items = [
@@ -1916,6 +2086,7 @@ function renderAdmin() {
     { r: 'admin-import-players', label: 'Import joueurs', ic: '<path d="M12 3v11"/><path d="M8 10l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>' },
     { r: 'admin-competitions', label: 'Compétitions', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-matches', label: 'Matchs', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
+    { r: 'admin-calendar', label: 'Calendrier', ic: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h4M7 17h7"/>' },
     { r: 'admin-poules', label: 'Poules', ic: '<circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0112 0M14 20a5 5 0 017-4.5"/>' },
     { r: 'admin-playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
     { r: 'admin-news', label: 'Actualités', ic: '<path d="M4 5h16v14H4zM4 9h16M9 5v14"/>' },
@@ -3656,6 +3827,7 @@ const RENDERERS = {
   'admin-import-players': renderAdminImportPlayers,
   'admin-competitions': () => renderAdminCrud(CRUD_COMPS),
   'admin-matches': renderAdminMatches,
+  'admin-calendar': renderAdminCalendar,
   'admin-news': () => renderAdminCrud(CRUD_NEWS),
   'admin-media': () => renderAdminCrud(CRUD_MEDIA),
   'admin-events': () => renderAdminCrud(CRUD_EVENTS),
