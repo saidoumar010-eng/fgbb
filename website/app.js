@@ -2402,6 +2402,84 @@ function boxTeamHtml(team, players, byPlayer) {
   return `<div class="block"><div class="block-head"><h2>${esc(team?.name || '')}</h2></div>
     <div class="boxscore-wrap"><table class="boxscore"><thead><tr><th class="bs-name">Joueur</th>${BOX_COLS.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
+// --- Import de box score collé (dans la feuille de match) ---
+// Synonymes d'en-têtes de colonne → clé de stat (BOX_COLS) ou 'name'/'number'.
+const STAT_HEADER_SYNS = {
+  name: ['nom', 'joueur', 'joueuse', 'player', 'name', 'nom complet'],
+  number: ['numero', 'num', 'no', 'n', 'dossard', 'maillot', 'number'],
+  minutes: ['min', 'minutes', 'mn', 'temps'],
+  points: ['pts', 'points', 'pt', 'score'],
+  rebounds: ['reb', 'rebonds', 'rebounds', 'rbd', 'rbds'],
+  off_rebounds: ['rebo', 'reb o', 'reb off', 'rebonds offensifs', 'oreb', 'ro'],
+  assists: ['pd', 'passes', 'passes decisives', 'ast', 'assists'],
+  steals: ['int', 'interceptions', 'stl', 'steals'],
+  blocks: ['ct', 'contres', 'contre', 'blk', 'blocks'],
+  turnovers: ['bp', 'ballons perdus', 'pertes', 'to', 'tov', 'turnovers'],
+  fouls: ['fte', 'fautes', 'faute', 'pf', 'fouls'],
+  fg_made: ['tm', 'tirs marques', 'fgm', 'tirs reussis', 'tirs', 'tm tt', 'tir'],
+  fg_att: ['tt', 'tirs tentes', 'fga'],
+  three_made: ['3m', '3 pts m', '3pts m', '3ptm', '3 points marques', 'tp m', '3m 3t', '3pts', '3 pts', 'tp', '3 points'],
+  three_att: ['3t', '3 pts t', '3pts t', '3pta', '3 points tentes', 'tp t'],
+  ft_made: ['lfm', 'lf m', 'lancers francs marques', 'ftm', 'lfm lft', 'lf', 'lancers francs', 'lancers'],
+  ft_att: ['lft', 'lf t', 'lancers francs tentes', 'fta'],
+  plus_minus: ['plus minus', 'plusmoins', 'evaluation', 'eval'],
+};
+function statHeaderFor(cell) {
+  const raw = String(cell ?? '').trim();
+  if (raw === '+/-' || raw === '+-') return 'plus_minus';
+  const key = normKey(raw);
+  if (!key) return null;
+  for (const field of Object.keys(STAT_HEADER_SYNS)) if (STAT_HEADER_SYNS[field].includes(key)) return field;
+  return null;
+}
+function guessStatMapping(headerRow, colCount) {
+  const map = {};
+  for (let i = 0; i < colCount; i++) map[i] = 'ignore';
+  if (headerRow) {
+    const used = new Set();
+    headerRow.forEach((c, i) => { const f = statHeaderFor(c); if (f && !used.has(f)) { map[i] = f; used.add(f); } });
+  } else { map[0] = 'name'; }
+  return map;
+}
+// Colonnes combinées « marqués/tentés » : une cellule « 7/12 » remplit les deux champs.
+const FG_PAIR = { fg_made: 'fg_att', three_made: 'three_att', ft_made: 'ft_att' };
+const STAT_FIELDS = [['name', 'Nom'], ['number', 'N°'], ...BOX_COLS.map(([k, l]) => [k, l])];
+// Associe chaque ligne collée à un joueur (par nom, repli sur numéro unique) + valeurs.
+function buildStatRows(parsedRows, mapping, headerPresent, players) {
+  const inv = {};
+  Object.keys(mapping).forEach((i) => { const f = mapping[i]; if (f !== 'ignore' && inv[f] == null) inv[f] = Number(i); });
+  const dataRows = headerPresent ? parsedRows.slice(1) : parsedRows;
+  const nameIndex = new Map();
+  const numIndex = new Map();
+  players.forEach((p) => {
+    const nk = normKey(p.full_name);
+    if (nk && !nameIndex.has(nk)) nameIndex.set(nk, p);
+    if (p.number != null) { const a = numIndex.get(p.number) || []; a.push(p); numIndex.set(p.number, a); }
+  });
+  const cell = (row, f) => (inv[f] != null ? String(row[inv[f]] ?? '').trim() : '');
+  return dataRows.map((row) => {
+    const nameRaw = cell(row, 'name');
+    const numRaw = cell(row, 'number');
+    let player = null;
+    if (nameRaw) player = nameIndex.get(normKey(nameRaw)) || null;
+    if (!player && numRaw) { const arr = numIndex.get(parseInt(numRaw, 10)); if (arr && arr.length === 1) player = arr[0]; }
+    const stats = {};
+    BOX_COLS.forEach(([k]) => {
+      if (inv[k] == null) return;
+      const raw = String(row[inv[k]] ?? '').trim();
+      if (!raw) return;
+      if (FG_PAIR[k]) { const mm = raw.match(/^(\d+)\s*[/\-]\s*(\d+)$/); if (mm) { stats[k] = parseInt(mm[1], 10); stats[FG_PAIR[k]] = parseInt(mm[2], 10); return; } }
+      const v = parseInt(raw.replace(/[^\d-]/g, ''), 10);
+      if (Number.isFinite(v)) stats[k] = v;
+    });
+    let status;
+    if (!nameRaw && !numRaw) status = 'skip';
+    else if (!player) status = 'warn';
+    else status = 'ok';
+    return { status, player, stats, display: nameRaw || (numRaw ? '#' + numRaw : '—') };
+  });
+}
+
 async function openBoxScore(matchId, opts = {}) {
   if (!isAdmin()) return renderAdminDenied();
   const backFn = opts.back || renderAdminMatches;
@@ -2423,6 +2501,16 @@ async function openBoxScore(matchId, opts = {}) {
     <a class="back-btn" id="bsBack" role="button" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>${esc(backLabel)}</a>
     <h1 class="view-title">Feuille de match</h1>
     <p class="view-sub">${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${m.status === 'finished' ? ` · ${m.home_score}–${m.away_score}` : ''}. Saisissez les statistiques par joueur, puis enregistrez.</p>
+    <div class="bs-import">
+      <button class="btn btn-ghost bs-import-toggle" id="bsPasteToggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-2"/><path d="M9 13h6M9 17h4"/></svg>Coller depuis Excel</button>
+      <div class="bs-import-panel" id="bsPastePanel" hidden>
+        <p class="view-sub" style="margin:0 0 8px">Collez le box score — une ligne par joueur, avec une colonne <b>Nom</b>. Les joueurs sont reconnus par leur nom (repli sur le numéro) ; ajoutez d'abord les manquants via « Import joueurs ». Une cellule « 7/12 » remplit marqués et tentés.</p>
+        <div class="field" style="margin-bottom:10px"><textarea id="bsPasteText" rows="6" spellcheck="false"></textarea></div>
+        <label class="imp-check" style="margin-bottom:10px"><input type="checkbox" id="bsPasteHeader" checked> La première ligne contient les en-têtes</label>
+        <div class="form-actions" style="justify-content:flex-start;margin:0 0 6px"><button class="btn" id="bsPasteAnalyze" type="button">Analyser</button></div>
+        <div id="bsPasteResult"></div>
+      </div>
+    </div>
     ${boxTeamHtml(m.home_team, homeP, byPlayer)}
     ${boxTeamHtml(m.away_team, awayP, byPlayer)}
     <div class="form-actions"><button class="btn btn-ghost" id="bsBack2" type="button">Retour</button><button class="btn" id="bsSave" type="button">Enregistrer la feuille</button></div>`;
@@ -2449,6 +2537,62 @@ async function openBoxScore(matchId, opts = {}) {
     catch (e) { toast(errMsg(e)); }
     btn.disabled = false; btn.textContent = orig;
   });
+
+  // Import de box score collé → remplit les cases des joueurs reconnus.
+  const rosterAll = [...homeP, ...awayP];
+  let pasteParsed = null, pasteMapping = null, pasteBuilt = null;
+  $('#bsPasteToggle').addEventListener('click', () => {
+    const panel = $('#bsPastePanel');
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) $('#bsPasteText').placeholder = 'Nom\tMIN\tPTS\tREB\tPD\tTM/TT\t3M/3T\tLFM/LFT\nMamadou Diallo\t28\t17\t6\t5\t7/12\t1/3\t2/2';
+  });
+  const renderPasteResult = () => {
+    const colCount = Math.max(...pasteParsed.rows.map((r) => r.length));
+    const headerPresent = $('#bsPasteHeader').checked;
+    const headerRow = headerPresent ? pasteParsed.rows[0] : null;
+    const opts = (sel) => [['ignore', '— Ignorer —'], ...STAT_FIELDS].map(([v, l]) => `<option value="${v}" ${sel === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
+    let cols = '';
+    for (let i = 0; i < colCount; i++) {
+      let smp = ''; for (let ri = headerPresent ? 1 : 0; ri < pasteParsed.rows.length; ri++) { if (pasteParsed.rows[ri][i]) { smp = pasteParsed.rows[ri][i]; break; } }
+      const head = headerRow && headerRow[i] ? esc(headerRow[i]) : `Col. ${i + 1}`;
+      cols += `<div class="imp-map-row"><div class="imp-map-col"><b>${head}</b><span>${esc(String(smp).slice(0, 20))}</span></div><select class="imp-map-sel" data-col="${i}">${opts(pasteMapping[i])}</select></div>`;
+    }
+    pasteBuilt = buildStatRows(pasteParsed.rows, pasteMapping, headerPresent, rosterAll);
+    const nOk = pasteBuilt.filter((b) => b.status === 'ok').length;
+    const unmatched = pasteBuilt.filter((b) => b.status === 'warn').map((b) => b.display);
+    const hasName = Object.keys(pasteMapping).some((k) => pasteMapping[k] === 'name');
+    $('#bsPasteResult').innerHTML = `
+      <div class="imp-map" style="margin-bottom:10px">${cols}</div>
+      ${hasName ? '' : '<p class="imp-warn" style="margin:0 0 8px">Indiquez quelle colonne est le <b>Nom</b> du joueur.</p>'}
+      <div class="imp-summary" style="margin-bottom:8px"><span class="status-pill ok">${nOk} joueur${nOk > 1 ? 's' : ''} reconnu${nOk > 1 ? 's' : ''}</span>${unmatched.length ? `<span class="status-pill warn">${unmatched.length} non trouvé${unmatched.length > 1 ? 's' : ''}</span>` : ''}</div>
+      ${unmatched.length ? `<p class="view-sub" style="margin:0 0 8px">Non trouvés : ${esc(unmatched.join(', '))}. Ajoutez-les à l'effectif puis recollez.</p>` : ''}
+      <div class="form-actions" style="justify-content:flex-start;margin:0"><button class="btn" id="bsPasteFill" type="button" ${nOk ? '' : 'disabled'}>Remplir ${nOk} ligne${nOk > 1 ? 's' : ''}</button></div>`;
+    $('#bsPasteResult').querySelectorAll('.imp-map-sel').forEach((sel) => sel.addEventListener('change', () => {
+      const col = Number(sel.dataset.col), val = sel.value;
+      if (val !== 'ignore') Object.keys(pasteMapping).forEach((k) => { if (pasteMapping[k] === val && Number(k) !== col) pasteMapping[k] = 'ignore'; });
+      pasteMapping[col] = val;
+      renderPasteResult();
+    }));
+    const fillBtn = $('#bsPasteFill');
+    if (fillBtn) fillBtn.addEventListener('click', () => {
+      let applied = 0;
+      pasteBuilt.filter((b) => b.status === 'ok').forEach((b) => {
+        Object.keys(b.stats).forEach((k) => { const el = view.querySelector(`input[data-player="${b.player.id}"][data-stat="${k}"]`); if (el) el.value = String(b.stats[k]); });
+        applied++;
+      });
+      toast(`${applied} ligne${applied > 1 ? 's' : ''} remplie${applied > 1 ? 's' : ''} — vérifiez puis Enregistrez`);
+      $('#bsPastePanel').hidden = true;
+    });
+  };
+  const analyzePaste = () => {
+    pasteParsed = splitPastedTable($('#bsPasteText').value);
+    if (!pasteParsed.rows.length) { $('#bsPasteResult').innerHTML = emptyHtml('Rien à analyser', 'Collez d’abord un box score.', 'inbox'); return; }
+    const colCount = Math.max(...pasteParsed.rows.map((r) => r.length));
+    pasteMapping = guessStatMapping($('#bsPasteHeader').checked ? pasteParsed.rows[0] : null, colCount);
+    renderPasteResult();
+  };
+  $('#bsPasteAnalyze').addEventListener('click', analyzePaste);
+  $('#bsPasteHeader').addEventListener('change', () => { if (pasteParsed) analyzePaste(); });
 }
 
 // ------------------------------------------------- Import de joueurs (coller depuis Excel)
