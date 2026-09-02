@@ -2389,3 +2389,14 @@ a.cs-item:hover { border-color: var(--accent); }
 .cal-match .cal-h { flex: 1; text-align: right; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-match .cal-a { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-match .cal-vs { flex: none; font-size: 10.5px; color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 8px; }
+
+/* créer un compte club */
+.cca-done { border-color: var(--accent); }
+.cca-done-head { display: flex; gap: 8px; align-items: flex-start; color: var(--text); font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+.cca-done-head svg { width: 18px; height: 18px; color: var(--accent); flex: none; margin-top: 1px; }
+.cred-line { display: flex; align-items: center; gap: 10px; background: var(--bg-deep); border: 1px solid var(--border-strong); border-radius: 12px; padding: 10px 12px; margin-bottom: 9px; }
+.cred-line > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cl-label { font-size: 11px; color: var(--dim); }
+.cl-value { font-size: 15px; font-weight: 600; word-break: break-all; }
+.cl-value.mono { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.03em; }
+.cl-copy { flex: none; padding: 7px 12px; }

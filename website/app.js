@@ -2077,6 +2077,49 @@ async function renderAdminCalendar() {
   applyCompTeams(calState.comp); // présélectionne les équipes de la compétition
 }
 
+// ------------------------------------------------- Créer un compte club (fédération)
+async function renderAdminClubAccount() {
+  if (!isAdmin()) return renderAdminDenied();
+  view.innerHTML = adminBackHtml() + '<h1 class="view-title">Créer un compte club</h1>' + loadingHtml();
+  const teams = await safe(listTeams(), []);
+  view.innerHTML = adminBackHtml() + `
+    <h1 class="view-title">Créer un compte club</h1>
+    <p class="view-sub">La fédération crée ici le compte d'un club et le rattache automatiquement. Le club pourra se connecter, gérer son effectif et publier. Transmettez-lui les identifiants affichés après création.</p>
+    <form class="admin-form" id="ccaForm" novalidate>
+      <div class="field"><label for="ccaEmail">E-mail du club *</label><input type="email" id="ccaEmail" placeholder="club@exemple.gn" autocomplete="off" autocapitalize="none"></div>
+      <div class="field"><label for="ccaName">Nom du responsable (facultatif)</label><input type="text" id="ccaName" placeholder="Nom du dirigeant" autocomplete="off"></div>
+      <div class="field"><label for="ccaPass">Mot de passe (laisser vide pour en générer un)</label><input type="text" id="ccaPass" placeholder="Généré automatiquement" autocomplete="off" autocapitalize="none"></div>
+      <div class="field"><label for="ccaTeam">Club *</label><select id="ccaTeam"><option value="">— Choisir un club —</option>${teams.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></div>
+      <div class="form-actions"><button class="btn" id="ccaSubmit" type="submit">Créer le compte</button></div>
+    </form>
+    <div id="ccaResult"></div>`;
+  $('#ccaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('#ccaEmail').value.trim();
+    const teamId = $('#ccaTeam').value;
+    if (!email || !teamId) return toast('Renseignez un e-mail et choisissez un club.');
+    const btn = $('#ccaSubmit'); btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Création…';
+    try {
+      const res = await createClubAccount({ email, full_name: $('#ccaName').value.trim(), team_id: teamId, password: $('#ccaPass').value.trim() || undefined });
+      const teamName = (teams.find((t) => t.id === teamId) || {}).name || '';
+      $('#ccaResult').innerHTML = `
+        <div class="block cca-done">
+          <div class="cca-done-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span>Compte créé${teamName ? ' pour ' + esc(teamName) : ''}. Notez ces identifiants : le mot de passe ne sera plus affiché.</span></div>
+          <div class="cred-line"><div><span class="cl-label">E-mail</span><span class="cl-value">${esc(res.email)}</span></div><button class="btn btn-ghost cl-copy" data-copy="${esc(res.email)}" type="button">Copier</button></div>
+          <div class="cred-line"><div><span class="cl-label">Mot de passe${res.generated ? ' (généré)' : ''}</span><span class="cl-value mono">${esc(res.password)}</span></div><button class="btn btn-ghost cl-copy" data-copy="${esc(res.password)}" type="button">Copier</button></div>
+          <p class="cal-note" style="margin:2px 0 12px">Demandez au club de changer ce mot de passe à la première connexion.</p>
+          <button class="btn btn-ghost" id="ccaAnother" type="button">Créer un autre compte</button>
+        </div>`;
+      $('#ccaEmail').value = ''; $('#ccaName').value = ''; $('#ccaPass').value = ''; $('#ccaTeam').value = '';
+      $('#ccaResult').querySelectorAll('.cl-copy').forEach((b) => b.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(b.dataset.copy); toast('Copié'); } catch { toast('Copie impossible — sélectionnez le texte'); }
+      }));
+      const another = $('#ccaAnother'); if (another) another.addEventListener('click', () => { $('#ccaResult').innerHTML = ''; $('#ccaEmail').focus(); });
+    } catch (err) { toast(errMsg(err)); }
+    btn.disabled = false; btn.textContent = orig;
+  });
+}
+
 function renderAdmin() {
   if (!isAdmin()) return renderAdminDenied();
   const items = [
@@ -2103,6 +2146,7 @@ function renderAdmin() {
     { r: 'admin-quizzes', label: 'Quiz', ic: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 015.4 1c0 1.8-2.6 2-2.6 3.5M12 17.5v.4"/>' },
     { r: 'admin-moderation', label: 'Modération', ic: '<path d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/>' },
     { r: 'admin-club-members', label: 'Responsables clubs', ic: '<path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-5h6v5"/>' },
+    { r: 'admin-club-account', label: 'Compte club', ic: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M18 8v6M15 11h6"/>' },
     { r: 'admin-club-messages', label: 'Messages clubs', ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' },
     { r: 'admin-bans', label: 'Bannissements', ic: '<circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/>' },
     { r: 'admin-socials', label: 'Réseaux sociaux', ic: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>' },
@@ -3842,6 +3886,7 @@ const RENDERERS = {
   'admin-quizzes': () => renderAdminCrud(CRUD_QUIZZES),
   'admin-moderation': renderAdminModeration,
   'admin-club-members': renderAdminClubMembers,
+  'admin-club-account': renderAdminClubAccount,
   'admin-club-messages': renderAdminClubMessages,
   'admin-bans': renderAdminBans,
   'admin-poules': renderAdminPoules,
@@ -4876,6 +4921,18 @@ function catLabelWeb(c) { return ({ messieurs: 'Messieurs', dames: 'Dames', u18:
 async function getCurrentSeason() {
   const { data } = await sb.from('seasons').select('*').eq('is_current', true).maybeSingle();
   return data ?? null;
+}
+// Création d'un compte de club par la fédération (edge function create-club-account,
+// clé de service côté serveur). Renvoie { user_id, email, password, generated }.
+async function createClubAccount(input) {
+  const { data, error } = await sb.functions.invoke('create-club-account', { body: input });
+  if (error) {
+    let message = error.message;
+    try { const body = await error.context?.json?.(); if (body?.error) message = body.error; } catch { /* corps illisible */ }
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 async function listMyRegistrations() {
   const uid = session?.user?.id;
