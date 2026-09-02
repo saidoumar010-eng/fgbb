@@ -2360,6 +2360,7 @@ a.cs-item:hover { border-color: var(--accent); }
 /* coller un box score dans la feuille de match */
 .bs-import { margin: 4px 0 16px; }
 .bs-import-toggle svg { width: 15px; height: 15px; margin-right: 6px; vertical-align: -3px; }
+.bs-import-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .bs-import-panel { margin-top: 12px; padding: 14px 14px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 
 /* générateur de calendrier */

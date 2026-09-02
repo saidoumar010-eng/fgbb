@@ -2606,6 +2606,17 @@ async function saveBoxScore(rows) {
   const { error } = await sb.from('player_match_stats').upsert(rows, { onConflict: 'match_id,player_id' });
   if (error) throw error;
 }
+// Analyse IA d'une photo de feuille de match (edge function parse-match-sheet).
+async function parseMatchSheet(imageBase64, mediaType) {
+  const { data, error } = await sb.functions.invoke('parse-match-sheet', { body: { image_base64: imageBase64, media_type: mediaType } });
+  if (error) {
+    let message = error.message;
+    try { const body = await error.context?.json?.(); if (body?.error) message = body.error; } catch { /* corps illisible */ }
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data.result || { teams: [], notes: '' };
+}
 const BOX_COLS = [['minutes', 'MIN'], ['points', 'PTS'], ['rebounds', 'REB'], ['off_rebounds', 'REB.O'], ['assists', 'PD'], ['steals', 'INT'], ['blocks', 'CT'], ['turnovers', 'BP'], ['fouls', 'FTE'], ['fg_made', 'TM'], ['fg_att', 'TT'], ['three_made', '3M'], ['three_att', '3T'], ['ft_made', 'LFM'], ['ft_att', 'LFT'], ['plus_minus', '+/-']];
 function boxTeamHtml(team, players, byPlayer) {
   if (!players.length) return `<div class="block"><div class="block-head"><h2>${esc(team?.name || '')}</h2></div><p class="view-sub" style="padding:6px 2px">Aucun joueur dans cette équipe (ajoutez-les dans « Joueurs »).</p></div>`;
@@ -2695,6 +2706,56 @@ function buildStatRows(parsedRows, mapping, headerPresent, players) {
   });
 }
 
+// --- Feuille de match par photo (IA parse-match-sheet) ---
+// Champs de stat renvoyés par l'IA (sous-ensemble de BOX_COLS ; le reste — minutes,
+// rebonds offensifs, ballons perdus, +/- — reste inchangé dans la grille).
+const AI_STAT_KEYS = ['points', 'rebounds', 'assists', 'steals', 'blocks', 'fouls', 'fg_made', 'fg_att', 'three_made', 'three_att', 'ft_made', 'ft_att'];
+// Associe chaque joueur extrait par l'IA à un joueur de l'effectif (nom, repli sur
+// numéro unique) et ne garde que les stats numériques valides.
+function buildAiStatRows(result, players) {
+  const nameIndex = new Map(), numIndex = new Map();
+  players.forEach((p) => {
+    const nk = normKey(p.full_name);
+    if (nk && !nameIndex.has(nk)) nameIndex.set(nk, p);
+    if (p.number != null) { const a = numIndex.get(p.number) || []; a.push(p); numIndex.set(p.number, a); }
+  });
+  const out = [];
+  ((result && result.teams) || []).forEach((tm) => {
+    ((tm && tm.players) || []).forEach((pl) => {
+      const nameRaw = String(pl.name || '').trim();
+      const num = pl.number;
+      let player = null;
+      if (nameRaw) player = nameIndex.get(normKey(nameRaw)) || null;
+      if (!player && num != null) { const arr = numIndex.get(num); if (arr && arr.length === 1) player = arr[0]; }
+      const stats = {};
+      AI_STAT_KEYS.forEach((k) => { const v = pl[k]; if (typeof v === 'number' && Number.isFinite(v)) stats[k] = v; });
+      out.push({ status: player ? 'ok' : (nameRaw || num != null ? 'warn' : 'skip'), player, stats, display: nameRaw || (num != null ? '#' + num : '—') });
+    });
+  });
+  return out;
+}
+// Réduit la photo (max 1600 px, JPEG) et renvoie le base64 sans préfixe data: —
+// l'edge function limite à ~6 Mo.
+function fileToScaledBase64(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      const scale = Math.min(1, maxDim / Math.max(w, h || 1));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.85);
+      resolve({ base64: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType: 'image/jpeg' });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible')); };
+    img.src = url;
+  });
+}
+
 async function openBoxScore(matchId, opts = {}) {
   if (!isAdmin()) return renderAdminDenied();
   const backFn = opts.back || renderAdminMatches;
@@ -2717,7 +2778,12 @@ async function openBoxScore(matchId, opts = {}) {
     <h1 class="view-title">Feuille de match</h1>
     <p class="view-sub">${esc(m.home_team?.name || '?')} — ${esc(m.away_team?.name || '?')}${m.status === 'finished' ? ` · ${m.home_score}–${m.away_score}` : ''}. Saisissez les statistiques par joueur, puis enregistrez.</p>
     <div class="bs-import">
-      <button class="btn btn-ghost bs-import-toggle" id="bsPasteToggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-2"/><path d="M9 13h6M9 17h4"/></svg>Coller depuis Excel</button>
+      <div class="bs-import-btns">
+        <button class="btn btn-ghost bs-import-toggle" id="bsPasteToggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 6H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-2"/><path d="M9 13h6M9 17h4"/></svg>Coller depuis Excel</button>
+        <button class="btn btn-ghost bs-import-toggle" id="bsPhotoBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Photographier la feuille (IA)</button>
+        <input type="file" id="bsPhotoInput" accept="image/*" capture="environment" hidden>
+      </div>
+      <div class="bs-import-panel" id="bsPhotoPanel" hidden><div id="bsPhotoResult"></div></div>
       <div class="bs-import-panel" id="bsPastePanel" hidden>
         <p class="view-sub" style="margin:0 0 8px">Collez le box score — une ligne par joueur, avec une colonne <b>Nom</b>. Les joueurs sont reconnus par leur nom (repli sur le numéro) ; ajoutez d'abord les manquants via « Import joueurs ». Une cellule « 7/12 » remplit marqués et tentés.</p>
         <div class="field" style="margin-bottom:10px"><textarea id="bsPasteText" rows="6" spellcheck="false"></textarea></div>
@@ -2753,8 +2819,17 @@ async function openBoxScore(matchId, opts = {}) {
     btn.disabled = false; btn.textContent = orig;
   });
 
-  // Import de box score collé → remplit les cases des joueurs reconnus.
+  // Import de box score (collage Excel ou photo IA) → remplit les cases des joueurs reconnus.
   const rosterAll = [...homeP, ...awayP];
+  const fillStatRows = (built) => {
+    let applied = 0;
+    built.filter((b) => b.status === 'ok').forEach((b) => {
+      Object.keys(b.stats).forEach((k) => { const el = view.querySelector(`input[data-player="${b.player.id}"][data-stat="${k}"]`); if (el) el.value = String(b.stats[k]); });
+      applied++;
+    });
+    toast(`${applied} ligne${applied > 1 ? 's' : ''} remplie${applied > 1 ? 's' : ''} — vérifiez puis Enregistrez`);
+    return applied;
+  };
   let pasteParsed = null, pasteMapping = null, pasteBuilt = null;
   $('#bsPasteToggle').addEventListener('click', () => {
     const panel = $('#bsPastePanel');
@@ -2789,15 +2864,7 @@ async function openBoxScore(matchId, opts = {}) {
       renderPasteResult();
     }));
     const fillBtn = $('#bsPasteFill');
-    if (fillBtn) fillBtn.addEventListener('click', () => {
-      let applied = 0;
-      pasteBuilt.filter((b) => b.status === 'ok').forEach((b) => {
-        Object.keys(b.stats).forEach((k) => { const el = view.querySelector(`input[data-player="${b.player.id}"][data-stat="${k}"]`); if (el) el.value = String(b.stats[k]); });
-        applied++;
-      });
-      toast(`${applied} ligne${applied > 1 ? 's' : ''} remplie${applied > 1 ? 's' : ''} — vérifiez puis Enregistrez`);
-      $('#bsPastePanel').hidden = true;
-    });
+    if (fillBtn) fillBtn.addEventListener('click', () => { fillStatRows(pasteBuilt); $('#bsPastePanel').hidden = true; });
   };
   const analyzePaste = () => {
     pasteParsed = splitPastedTable($('#bsPasteText').value);
@@ -2808,6 +2875,31 @@ async function openBoxScore(matchId, opts = {}) {
   };
   $('#bsPasteAnalyze').addEventListener('click', analyzePaste);
   $('#bsPasteHeader').addEventListener('change', () => { if (pasteParsed) analyzePaste(); });
+
+  // Feuille par photo → IA (parse-match-sheet) → remplit la grille.
+  $('#bsPhotoBtn').addEventListener('click', () => { $('#bsPastePanel').hidden = true; $('#bsPhotoInput').click(); });
+  $('#bsPhotoInput').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // permet de re-choisir le même fichier
+    if (!file) return;
+    const panel = $('#bsPhotoPanel'); panel.hidden = false;
+    const res = $('#bsPhotoResult');
+    res.innerHTML = '<p class="view-sub" style="margin:0 0 8px">Analyse de la photo par l\'IA… (quelques secondes)</p>' + loadingHtml();
+    try {
+      const { base64, mediaType } = await fileToScaledBase64(file, 1600, 0.85);
+      const result = await parseMatchSheet(base64, mediaType);
+      const built = buildAiStatRows(result, rosterAll);
+      const nOk = built.filter((b) => b.status === 'ok').length;
+      const unmatched = built.filter((b) => b.status === 'warn').map((b) => b.display);
+      res.innerHTML = `
+        <div class="imp-summary" style="margin-bottom:8px"><span class="status-pill ok">${nOk} joueur${nOk > 1 ? 's' : ''} reconnu${nOk > 1 ? 's' : ''}</span>${unmatched.length ? `<span class="status-pill warn">${unmatched.length} non trouvé${unmatched.length > 1 ? 's' : ''}</span>` : ''}</div>
+        ${result.notes ? `<p class="view-sub" style="margin:0 0 8px"><b>Notes de l'IA :</b> ${esc(result.notes)}</p>` : ''}
+        ${unmatched.length ? `<p class="view-sub" style="margin:0 0 8px">Non trouvés : ${esc(unmatched.join(', '))}. Ajoutez-les à l'effectif puis reprenez la photo.</p>` : ''}
+        <div class="form-actions" style="justify-content:flex-start;margin:0"><button class="btn" id="bsPhotoFill" type="button" ${nOk ? '' : 'disabled'}>Remplir ${nOk} ligne${nOk > 1 ? 's' : ''}</button></div>`;
+      const fb = $('#bsPhotoFill');
+      if (fb) fb.addEventListener('click', () => { fillStatRows(built); panel.hidden = true; });
+    } catch (err) { res.innerHTML = `<p class="imp-warn" style="margin:0">${esc(errMsg(err))} <span style="color:var(--dim)">— réessayez avec une photo nette et bien cadrée.</span></p>`; }
+  });
 }
 
 // ------------------------------------------------- Import de joueurs (coller depuis Excel)
