@@ -907,13 +907,74 @@ function leaderRowHtml(p, i, unit, teamsMap) {
 }
 
 // --------------------------------------------------------------- vues
+
+// ===== Accueil « façon NBA » (structure NBA, couleurs FGBB) — Phase 1 =====
+// Couleur d'une compétition pour le rail de catégories : par tranche d'âge si
+// le nom l'indique (U20/U18/U16/U14), sinon par genre (messieurs/dames/mixte).
+function homeCatColor(c) {
+  const n = (c?.name || '').toLowerCase();
+  if (/u-?20/.test(n)) return 'var(--cat-u20)';
+  if (/u-?18/.test(n)) return 'var(--cat-u18)';
+  if (/u-?16/.test(n)) return 'var(--cat-u16)';
+  if (/u-?14/.test(n)) return 'var(--cat-u14)';
+  if (c?.category === 'dames') return 'var(--cat-n1d)';
+  if (c?.category === 'mixte') return 'var(--accent-2)';
+  return 'var(--cat-n1m)';
+}
+// Carte compacte « score » de la barre défilante (en direct / final / à venir).
+function scoreCardHtml(m) {
+  const live = m.status === 'live', done = m.status === 'finished';
+  const homeWin = done && (m.home_score ?? 0) > (m.away_score ?? 0);
+  const awayWin = done && (m.away_score ?? 0) > (m.home_score ?? 0);
+  let st;
+  if (live) st = `<span class="sc-st live">Q${m.current_quarter || 1}</span>`;
+  else if (done) st = `<span class="sc-st">Final</span>`;
+  else st = `<span class="sc-st">${esc([relativeDayLabel(m.scheduled_at), fmtTime(m.scheduled_at)].filter(Boolean).join(' · ')) || 'À venir'}</span>`;
+  const val = (v, lo) => (live || done) ? `<span class="sc-pt${lo ? ' lo' : ''}">${v ?? 0}</span>` : `<span class="sc-pt mut">—</span>`;
+  const line = (t, v, lo) => `<div class="sc-line${lo ? ' lo' : ''}">${logoHtml(t, 'sc-logo')}<span class="sc-nm">${esc(t?.short_name || t?.name || 'Équipe')}</span>${val(v, lo)}</div>`;
+  return `<a class="sc-card" href="#match/${m.id}">
+    <div class="sc-top"><span class="sc-comp">${esc(m.competition?.name || 'Match')}</span>${st}</div>
+    ${line(m.home_team, m.home_score, awayWin)}
+    ${line(m.away_team, m.away_score, homeWin)}
+  </a>`;
+}
+// Barre de scores : en direct, puis prochaines, puis derniers résultats.
+function homeScoresStrip(live, upcoming, finished) {
+  const cards = [...live, ...upcoming.slice(0, 6), ...finished.slice(-6).reverse()];
+  if (!cards.length) return '';
+  return `<div class="home-scores"><div class="sc-row">${cards.map(scoreCardHtml).join('')}</div></div>`;
+}
+// Rail de catégories (couleur par catégorie) issu des compétitions réelles,
+// + une pastille « Sélections nationales » (tricolore) en aperçu (Phase 5).
+function homeCatRail(comps) {
+  const chips = comps.slice(0, 12).map((c) =>
+    `<a class="home-cat" style="--cc:${homeCatColor(c)}" href="#classement"><span class="hc-dot"></span>${esc(c.name || 'Compétition')}</a>`
+  ).join('');
+  return `<div class="home-cats">${chips}<span class="home-cat flag" title="Bientôt">Sélections nationales</span></div>`;
+}
+// Titre de section façon NBA (barre d'accent + lien « tout voir »).
+function homeHead(title, go) {
+  return `<div class="home-head"><h2>${esc(title)}</h2>${go ? `<button class="home-more" data-go="${go}">Tout voir →</button>` : ''}</div>`;
+}
+// Bande promo « Équipes nationales » — aperçu de la future section (Phase 5).
+function homeNationalPromo() {
+  const cats = ['Seniors M', 'Seniors F', 'U18', 'U16', 'U14'];
+  return `<div class="home-nat">
+    <span class="hn-eyebrow">${STAR_ICO}Équipes nationales</span>
+    <h2>Les sélections de la Guinée</h2>
+    <p>Seniors, U18, U16… Effectifs, calendrier FIBA / AfroBasket, palmarès et médias — bientôt réunis ici.</p>
+    <div class="hn-chips">${cats.map((c) => `<span class="hn-chip">${esc(c)}</span>`).join('')}<span class="hn-chip soon">Bientôt</span></div>
+  </div>`;
+}
+
 async function renderAccueil() {
   view.innerHTML = loadingHtml();
-  const [matches, standings, news, topPerf] = await Promise.all([
+  const [matches, standings, news, topPerf, comps] = await Promise.all([
     safe(listMatches(), []),
     safe(listStandings(), []),
     safe(listNews(), []),
     safe(listGameHighs('points', 3), []),
+    safe(listCompetitions(), []),
   ]);
 
   const live = matches.filter((m) => m.status === 'live');
@@ -930,33 +991,32 @@ async function renderAccueil() {
     return;
   }
 
-  let html = `<h1 class="view-title">Bonjour${profile?.full_name ? ' ' + esc(profile.full_name.split(' ')[0]) : ''}</h1>
-    <p class="view-sub">Voici l'essentiel du basket guinéen aujourd'hui.</p>`;
+  const greet = `<div class="home-greet"><h1>Bonjour${profile?.full_name ? ' ' + esc(profile.full_name.split(' ')[0]) : ''}</h1><p>Voici l'essentiel du basket guinéen aujourd'hui.</p></div>`;
 
-  if (featured) html += afficheHtml(featured);
-  if (topPerf.length) html += vedettesHtml(topPerf);
+  // Haut de page : barre de scores + affiche du choc + rail de catégories.
+  let top = homeScoresStrip(live, upcoming, finished);
+  if (featured) top += `<div class="home-hero">${afficheHtml(featured)}</div>`;
+  top += homeCatRail(comps);
 
-  // Rencontres regroupées : en direct · à venir · derniers résultats.
-  const liveRest = live.filter((m) => m !== featured);
-  const nextUp = upcoming.filter((m) => m !== featured).slice(0, 4);
-  const results = finished.filter((m) => m !== featured).slice(-3).reverse();
-  const ICO_LIVE = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>';
-  const ICO_CAL = '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
-  const ICO_BALL = '<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18M5 6c4 3 10 3 14 0M5 18c4-3 10-3 14 0"/>';
-  const rencSection = (icon, title, list) => `<div class="block"><div class="block-head"><h2><span class="bh-ic">${icoSvg(icon)}</span>${title}</h2><button class="more" data-go="matchs">Tout voir →</button></div>${list.map(matchCardHtml).join('')}</div>`;
-  if (liveRest.length) html += rencSection(ICO_LIVE, 'En direct', liveRest);
-  if (nextUp.length) html += rencSection(ICO_CAL, 'Prochaines rencontres', nextUp);
-  if (results.length) html += rencSection(ICO_BALL, 'Derniers résultats', results);
-
+  // Grille : à la une (actualités) à gauche, classement à droite.
+  let main = '';
+  const newsList = news.slice(0, 5);
+  if (newsList.length) {
+    const [lead, ...rest] = newsList;
+    main = `<section class="home-stories">${homeHead('À la une', 'actus')}<div class="hs-lead">${newsCardHtml(lead)}</div>${rest.length ? `<div class="hs-rest">${rest.map(newsCardHtml).join('')}</div>` : ''}</section>`;
+  }
+  let aside = '';
   if (standings.length) {
-    html += `<div class="block"><div class="block-head"><h2>Classement</h2><button class="more" data-go="classement">Tout voir →</button></div>${standingsHtml(standings.slice(0, 5))}</div>`;
+    aside = `<section class="home-side">${homeHead('Classement', 'classement')}<div class="hs-std">${standingsHtml(standings.slice(0, 6))}</div><button class="btn ghost home-side-btn" data-go="classement">Classement complet</button></section>`;
   }
+  const grid = (main || aside) ? `<div class="home-grid"><div class="home-main">${main}</div><aside class="home-aside">${aside}</aside></div>` : '';
 
-  if (news.length) {
-    html += `<div class="block"><div class="block-head"><h2>Actualités</h2><button class="more" data-go="actus">Tout voir →</button></div><div class="news-grid">${news.slice(0, 3).map(newsCardHtml).join('')}</div></div>`;
-  }
+  // Pleine largeur : vedettes + promo sélections nationales.
+  let strips = '';
+  if (topPerf.length) strips += `<section class="home-stars">${homeHead('Ils ont brillé', 'leaders')}${vedettesHtml(topPerf)}</section>`;
+  strips += `<section class="home-natsec">${homeNationalPromo()}</section>`;
 
-  view.innerHTML = html;
+  view.innerHTML = `<div class="home">${greet}${top}${grid}${strips}</div>`;
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => (location.hash = b.dataset.go)));
   scheduleLiveRefresh(hasLive);
 }

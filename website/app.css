@@ -2401,3 +2401,93 @@ a.cs-item:hover { border-color: var(--accent); }
 .cl-value { font-size: 15px; font-weight: 600; word-break: break-all; }
 .cl-value.mono { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.03em; }
 .cl-copy { flex: none; padding: 7px 12px; }
+
+/* ============================================================ ACCUEIL « façon NBA » (Phase 1)
+   Structure NBA (barre de scores, affiche, rail de catégories, grille à la une /
+   classement, vedettes, promo sélections) — identité FGBB conservée.
+   Tout est scopé sous .home pour ne pas affecter les autres pages. */
+.home {
+  --font-display: "Oswald", var(--font);
+  --cat-n1m: var(--accent);
+  --cat-n1d: #19c6d6;
+  --cat-u20: #30b57a;
+  --cat-u18: #f5a623;
+  --cat-u16: #4d9be6;
+  --cat-u14: #9b6cf2;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.home-greet h1 { font-size: 26px; letter-spacing: -0.01em; }
+.home-greet p { color: var(--muted); margin-top: 2px; }
+
+/* Barre de scores (bord à bord : .container a 22px de marge interne) */
+.home-scores { margin: 0 -22px; }
+.home .sc-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 22px 12px; scrollbar-width: thin; }
+.home .sc-row::-webkit-scrollbar { height: 6px; }
+.home .sc-row::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 6px; }
+.home .sc-card { flex: 0 0 auto; width: 222px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.home .sc-card:hover { border-color: var(--border-strong); }
+.home .sc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 7px; }
+.home .sc-comp { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home .sc-st { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); flex: none; }
+.home .sc-st.live { color: var(--red); }
+.home .sc-st.live::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--red); margin-right: 5px; vertical-align: middle; animation: scPulse 1.3s infinite; }
+@keyframes scPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.home .sc-line { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.home .sc-logo { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 10px; font-weight: 800; color: #fff; overflow: hidden; }
+.home .sc-logo img { width: 100%; height: 100%; object-fit: cover; }
+.home .sc-nm { font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home .sc-pt { margin-left: auto; font-family: var(--font-display); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; flex: none; }
+.home .sc-pt.mut { color: var(--dim); }
+.home .sc-line.lo .sc-nm, .home .sc-line.lo .sc-pt { color: var(--dim); }
+
+/* Affiche du choc (réutilise .affiche) */
+.home-hero .affiche { margin: 0; }
+
+/* Rail de catégories (couleurs + pastille tricolore pour les sélections) */
+.home-cats { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.home-cats::-webkit-scrollbar { display: none; }
+.home .home-cat { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; padding: 11px 16px 11px 13px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--cc, var(--accent)); border-radius: var(--radius); font-family: var(--font-display); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; font-size: 14px; white-space: nowrap; }
+.home .home-cat:hover { background: var(--surface-2); }
+.home .hc-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
+.home .home-cat.flag { border-left: none; padding-left: 16px; position: relative; overflow: hidden; cursor: default; }
+.home .home-cat.flag::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(var(--flag-red) 0 33.3%, var(--flag-yellow) 33.3% 66.6%, var(--flag-green) 66.6% 100%); }
+
+/* Titres de section façon NBA */
+.home-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.home-head h2 { font-family: var(--font-display); font-size: 24px; text-transform: uppercase; letter-spacing: 0.01em; display: flex; align-items: center; gap: 12px; }
+.home-head h2::before { content: ""; width: 5px; height: 22px; border-radius: 3px; background: var(--accent); flex: none; }
+.home-head .home-more { margin-left: auto; background: none; border: none; cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); }
+.home-head .home-more:hover { color: var(--accent); }
+
+/* Grille à la une / classement */
+.home-grid { display: grid; grid-template-columns: 1fr 360px; gap: 26px; align-items: start; }
+.home-main { min-width: 0; }
+.home-aside { min-width: 0; }
+.home-stories .hs-lead { margin-bottom: 16px; }
+.home-stories .hs-rest { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.home-side-btn { width: 100%; margin-top: 14px; }
+
+/* Vedettes (réutilise .vedettes) */
+.home-stars .vedettes { margin: 0; }
+
+/* Promo sélections nationales */
+.home-nat { position: relative; border-radius: var(--radius-xl); overflow: hidden; border: 1px solid var(--border); background: linear-gradient(120deg, var(--teal-deep), var(--bg-deep)); padding: 26px 30px; }
+.home-nat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(var(--flag-red) 0 33.3%, var(--flag-yellow) 33.3% 66.6%, var(--flag-green) 66.6% 100%); }
+.home-nat .hn-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; color: var(--flag-yellow); }
+.home-nat .hn-eyebrow svg { width: 14px; height: 14px; flex: none; }
+.home-nat h2 { font-family: var(--font-display); font-size: 26px; text-transform: uppercase; margin-top: 6px; }
+.home-nat p { color: #cfe3dd; margin-top: 6px; max-width: 560px; }
+.home-nat .hn-chips { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
+.home-nat .hn-chip { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; font-size: 13px; padding: 7px 13px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-strong); }
+.home-nat .hn-chip.soon { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+
+@media (max-width: 900px) {
+  .home-grid { grid-template-columns: 1fr; }
+  .home-head h2 { font-size: 21px; }
+  .home-nat { padding: 22px 20px; }
+}
+@media (max-width: 560px) {
+  .home-stories .hs-rest { grid-template-columns: 1fr; }
+}
