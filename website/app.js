@@ -1042,6 +1042,7 @@ let matchGenderFilter = 'all';
 async function renderMatchs() {
   view.innerHTML =
     `<h1 class="view-title">Matchs</h1>
+     <div class="sub-links"><a class="sub-link" href="#programme">${icoSvg('<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>')}Programme par catégorie</a></div>
      <div class="segmented" id="matchSeg">
        ${[['all', 'Tous'], ['live', 'En direct'], ['scheduled', 'À venir'], ['finished', 'Terminés']]
         .map(([k, l]) => `<button class="seg ${matchFilter === k ? 'active' : ''}" data-f="${k}">${l}</button>`)
@@ -1499,6 +1500,35 @@ async function renderVideos() {
   </a>`).join('')}</div>`;
 }
 
+// ------------------------------------------------------- programme (par catégorie)
+let progGender = 'all';
+async function renderProgramme() {
+  view.innerHTML = `<h1 class="view-title">Programme</h1><p class="view-sub">Toutes les rencontres, regroupées par catégorie.</p>${genderSegHtml(progGender)}<div id="progBody">${loadingHtml()}</div>`;
+  wireGenderSeg((g) => { progGender = g; renderProgramme(); });
+  const [all, comps] = await Promise.all([safe(listMatches(), null), safe(listCompetitions(), [])]);
+  const el = $('#progBody');
+  if (all === null) { el.innerHTML = errorHtml(); return; }
+  let rows = all;
+  if (progGender !== 'all') rows = rows.filter((m) => matchGenderOf(m) === progGender);
+  if (!rows.length) { el.innerHTML = emptyHtml('Aucun match', 'Le programme apparaîtra ici dès que des matchs seront programmés.', 'ball'); return; }
+  const byComp = new Map();
+  rows.forEach((m) => { const k = m.competition?.id || '—'; if (!byComp.has(k)) byComp.set(k, []); byComp.get(k).push(m); });
+  const order = comps.map((c) => c.id);
+  const keys = [...byComp.keys()].sort((a, b) => (order.indexOf(a) < 0 ? 999 : order.indexOf(a)) - (order.indexOf(b) < 0 ? 999 : order.indexOf(b)));
+  el.innerHTML = keys.map((k) => {
+    const list = byComp.get(k);
+    const comp = comps.find((c) => c.id === k) || list[0]?.competition;
+    const name = comp?.name || 'Autres rencontres';
+    const cc = comp ? homeCatColor(comp) : 'var(--muted)';
+    const live = list.filter((m) => m.status === 'live');
+    const up = list.filter((m) => m.status === 'scheduled').sort((a, b) => tOf(a.scheduled_at) - tOf(b.scheduled_at));
+    const done = list.filter((m) => m.status === 'finished').sort((a, b) => tOf(b.scheduled_at) - tOf(a.scheduled_at));
+    const seg = (label, arr) => arr.length ? `<div class="prog-sub">${label}</div>${arr.map(matchCardHtml).join('')}` : '';
+    return `<section class="prog-cat" style="--cc:${cc}"><div class="prog-cat-head"><h2>${esc(name)}</h2><span class="pc-count">${list.length}</span></div>${seg('En direct', live)}${seg('À venir', up)}${seg('Résultats', done)}</section>`;
+  }).join('');
+  scheduleLiveRefresh(rows.some((m) => m.status === 'live'));
+}
+
 // ------------------------------------------------------- clubs (liste)
 let clubGender = 'all';
 function clubCardHtml(t) {
@@ -1621,6 +1651,7 @@ async function pollCardEl(p, refresh) {
 // ------------------------------------------------------- hub « Plus »
 function renderPlus() {
   const items = [
+    { r: 'programme', label: 'Programme', ic: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
     { r: 'videos', label: 'Vidéos', ic: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>' },
     { r: 'clubs', label: 'Clubs', ic: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
     { r: 'playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/>' },
@@ -4203,6 +4234,7 @@ const RENDERERS = {
   plus: renderPlus,
   videos: renderVideos,
   clubs: renderClubs,
+  programme: renderProgramme,
   fanzone: renderFanzone,
   recherche: renderSearch,
   favoris: renderFavoris,
@@ -4243,7 +4275,7 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'playoffs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz', 'photos', 'records', 'stats-equipes', 'stats-avancees'];
+const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'programme', 'playoffs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz', 'photos', 'records', 'stats-equipes', 'stats-avancees'];
 function setActiveTab(route) {
   const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));

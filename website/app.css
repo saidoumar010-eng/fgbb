@@ -2567,3 +2567,10 @@ a.cs-item:hover { border-color: var(--accent); }
 .roster-row .rr-meta { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 1px; }
 .roster-row .rr-avg { margin-left: auto; color: var(--muted); font-family: var(--font-display); font-size: 13px; letter-spacing: 0.01em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .roster-row .rr-avg small { color: var(--dim); font-size: 10px; margin: 0 5px 0 1px; }
+
+/* ------------------------------------------------- Programme (par catégorie) */
+.prog-cat { margin-bottom: 30px; }
+.prog-cat-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; padding-left: 13px; border-left: 4px solid var(--cc, var(--accent)); }
+.prog-cat-head h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 21px; }
+.prog-cat-head .pc-count { font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 11px; }
+.prog-sub { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
