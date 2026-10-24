@@ -2551,3 +2551,10 @@ a.cs-item:hover { border-color: var(--accent); }
 .nat-cat { display: inline-flex; align-items: center; gap: 9px; padding: 11px 16px 11px 13px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--cc, var(--accent)); border-radius: var(--radius); font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; font-size: 14px; }
 .nat-cat .nd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
 @media (max-width: 560px) { .nat-hero { padding: 22px 20px; } }
+
+/* ------------------------------------------------- Filtre genre + clubs groupés (Masculin / Féminin) */
+.gender-seg { margin-top: -6px; }
+.club-group { margin-bottom: 32px; }
+.club-group-head { display: flex; align-items: center; gap: 11px; margin-bottom: 15px; padding-left: 13px; border-left: 4px solid var(--gc, var(--accent)); }
+.club-group-head h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 21px; }
+.club-group-head .cg-count { font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 11px; }

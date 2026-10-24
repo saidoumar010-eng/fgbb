@@ -1022,6 +1022,23 @@ async function renderAccueil() {
 }
 
 let matchFilter = 'all';
+// ---- Filtre par genre (Masculin / Féminin) partagé par plusieurs pages ----
+const GENDER_SEG = [['all', 'Tous'], ['messieurs', 'Masculin'], ['dames', 'Féminin']];
+function genderDotColor(g) { return g === 'dames' ? 'var(--cat-n1d)' : g === 'messieurs' ? 'var(--cat-n1m)' : 'var(--muted)'; }
+function genderSegHtml(current) {
+  return `<div class="segmented gender-seg">${GENDER_SEG.map(([k, l]) => `<button class="seg ${current === k ? 'active' : ''}" data-g="${k}"><span class="seg-dot" style="--cc:${genderDotColor(k)}"></span>${l}</button>`).join('')}</div>`;
+}
+function wireGenderSeg(onPick) {
+  view.querySelectorAll('.gender-seg .seg').forEach((b) => b.addEventListener('click', () => onPick(b.dataset.g)));
+}
+// Genre d'un match : via la catégorie de la compétition, sinon via l'équipe.
+function matchGenderOf(m) {
+  const c = m.competition?.category;
+  if (c === 'messieurs' || c === 'dames') return c;
+  return m.home_team?.gender || m.away_team?.gender || null;
+}
+
+let matchGenderFilter = 'all';
 async function renderMatchs() {
   view.innerHTML =
     `<h1 class="view-title">Matchs</h1>
@@ -1029,11 +1046,14 @@ async function renderMatchs() {
        ${[['all', 'Tous'], ['live', 'En direct'], ['scheduled', 'À venir'], ['finished', 'Terminés']]
         .map(([k, l]) => `<button class="seg ${matchFilter === k ? 'active' : ''}" data-f="${k}">${l}</button>`)
         .join('')}
-     </div><div id="matchList">${loadingHtml()}</div>`;
+     </div>
+     ${genderSegHtml(matchGenderFilter)}
+     <div id="matchList">${loadingHtml()}</div>`;
 
   $('#matchSeg').querySelectorAll('.seg').forEach((b) =>
     b.addEventListener('click', () => { matchFilter = b.dataset.f; renderMatchs(); }),
   );
+  wireGenderSeg((g) => { matchGenderFilter = g; renderMatchs(); });
 
   const all = await safe(listMatches(), null);
   const listEl = $('#matchList');
@@ -1051,11 +1071,14 @@ async function renderMatchs() {
     });
   }
 
+  if (matchGenderFilter !== 'all') rows = rows.filter((m) => matchGenderOf(m) === matchGenderFilter);
+
   listEl.innerHTML = rows.length ? rows.map(matchCardHtml).join('') : emptyHtml('Aucun match', 'Aucun match dans cette catégorie pour le moment.', 'ball');
   scheduleLiveRefresh(all.some((m) => m.status === 'live'));
 }
 
 let compFilter = undefined; // undefined = pas encore choisi
+let clsGender = 'all'; // filtre genre du classement (Tous / Masculin / Féminin)
 async function renderClassement() {
   view.innerHTML = `<h1 class="view-title">Classement</h1><p class="view-sub">2 points par victoire, 1 par défaite (règles FIBA).</p>
     <div class="sub-links">
@@ -1063,13 +1086,25 @@ async function renderClassement() {
       <a class="sub-link" href="#stats-equipes">${icoSvg('<path d="M18 20V10M12 20V4M6 20v-6"/>')}Stats équipes</a>
       <a class="sub-link" href="#stats-avancees">${icoSvg('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>')}Stats avancées</a>
     </div>
+    ${genderSegHtml(clsGender)}
     <div id="clsFilter"></div><div id="clsBody">${loadingHtml()}</div><div id="clsPlayoffs"></div>`;
 
-  const comps = await safe(listCompetitions(), []);
-  if (compFilter === undefined) compFilter = comps.length ? comps[0].id : null;
+  wireGenderSeg((g) => { clsGender = g; compFilter = undefined; renderClassement(); });
+
+  const allComps = await safe(listCompetitions(), []);
+  const comps = clsGender === 'all' ? allComps : allComps.filter((c) => c.category === clsGender);
+  // Filtre genre actif mais aucune compétition de ce genre : état vide.
+  if (clsGender !== 'all' && !comps.length) {
+    $('#clsFilter').innerHTML = '';
+    $('#clsBody').innerHTML = emptyHtml('Aucune compétition', `Pas encore de compétition ${clsGender === 'dames' ? 'féminine' : 'masculine'}.`, 'trophy');
+    return;
+  }
+  if (compFilter === undefined || (clsGender !== 'all' && compFilter !== null && !comps.some((c) => c.id === compFilter)))
+    compFilter = comps.length ? comps[0].id : null;
 
   if (comps.length) {
-    const seg = [`<button class="seg ${compFilter === null ? 'active' : ''}" data-c=""><span class="seg-dot" style="--cc:var(--muted)"></span>Toutes</button>`]
+    const showAll = clsGender === 'all';
+    const seg = (showAll ? [`<button class="seg ${compFilter === null ? 'active' : ''}" data-c=""><span class="seg-dot" style="--cc:var(--muted)"></span>Toutes</button>`] : [])
       .concat(comps.map((c) => `<button class="seg ${compFilter === c.id ? 'active' : ''}" data-c="${c.id}" style="--cc:${homeCatColor(c)}"><span class="seg-dot"></span>${esc(c.name)}</button>`))
       .join('');
     const wrap = $('#clsFilter');
@@ -1131,22 +1166,26 @@ const LEADER_CATS = [
   { col: 'bpg', label: 'ctr', name: 'Contres' },
 ];
 let leaderCat = 'ppg';
+let leaderGender = 'all';
 async function renderLeaders() {
   view.innerHTML =
     `<h1 class="view-title">Leaders</h1><p class="view-sub">Les meilleures moyennes de la saison.</p>
      <div class="segmented" id="ldSeg">${LEADER_CATS.map((c) => `<button class="seg ${leaderCat === c.col ? 'active' : ''}" data-c="${c.col}">${c.name}</button>`).join('')}</div>
+     ${genderSegHtml(leaderGender)}
      <div id="ldBody">${loadingHtml()}</div>`;
 
   $('#ldSeg').querySelectorAll('.seg').forEach((b) =>
     b.addEventListener('click', () => { leaderCat = b.dataset.c; renderLeaders(); }),
   );
+  wireGenderSeg((g) => { leaderGender = g; renderLeaders(); });
 
   const unit = LEADER_CATS.find((c) => c.col === leaderCat);
   const [rows, teamsMap] = await Promise.all([safe(listLeadersBy(leaderCat), null), fetchTeamsMap()]);
+  const list = rows && leaderGender !== 'all' ? rows.filter((p) => teamsMap[p.team_id]?.gender === leaderGender) : rows;
   $('#ldBody').innerHTML =
     rows === null ? errorHtml()
-    : rows.length ? rows.map((p, i) => leaderRowHtml(p, i, unit, teamsMap)).join('')
-    : emptyHtml('Pas encore de statistiques', 'Les leaders apparaîtront après les premiers matchs.', 'trophy');
+    : list.length ? list.map((p, i) => leaderRowHtml(p, i, unit, teamsMap)).join('')
+    : emptyHtml('Pas encore de statistiques', 'Aucun leader pour ce filtre pour le moment.', 'trophy');
 }
 
 // ------------------------------------------------------- fiche match (détail)
@@ -1424,18 +1463,34 @@ async function renderVideos() {
 }
 
 // ------------------------------------------------------- clubs (liste)
+let clubGender = 'all';
+function clubCardHtml(t) {
+  const cat = [t.division, labelOf(TEAM_GENDERS, t.gender)].filter(Boolean).join(' · ');
+  return `<a class="club-card" href="#team/${t.id}" style="--tc:${t.color ? esc(t.color) : 'var(--teal)'}"><span class="cc-strip"></span>${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${t.city ? `<span class="cc-city">${esc(t.city)}</span>` : ''}${cat ? `<span class="cc-cat">${esc(cat)}</span>` : ''}</a>`;
+}
 async function renderClubs() {
   view.innerHTML = `<h1 class="view-title">Clubs</h1><p class="view-sub">Les équipes engagées.</p>
+    ${genderSegHtml(clubGender)}
     <div class="sub-links"><a class="sub-link" href="#inscription-club">${icoSvg('<path d="M12 5v14M5 12h14"/>')}Inscrire mon club</a></div>
     <div id="clubBody">${loadingHtml()}</div>`;
+  wireGenderSeg((g) => { clubGender = g; renderClubs(); });
   const teams = await safe(listTeams(), null);
   const el = $('#clubBody');
   if (teams === null) { el.innerHTML = errorHtml(); return; }
-  if (!teams.length) { el.innerHTML = emptyHtml('Aucun club', 'Les clubs apparaîtront ici.', 'ball'); return; }
-  el.innerHTML = `<div class="club-grid">${teams.map((t) => {
-    const cat = [t.division, labelOf(TEAM_GENDERS, t.gender)].filter(Boolean).join(' · ');
-    return `<a class="club-card" href="#team/${t.id}" style="--tc:${t.color ? esc(t.color) : 'var(--teal)'}"><span class="cc-strip"></span>${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${t.city ? `<span class="cc-city">${esc(t.city)}</span>` : ''}${cat ? `<span class="cc-cat">${esc(cat)}</span>` : ''}</a>`;
-  }).join('')}</div>`;
+  const clubs = teams.filter((t) => !t.is_national); // les sélections nationales ont leur onglet dédié
+  if (!clubs.length) { el.innerHTML = emptyHtml('Aucun club', 'Les clubs apparaîtront ici.', 'ball'); return; }
+  // Groupé par genre : Masculin / Féminin bien distincts au premier coup d'œil.
+  const groups = [];
+  if (clubGender === 'all' || clubGender === 'messieurs') groups.push(['messieurs', 'Masculin', clubs.filter((t) => t.gender === 'messieurs')]);
+  if (clubGender === 'all' || clubGender === 'dames') groups.push(['dames', 'Féminin', clubs.filter((t) => t.gender === 'dames')]);
+  if (clubGender === 'all') {
+    const other = clubs.filter((t) => t.gender !== 'messieurs' && t.gender !== 'dames');
+    if (other.length) groups.push(['autre', 'Autres', other]);
+  }
+  const html = groups.filter(([, , list]) => list.length).map(([g, label, list]) =>
+    `<section class="club-group" style="--gc:${genderDotColor(g)}"><div class="club-group-head"><h2>${label}</h2><span class="cg-count">${list.length}</span></div><div class="club-grid">${list.map(clubCardHtml).join('')}</div></section>`
+  ).join('');
+  el.innerHTML = html || emptyHtml('Aucun club', 'Aucun club pour ce filtre.', 'ball');
 }
 
 // ------------------------------------------------------- équipes nationales (sélections)
