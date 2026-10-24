@@ -197,7 +197,10 @@ body.app-body {
   gap: 12px;
 }
 .block-head h2 {
-  font-size: 21px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -223,12 +226,30 @@ body.app-body {
   font-family: inherit;
 }
 .view-title {
-  font-size: clamp(24px, 4vw, 32px);
+  position: relative;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4.4vw, 38px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.03;
+  padding-left: 15px;
   margin-bottom: 6px;
+}
+.view-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.1em;
+  bottom: 0.1em;
+  width: 5px;
+  border-radius: 3px;
+  background: linear-gradient(var(--accent), var(--accent-2));
 }
 .view-sub {
   color: var(--muted);
   margin-bottom: 24px;
+  margin-left: 15px;
   font-size: 15px;
 }
 
@@ -241,16 +262,32 @@ body.app-body {
 }
 .seg {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 1px solid var(--border);
   background: var(--chipBg, #0f332d);
   color: var(--muted);
-  font-family: inherit;
-  font-size: 13.5px;
+  font-family: var(--font-display);
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   padding: 9px 15px;
   border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
+}
+/* pastille de catégorie (couleur par genre/âge) dans les onglets */
+.seg .seg-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cc, var(--accent));
+  flex: none;
+}
+.seg.active .seg-dot {
+  background: var(--accent-text);
 }
 .seg:hover {
   color: var(--text);
@@ -2406,14 +2443,16 @@ a.cs-item:hover { border-color: var(--accent); }
    Structure NBA (barre de scores, affiche, rail de catégories, grille à la une /
    classement, vedettes, promo sélections) — identité FGBB conservée.
    Tout est scopé sous .home pour ne pas affecter les autres pages. */
-.home {
-  --font-display: "Oswald", var(--font);
+/* Palette des catégories (genres + âges de sélection) — partagée accueil + classement + clubs */
+:root {
   --cat-n1m: var(--accent);
   --cat-n1d: #19c6d6;
   --cat-u20: #30b57a;
   --cat-u18: #f5a623;
   --cat-u16: #4d9be6;
   --cat-u14: #9b6cf2;
+}
+.home {
   display: flex;
   flex-direction: column;
   gap: 26px;
@@ -2491,3 +2530,11 @@ a.cs-item:hover { border-color: var(--accent); }
 @media (max-width: 560px) {
   .home-stories .hs-rest { grid-template-columns: 1fr; }
 }
+
+/* ============================================================ EXTENSION « façon NBA » aux autres pages (Phase 2)
+   En-têtes de page (.view-title), onglets (.seg) et titres de section (.block-head)
+   sont traités plus haut. Ici : accents couleur d'équipe sur les cartes club. */
+.club-card { position: relative; overflow: hidden; }
+.club-card .cc-strip { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--tc, var(--teal)); }
+.club-card:hover { border-color: var(--tc, var(--border-strong)); }
+.club-card .cc-cat { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; color: var(--muted); }

@@ -59,7 +59,7 @@
   --maxw: 1120px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif;
-  --font-display: var(--font);
+  --font-display: "Oswald", var(--font);
   --lh-tight: 1.14;
   --lh-body: 1.6;
 }

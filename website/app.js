@@ -1069,8 +1069,8 @@ async function renderClassement() {
   if (compFilter === undefined) compFilter = comps.length ? comps[0].id : null;
 
   if (comps.length) {
-    const seg = [`<button class="seg ${compFilter === null ? 'active' : ''}" data-c="">Toutes</button>`]
-      .concat(comps.map((c) => `<button class="seg ${compFilter === c.id ? 'active' : ''}" data-c="${c.id}">${esc(c.name)}</button>`))
+    const seg = [`<button class="seg ${compFilter === null ? 'active' : ''}" data-c=""><span class="seg-dot" style="--cc:var(--muted)"></span>Toutes</button>`]
+      .concat(comps.map((c) => `<button class="seg ${compFilter === c.id ? 'active' : ''}" data-c="${c.id}" style="--cc:${homeCatColor(c)}"><span class="seg-dot"></span>${esc(c.name)}</button>`))
       .join('');
     const wrap = $('#clsFilter');
     wrap.className = 'segmented';
@@ -1432,7 +1432,10 @@ async function renderClubs() {
   const el = $('#clubBody');
   if (teams === null) { el.innerHTML = errorHtml(); return; }
   if (!teams.length) { el.innerHTML = emptyHtml('Aucun club', 'Les clubs apparaîtront ici.', 'ball'); return; }
-  el.innerHTML = `<div class="club-grid">${teams.map((t) => `<a class="club-card" href="#team/${t.id}">${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${t.city ? `<span class="cc-city">${esc(t.city)}</span>` : ''}</a>`).join('')}</div>`;
+  el.innerHTML = `<div class="club-grid">${teams.map((t) => {
+    const cat = [t.division, labelOf(TEAM_GENDERS, t.gender)].filter(Boolean).join(' · ');
+    return `<a class="club-card" href="#team/${t.id}" style="--tc:${t.color ? esc(t.color) : 'var(--teal)'}"><span class="cc-strip"></span>${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${t.city ? `<span class="cc-city">${esc(t.city)}</span>` : ''}${cat ? `<span class="cc-cat">${esc(cat)}</span>` : ''}</a>`;
+  }).join('')}</div>`;
 }
 
 // ------------------------------------------------------- fan zone (sondages)
