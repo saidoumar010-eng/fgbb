@@ -3422,7 +3422,8 @@ const NEWS_CATS = [{ value: 'officiel', label: 'Officiel' }, { value: 'communiqu
 const SPONSOR_TIERS = [{ value: 'principal', label: 'Sponsor principal' }, { value: 'officiel', label: 'Sponsor officiel' }, { value: 'partenaire', label: 'Partenaire' }, { value: 'media', label: 'Partenaire média' }];
 const SPONSOR_PLACEMENTS = [{ value: 'tous', label: 'Partout' }, { value: 'accueil', label: 'Accueil' }, { value: 'apropos', label: 'À propos' }, { value: 'matchs', label: 'Matchs' }];
 const REF_LEVELS = [{ value: 'regional', label: 'Régional' }, { value: 'national', label: 'National' }, { value: 'international', label: 'International' }];
-const AWARD_KINDS = [{ value: 'champion', label: 'Champion' }, { value: 'vainqueur_coupe', label: 'Vainqueur de coupe' }, { value: 'mvp', label: 'MVP' }, { value: 'meilleur_marqueur', label: 'Meilleur marqueur' }, { value: 'meilleur_espoir', label: 'Meilleur espoir' }, { value: 'meilleur_defenseur', label: 'Meilleur défenseur' }];
+// Doit rester aligné sur la contrainte `awards_kind_check` de la base (et sur AWARD_LABELS).
+const AWARD_KINDS = [{ value: 'joueur_du_mois', label: 'Joueur du mois' }, { value: 'mvp_saison', label: 'MVP de la saison' }, { value: 'meilleur_cinq', label: 'Meilleur cinq' }, { value: 'autre', label: 'Distinction' }];
 const SANCTION_KINDS = [{ value: 'avertissement', label: 'Avertissement' }, { value: 'suspension', label: 'Suspension' }, { value: 'amende', label: 'Amende' }, { value: 'exclusion', label: 'Exclusion' }];
 const SANCTION_STATUS = [{ value: 'active', label: 'Active' }, { value: 'purgee', label: 'Purgée' }, { value: 'annulee', label: 'Annulée' }];
 const AD_MEDIA_KINDS = [{ value: 'interview', label: 'Interview' }, { value: 'podcast', label: 'Podcast' }, { value: 'reportage', label: 'Reportage' }, { value: 'video', label: 'Vidéo' }];
