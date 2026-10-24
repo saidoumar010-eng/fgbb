@@ -3364,10 +3364,12 @@ const COMP_TYPES = [
   { value: 'coupe', label: 'Coupe' },
   { value: 'tournoi', label: 'Tournoi' },
 ];
+// Doit rester aligné sur la contrainte `competitions_category_check` de la base.
 const COMP_CATEGORIES = [
   { value: 'messieurs', label: 'Messieurs' },
   { value: 'dames', label: 'Dames' },
-  { value: 'mixte', label: 'Mixte' },
+  { value: 'u18', label: 'U18' },
+  { value: 'autre', label: 'Autre' },
 ];
 // Genre d'une équipe : choix binaire masculine (messieurs) / féminine (dames).
 // Sous-ensemble du vocabulaire de la catégorie des compétitions (sans « mixte »,
@@ -3476,11 +3478,13 @@ const CRUD_COMPS = {
 const NEWS_CATS = [{ value: 'officiel', label: 'Officiel' }, { value: 'communiqué', label: 'Communiqué' }, { value: 'compétition', label: 'Compétition' }, { value: 'interview', label: 'Interview' }];
 const SPONSOR_TIERS = [{ value: 'principal', label: 'Sponsor principal' }, { value: 'officiel', label: 'Sponsor officiel' }, { value: 'partenaire', label: 'Partenaire' }, { value: 'media', label: 'Partenaire média' }];
 const SPONSOR_PLACEMENTS = [{ value: 'tous', label: 'Partout' }, { value: 'accueil', label: 'Accueil' }, { value: 'apropos', label: 'À propos' }, { value: 'matchs', label: 'Matchs' }];
-const REF_LEVELS = [{ value: 'regional', label: 'Régional' }, { value: 'national', label: 'National' }, { value: 'international', label: 'International' }];
+// Doit rester aligné sur la contrainte `referees_level_check` de la base (regional / national / fiba).
+const REF_LEVELS = [{ value: 'regional', label: 'Régional' }, { value: 'national', label: 'National' }, { value: 'fiba', label: 'FIBA' }];
 // Doit rester aligné sur la contrainte `awards_kind_check` de la base (et sur AWARD_LABELS).
 const AWARD_KINDS = [{ value: 'joueur_du_mois', label: 'Joueur du mois' }, { value: 'mvp_saison', label: 'MVP de la saison' }, { value: 'meilleur_cinq', label: 'Meilleur cinq' }, { value: 'autre', label: 'Distinction' }];
 const SANCTION_KINDS = [{ value: 'avertissement', label: 'Avertissement' }, { value: 'suspension', label: 'Suspension' }, { value: 'amende', label: 'Amende' }, { value: 'exclusion', label: 'Exclusion' }];
-const SANCTION_STATUS = [{ value: 'active', label: 'Active' }, { value: 'purgee', label: 'Purgée' }, { value: 'annulee', label: 'Annulée' }];
+// Doit rester aligné sur la contrainte `sanctions_status_check` de la base (active / served / cancelled).
+const SANCTION_STATUS = [{ value: 'active', label: 'Active' }, { value: 'served', label: 'Purgée' }, { value: 'cancelled', label: 'Annulée' }];
 const AD_MEDIA_KINDS = [{ value: 'interview', label: 'Interview' }, { value: 'podcast', label: 'Podcast' }, { value: 'reportage', label: 'Reportage' }, { value: 'video', label: 'Vidéo' }];
 const EVENT_CATS = [{ value: 'federation', label: 'Fédération' }, { value: 'competition', label: 'Compétition' }, { value: 'formation', label: 'Formation' }, { value: 'ceremonie', label: 'Cérémonie' }];
 const LICENSE_STATUS = [{ value: 'pending', label: 'En attente' }, { value: 'valid', label: 'Validée' }, { value: 'expired', label: 'Expirée' }, { value: 'suspended', label: 'Suspendue' }];
