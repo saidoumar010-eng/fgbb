@@ -534,7 +534,7 @@ async function listSponsors() {
   return data ?? [];
 }
 async function listPlayersLite() {
-  const { data, error } = await sb.from('players').select('id, full_name').order('full_name');
+  const { data, error } = await sb.from('players').select('id, full_name, team_id').order('full_name');
   if (error) throw error;
   return data ?? [];
 }
@@ -1857,13 +1857,17 @@ async function renderApropos() {
 
 // -- comparateur de joueurs
 let compareMode = 'joueurs';
+let compareGender = 'all';
 async function renderCompare() {
   view.innerHTML = `<h1 class="view-title">Comparateur</h1>
     <div class="segmented" id="cmpMode">${[['joueurs', 'Joueurs'], ['equipes', 'Équipes']].map(([k, l]) => `<button class="seg ${compareMode === k ? 'active' : ''}" data-m="${k}">${l}</button>`).join('')}</div>
+    ${genderSegHtml(compareGender)}
     <div id="cmpPickers">${loadingHtml()}</div><div id="cmpBody"></div>`;
   $('#cmpMode').querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { compareMode = b.dataset.m; renderCompare(); }));
+  wireGenderSeg((g) => { compareGender = g; renderCompare(); });
   const isTeams = compareMode === 'equipes';
-  const list = await safe(isTeams ? listTeams() : listPlayersLite(), []);
+  const [list0, teamsMap] = await Promise.all([safe(isTeams ? listTeams() : listPlayersLite(), []), fetchTeamsMap()]);
+  const list = compareGender === 'all' ? list0 : list0.filter((x) => (isTeams ? x.gender : teamsMap[x.team_id]?.gender) === compareGender);
   const label = isTeams ? 'un club' : 'un joueur';
   const opts = [`<option value="">— Choisir ${label} —</option>`].concat(list.map((x) => `<option value="${x.id}">${esc(x.name || x.full_name)}</option>`)).join('');
   $('#cmpPickers').innerHTML = `<div class="cmp-pickers"><select id="cmpA" class="cmp-select">${opts}</select><span class="cmp-vs">VS</span><select id="cmpB" class="cmp-select">${opts}</select></div>`;
@@ -3493,6 +3497,14 @@ const CRUD_TEAMS = {
   thumb: (t) => logoHtml(t),
   itemTitle: (t) => t.name,
   itemSub: (t) => [t.short_name, labelOf(TEAM_GENDERS, t.gender), t.city, t.division].filter(Boolean).join(' · '),
+  search: (t) => [t.name, t.short_name, t.city, t.division].filter(Boolean).join(' '),
+  searchPlaceholder: 'Rechercher un club…',
+  groups: (list) => [
+    ['Masculin', 'var(--cat-n1m)', list.filter((t) => !t.is_national && t.gender === 'messieurs')],
+    ['Féminin', 'var(--cat-n1d)', list.filter((t) => !t.is_national && t.gender === 'dames')],
+    ['Sélections nationales', 'var(--flag-yellow)', list.filter((t) => t.is_national)],
+    ['Autres', 'var(--muted)', list.filter((t) => !t.is_national && t.gender !== 'messieurs' && t.gender !== 'dames')],
+  ],
   fields: [
     { k: 'name', label: 'Nom du club', type: 'text', required: true, placeholder: 'Ex. Tout Sport de Kaloum' },
     { k: 'short_name', label: 'Sigle', type: 'text', placeholder: 'Ex. TSK' },
@@ -3523,6 +3535,8 @@ const CRUD_PLAYERS = {
     : `<span class="mlogo" style="background:var(--teal)">${esc(initials(p.full_name))}</span>`,
   itemTitle: (p) => p.full_name,
   itemSub: (p) => [p.team && p.team.name, p.position, p.number != null ? '#' + p.number : ''].filter(Boolean).join(' · '),
+  search: (p) => [p.full_name, p.team && p.team.name, p.position].filter(Boolean).join(' '),
+  searchPlaceholder: 'Rechercher un joueur…',
   formContext: async () => ({ teams: await safe(listTeams(), []) }),
   fields: (ctx) => [
     { k: 'full_name', label: 'Nom complet', type: 'text', required: true },
@@ -3803,15 +3817,32 @@ async function renderAdminCrud(cfg) {
   if (!body) return;
   if (items === null) { body.innerHTML = errorHtml(); return; }
   if (!items.length) { body.innerHTML = emptyHtml(cfg.emptyTitle || 'Rien à afficher', cfg.emptySub || '', cfg.emptyIcon || 'inbox'); return; }
-  body.innerHTML = `<div class="admin-list">${items.map((it) => crudRowHtml(cfg, it)).join('')}</div>`;
+  const searchBox = cfg.search ? `<div class="search-box" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input type="search" id="crudSearch" placeholder="${esc(cfg.searchPlaceholder || 'Rechercher…')}" autocomplete="off" /></div>` : '';
+  let listHtml;
+  if (cfg.groups) {
+    listHtml = cfg.groups(items).filter((g) => g[2].length).map((g) => `<section class="admin-group" style="--gc:${g[1] || 'var(--accent)'}"><div class="admin-group-head"><h2>${esc(g[0])}</h2><span class="ag-count">${g[2].length}</span></div><div class="admin-list">${g[2].map((it) => crudRowHtml(cfg, it)).join('')}</div></section>`).join('');
+  } else {
+    listHtml = `<div class="admin-list">${items.map((it) => crudRowHtml(cfg, it)).join('')}</div>`;
+  }
+  body.innerHTML = searchBox + listHtml;
   if (cfg.extraAction) body.querySelectorAll('[data-extra]').forEach((b) => b.addEventListener('click', () => cfg.extraAction.run(items.find((x) => x.id === b.dataset.extra))));
   body.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openCrudForm(cfg, items.find((x) => x.id === b.dataset.edit))));
   body.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => confirmCrudDelete(cfg, items.find((x) => x.id === b.dataset.del))));
+  const crudSearch = $('#crudSearch');
+  if (crudSearch) {
+    const rows = body.querySelectorAll('.admin-list-row');
+    crudSearch.addEventListener('input', () => {
+      const q = crudSearch.value.trim().toLowerCase();
+      rows.forEach((r) => { r.style.display = !q || (r.dataset.search || '').includes(q) ? '' : 'none'; });
+      body.querySelectorAll('.admin-group').forEach((sec) => { const any = [...sec.querySelectorAll('.admin-list-row')].some((r) => r.style.display !== 'none'); sec.style.display = any ? '' : 'none'; });
+    });
+  }
 }
 function crudRowHtml(cfg, it) {
   const thumb = cfg.thumb ? cfg.thumb(it) : '';
   const sub = cfg.itemSub ? cfg.itemSub(it) : '';
-  return `<div class="admin-list-row">
+  const sx = cfg.search ? ` data-search="${esc((cfg.search(it) || '').toLowerCase())}"` : '';
+  return `<div class="admin-list-row"${sx}>
     ${thumb}
     <div class="alr-main"><b>${esc(cfg.itemTitle(it))}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>
     <div class="alr-actions">
@@ -3938,11 +3969,12 @@ async function renderAdminRoles() {
   if (accounts === null) { body.innerHTML = errorHtml(); return; }
   if (!accounts.length) { body.innerHTML = emptyHtml('Aucun compte', 'Les comptes apparaîtront ici après inscription.', 'inbox'); return; }
   const myId = session?.user?.id;
-  body.innerHTML = `<div class="search-box" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input type="search" id="arSearch" placeholder="Rechercher un nom ou un e-mail…" autocomplete="off" /></div>
+  body.innerHTML = `<div class="segmented ar-rolefilter" id="arRoleFilter" style="margin-bottom:12px"><button class="seg active" data-r="all">Tous</button>${ROLE_OPTIONS.map(([v, l]) => `<button class="seg" data-r="${v}">${l}</button>`).join('')}</div>
+  <div class="search-box" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input type="search" id="arSearch" placeholder="Rechercher un nom ou un e-mail…" autocomplete="off" /></div>
   <div class="roster">${accounts.map((a) => {
     const isMe = a.id === myId;
     const opts = ROLE_OPTIONS.map(([v, l]) => `<option value="${v}" ${a.role === v ? 'selected' : ''}>${l}</option>`).join('');
-    return `<div class="roster-row" data-search="${esc(((a.full_name || '') + ' ' + (a.email || '')).toLowerCase())}"><span class="rr-name">${esc(a.full_name || '—')}<br><span class="rr-sub">${esc(a.email || '')}${isMe ? ' · vous' : ''}</span></span><select class="poule-select role-select" data-id="${a.id}" ${isMe ? 'disabled title="Vous ne pouvez pas changer votre propre rôle"' : ''}>${opts}</select></div>`;
+    return `<div class="roster-row" data-role="${esc(a.role || 'fan')}" data-search="${esc(((a.full_name || '') + ' ' + (a.email || '')).toLowerCase())}"><span class="rr-name">${esc(a.full_name || '—')}<br><span class="rr-sub">${esc(a.email || '')}${isMe ? ' · vous' : ''}</span></span><select class="poule-select role-select" data-id="${a.id}" ${isMe ? 'disabled title="Vous ne pouvez pas changer votre propre rôle"' : ''}>${opts}</select></div>`;
   }).join('')}</div>`;
   body.querySelectorAll('.role-select').forEach((sel) => {
     sel.dataset.prev = sel.value;
@@ -3956,10 +3988,18 @@ async function renderAdminRoles() {
   });
   const search = $('#arSearch');
   const rows = body.querySelectorAll('.roster-row');
-  if (search) search.addEventListener('input', () => {
-    const q = search.value.trim().toLowerCase();
-    rows.forEach((row) => { row.style.display = !q || (row.dataset.search || '').includes(q) ? '' : 'none'; });
-  });
+  let roleF = 'all';
+  const applyFilter = () => {
+    const q = (search?.value || '').trim().toLowerCase();
+    rows.forEach((row) => {
+      const okQ = !q || (row.dataset.search || '').includes(q);
+      const okR = roleF === 'all' || row.dataset.role === roleF;
+      row.style.display = okQ && okR ? '' : 'none';
+    });
+  };
+  if (search) search.addEventListener('input', applyFilter);
+  const rf = $('#arRoleFilter');
+  if (rf) rf.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { roleF = b.dataset.r; rf.querySelectorAll('.seg').forEach((x) => x.classList.toggle('active', x === b)); applyFilter(); }));
 }
 
 async function listQuizQuestions(quizId) {

@@ -2583,3 +2583,9 @@ a.cs-item:hover { border-color: var(--accent); }
 .md-live .ml-clock { font-family: var(--font-display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; color: var(--accent); min-width: 48px; text-align: center; }
 .md-live .ml-tag { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; color: var(--red); }
 @keyframes livePulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); } 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* ------------------------------------------------- Admin : listes groupées (clubs M/F/sélection) */
+.admin-group { margin-bottom: 24px; }
+.admin-group-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding-left: 12px; border-left: 4px solid var(--gc, var(--accent)); }
+.admin-group-head h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 18px; }
+.admin-group-head .ag-count { font-family: var(--font-display); font-weight: 600; font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 2px 10px; }
