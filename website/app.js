@@ -1388,22 +1388,59 @@ async function renderPlayer(id) {
 async function renderTeam(id) {
   view.innerHTML = backBtnHtml() + loadingHtml(); wireBack(); window.scrollTo({ top: 0 });
   const uid = session?.user?.id;
-  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos, events, eventCounts, myRsvps, allTeamStats] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), []), safe(listClubEvents(id), []), safe(getEventCounts(id), new Map()), uid ? safe(listMyEventRsvps(), new Map()) : Promise.resolve(new Map()), safe(listAllTeamStats(), [])]);
+  const [t, players, standing, matches, isFav, posts, sponsors, awards, ldb, highs, activePolls, photos, events, eventCounts, myRsvps, allTeamStats, advAll, playerStats] = await Promise.all([safe(getTeam(id), null), safe(getTeamPlayers(id), []), safe(getTeamStanding(id), null), safe(getTeamMatches(id), []), uid ? safe(isFavoriteTeam(uid, id), false) : Promise.resolve(false), safe(listTeamPosts(id), []), safe(listClubSponsors(id), []), safe(listTeamAwards(id), []), safe(fanLeaderboardByTeam(id, 20), []), safe(listTeamGameHighs(id), []), safe(listActiveTeamPolls(id), []), safe(listTeamPhotos(id), []), safe(listClubEvents(id), []), safe(getEventCounts(id), new Map()), uid ? safe(listMyEventRsvps(), new Map()) : Promise.resolve(new Map()), safe(listAllTeamStats(), []), safe(listTeamAdvancedStats(), []), safe(getTeamTopScorers(id, 50), [])]);
   const upcomingEvents = events.filter((e) => tOf(e.starts_at) >= Date.now() - 3 * 3600 * 1000);
   const badges = computeClubBadges(id, matches, allTeamStats);
   if (!t) { view.innerHTML = backBtnHtml() + errorHtml(); wireBack(); return; }
   const crestColor = t.color || '#0E5F58';
-  const statsHtml = standing ? `<div class="club-stats">${clubStat(standing.points, 'Points')}${clubStat(standing.wins, 'Victoires')}${clubStat(standing.losses, 'Défaites')}${clubStat(standing.played, 'Joués')}</div>` : '';
+  const pstat = {}; (playerStats || []).forEach((p) => { pstat[p.player_id] = p; });
+  const adv = (advAll || []).find((r) => r.team_id === id) || null;
+  const form = teamFormFrom(matches, id);
+  const fin = matches.filter((m) => m.status === 'finished');
+  const agg = fin.reduce((a, m) => {
+    const home = m.home_team_id === id, my = (home ? m.home_score : m.away_score) || 0, op = (home ? m.away_score : m.home_score) || 0;
+    a.g++; a.pf += my; a.pa += op; if (my > a.best) a.best = my; if (my > op) a.w++; else if (my < op) a.l++;
+    return a;
+  }, { g: 0, pf: 0, pa: 0, best: 0, w: 0, l: 0 });
+  const perG = (x) => (agg.g ? (x / agg.g).toFixed(1) : '0');
+  const wins = standing?.wins ?? agg.w, losses = standing?.losses ?? agg.l, played = standing?.played ?? agg.g;
+  const points = standing?.points ?? (wins * 2 + losses), winPct = played ? Math.round((wins / played) * 100) : 0;
+  const diffTot = (standing?.pts_for != null && standing?.pts_against != null) ? (standing.pts_for - standing.pts_against) : (agg.pf - agg.pa);
+  const subBits = [labelOf(TEAM_GENDERS, t.gender), t.division ? esc(t.division) : null, t.city ? esc(t.city) : null, t.founded_year ? 'Depuis ' + t.founded_year : null, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean);
+  const sub = (t.is_national ? 'Sélection nationale · ' : '') + (subBits.join(' · ') || 'Club');
+  const statsHtml = (standing || agg.g) ? `<div class="club-stats">${clubStat(points, 'Points')}${clubStat(wins, 'Victoires')}${clubStat(losses, 'Défaites')}${clubStat(played, 'Joués')}${clubStat(winPct + '%', '% victoires')}${clubStat((diffTot >= 0 ? '+' : '') + diffTot, 'Diff.')}</div>` : '';
+  const formHtml = form.length ? `<div class="team-form"><span class="tf-label">Forme</span><span class="scout-form">${form.map((f) => `<span class="form-pill ${f.res}" title="${esc(f.opp?.name || '')} ${f.my}-${f.other}">${f.res === 'W' ? 'V' : f.res === 'L' ? 'D' : 'N'}</span>`).join('')}</span></div>` : '';
   let html = backBtnHtml();
   html += `<div class="profile">
     <div class="crest-badge" style="background:${esc(crestColor)};box-shadow:0 0 0 4px ${hexA(crestColor, 0.16)}">${t.logo_url ? `<img src="${esc(t.logo_url)}" alt="">` : `<span>${esc(t.short_name || initials(t.name))}</span>`}</div>
-    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${[labelOf(TEAM_GENDERS, t.gender), esc(t.city), t.founded_year ? 'Depuis ' + t.founded_year : null, t.coach ? 'Coach : ' + esc(t.coach) : null].filter(Boolean).join(' · ') || 'Club'}</div>${statsHtml}<div class="profile-actions">${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}<button class="btn btn-ghost sm" id="teamShareBtn">${SHARE_ICON}Partager</button></div>${socialLinksHtml(t, TEAM_SOCIALS)}</div>
+    <div class="profile-info"><h1>${esc(t.name)}</h1><div class="profile-sub">${sub}</div>${statsHtml}${formHtml}<div class="profile-actions">${followBtnHtml(isFav, 'Ajouter aux favoris', 'Dans mes favoris')}<button class="btn btn-ghost sm" id="teamShareBtn">${SHARE_ICON}Partager</button></div>${socialLinksHtml(t, TEAM_SOCIALS)}</div>
   </div>`;
   html += teamBadgesHtml(badges);
   if (t.presentation) html += `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="9"/>')}À propos</h2></div><div class="team-about">${esc(t.presentation).replace(/\n+/g, '<br>')}</div></div>`;
   html += teamEventsHtml(upcomingEvents, eventCounts, myRsvps);
+  // Statistiques de l'équipe (moyennes par match) + four factors
+  if (agg.g) {
+    const diffPg = (agg.pf - agg.pa) / agg.g;
+    const kpi = (v, l) => `<div class="rec-mini"><span class="rec-mini-val">${v}</span><span class="rec-mini-lbl">${esc(l)}</span></div>`;
+    let kpis = kpi(perG(agg.pf), 'Pts marqués / match') + kpi(perG(agg.pa), 'Pts encaissés / match') + kpi((diffPg >= 0 ? '+' : '') + diffPg.toFixed(1), 'Différentiel / match') + kpi(agg.best, 'Meilleur score');
+    if (adv) kpis += kpi(adv.efg_pct + '%', '% de tir effectif') + kpi(adv.tov_pct + '%', 'Balles perdues') + kpi(adv.orb_pct + '%', 'Rebonds offensifs') + kpi(adv.ft_rate + '%', 'Lancers francs');
+    html += `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>')}Statistiques de l'équipe</h2></div><div class="rec-grid">${kpis}</div></div>`;
+  }
+  // Meilleurs joueurs du club
+  if (playerStats && playerStats.length) {
+    const topR = [...playerStats].sort((a, b) => (b.rpg || 0) - (a.rpg || 0))[0];
+    const topA = [...playerStats].sort((a, b) => (b.apg || 0) - (a.apg || 0))[0];
+    const lead = (p, k, u, l) => (p && p[k] > 0) ? `<a class="rec-mini" href="#player/${p.player_id}"><span class="rec-mini-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}</span><span class="rec-mini-val">${p[k]}<small>${u}</small></span><span class="rec-mini-lbl">${l}</span><span class="rec-mini-who">${esc(p.full_name)}</span></a>` : '';
+    const leadHtml = lead(playerStats[0], 'ppg', 'pts', 'Meilleur marqueur') + lead(topR, 'rpg', 'reb', 'Meilleur rebondeur') + lead(topA, 'apg', 'pd', 'Meilleur passeur');
+    if (leadHtml) html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="8" r="5"/><path d="M8.2 12.5L7 22l5-3 5 3-1.2-9.5"/>')}Meilleurs joueurs</h2></div><div class="rec-grid">${leadHtml}</div></div>`;
+  }
   if (players.length) {
-    const rows = players.map((pl) => `<a class="roster-row" href="#player/${pl.id}"><span class="bx-num">${pl.number ?? ''}</span><span class="rr-name">${esc(pl.full_name)}</span><span class="rr-pos">${esc(pl.position || '')}</span></a>`).join('');
+    const rows = players.map((pl) => {
+      const s = pstat[pl.id];
+      const meta = [pl.position, pl.height_cm ? pl.height_cm + ' cm' : null].filter(Boolean).join(' · ');
+      const right = s ? `<span class="rr-avg">${s.ppg}<small>pts</small> ${s.rpg}<small>reb</small> ${s.apg}<small>pd</small></span>` : (pl.position ? `<span class="rr-pos">${esc(pl.position)}</span>` : '');
+      return `<a class="roster-row" href="#player/${pl.id}"><span class="bx-num">${pl.number ?? ''}</span><span class="rr-name">${esc(pl.full_name)}${meta ? `<span class="rr-meta">${esc(meta)}</span>` : ''}</span>${right}</a>`;
+    }).join('');
     html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>')}Effectif</h2></div><div class="roster">${rows}</div></div>`;
   }
   const live = matches.filter((m) => m.status === 'live');
