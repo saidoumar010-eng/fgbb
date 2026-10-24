@@ -5010,9 +5010,10 @@ async function listTeamAdvancedStats() {
 // -- écran : statistiques des équipes (attaque / défense / différentiel)
 let seMode = 'attaque';
 let seComp; // undefined = pas encore initialisé → « toutes »
+let seGender = 'all';
 function seValue(r) { return seMode === 'attaque' ? r.pts_for : seMode === 'defense' ? r.pts_against : r.diff; }
 async function renderStatsEquipes() {
-  view.innerHTML = `<h1 class="view-title">Statistiques des équipes</h1><p class="view-sub">Attaque, défense et différentiel — toujours par match.</p><div id="seModes"></div><div id="seComps"></div><div id="seBody">${loadingHtml()}</div>`;
+  view.innerHTML = `<h1 class="view-title">Statistiques des équipes</h1><p class="view-sub">Attaque, défense et différentiel — toujours par match.</p><div id="seModes"></div><div id="seComps"></div>${genderSegHtml(seGender)}<div id="seBody">${loadingHtml()}</div>`;
   const modes = [['attaque', 'Attaque'], ['defense', 'Défense'], ['diff', 'Différentiel']];
   const mw = $('#seModes'); mw.className = 'segmented';
   mw.innerHTML = modes.map(([id, l]) => `<button class="seg ${seMode === id ? 'active' : ''}" data-m="${id}">${l}</button>`).join('');
@@ -5025,12 +5026,14 @@ async function renderStatsEquipes() {
       .concat(comps.map((c) => `<button class="seg ${seComp === c.id ? 'active' : ''}" data-c="${c.id}">${esc(c.name)}</button>`)).join('');
     cw.querySelectorAll('.seg').forEach((btn) => btn.addEventListener('click', () => { seComp = btn.dataset.c || undefined; renderStatsEquipes(); }));
   }
+  wireGenderSeg((g) => { seGender = g; renderStatsEquipes(); });
 
-  const stats = await safe(listTeamSeasonStats(seComp || null), null);
+  const [stats, teamsMap] = await Promise.all([safe(listTeamSeasonStats(seComp || null), null), fetchTeamsMap()]);
   const b = $('#seBody'); if (!b) return;
   if (stats === null) { b.innerHTML = errorHtml(); return; }
-  const rows = stats.slice().sort((a, b2) => seMode === 'defense' ? seValue(a) - seValue(b2) : seValue(b2) - seValue(a));
-  if (!rows.length) { b.innerHTML = emptyHtml('Aucune statistique', 'Les bilans apparaîtront dès que des matchs auront été joués.', 'trophy'); return; }
+  let rows = stats.slice().sort((a, b2) => seMode === 'defense' ? seValue(a) - seValue(b2) : seValue(b2) - seValue(a));
+  if (seGender !== 'all') rows = rows.filter((r) => teamsMap[r.team_id]?.gender === seGender);
+  if (!rows.length) { b.innerHTML = emptyHtml('Aucune statistique', 'Aucune équipe pour ce filtre pour le moment.', 'trophy'); return; }
   const scale = Math.max(1, ...rows.map((r) => Math.abs(seValue(r))));
   const legend = seMode === 'attaque' ? 'Points marqués par match' : seMode === 'defense' ? 'Points encaissés par match' : 'Différence de points par match';
   const centered = seMode === 'diff';
@@ -5053,18 +5056,21 @@ const ADV_METRICS = [
   { id: 'ft_rate', label: 'Lancers francs', hint: 'Fréquence des lancers francs' },
 ];
 let saMetric = 'efg_pct';
+let saGender = 'all';
 async function renderStatsAvancees() {
-  view.innerHTML = `<h1 class="view-title">Statistiques avancées</h1><p class="view-sub">Les « four factors », calculés sur les box scores de la saison.</p><div id="saModes"></div><div id="saBody">${loadingHtml()}</div>`;
+  view.innerHTML = `<h1 class="view-title">Statistiques avancées</h1><p class="view-sub">Les « four factors », calculés sur les box scores de la saison.</p><div id="saModes"></div>${genderSegHtml(saGender)}<div id="saBody">${loadingHtml()}</div>`;
   const mw = $('#saModes'); mw.className = 'segmented';
   mw.innerHTML = ADV_METRICS.map((m) => `<button class="seg ${saMetric === m.id ? 'active' : ''}" data-m="${m.id}">${esc(m.label)}</button>`).join('');
   mw.querySelectorAll('.seg').forEach((btn) => btn.addEventListener('click', () => { saMetric = btn.dataset.m; renderStatsAvancees(); }));
+  wireGenderSeg((g) => { saGender = g; renderStatsAvancees(); });
 
-  const data = await safe(listTeamAdvancedStats(), null);
+  const [data, teamsMap] = await Promise.all([safe(listTeamAdvancedStats(), null), fetchTeamsMap()]);
   const b = $('#saBody'); if (!b) return;
   if (data === null) { b.innerHTML = errorHtml(); return; }
   const cur = ADV_METRICS.find((m) => m.id === saMetric);
-  const rows = data.slice().sort((a, b2) => cur.lower ? a[saMetric] - b2[saMetric] : b2[saMetric] - a[saMetric]);
-  if (!rows.length) { b.innerHTML = emptyHtml('Aucune statistique', 'Les indicateurs avancés apparaîtront après quelques matchs.', 'trophy'); return; }
+  let rows = data.slice().sort((a, b2) => cur.lower ? a[saMetric] - b2[saMetric] : b2[saMetric] - a[saMetric]);
+  if (saGender !== 'all') rows = rows.filter((r) => teamsMap[r.team_id]?.gender === saGender);
+  if (!rows.length) { b.innerHTML = emptyHtml('Aucune statistique', 'Aucune équipe pour ce filtre pour le moment.', 'trophy'); return; }
   b.innerHTML = `<p class="view-sub" style="margin-bottom:12px">${esc(cur.hint)}</p><div class="se-card">${rows.map((r, i) => {
     const team = { name: r.team_name, short_name: r.short_name, color: r.color };
     return `<a class="se-row" href="#team/${r.team_id}"><div class="se-top"><span class="se-rk${i < 3 ? ' top' : ''}">${i + 1}</span>${logoHtml(team, 'mlogo sm')}<span class="se-name"><b>${esc(r.team_name)}</b><span>${r.games} matchs</span></span><span class="se-val">${r[saMetric]}%</span></div></a>`;
