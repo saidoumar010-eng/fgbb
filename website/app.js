@@ -32,6 +32,7 @@ let lastListRoute = 'accueil'; // onglet d'où l'on ouvre une fiche match (pour 
 let viewRendered = false;
 let liveTimer = null;
 let detailTimer = null;
+let clockTimer = null;
 let teamsPromise = null;
 let myClubsCache = null; // clubs délégués au compte courant (null = pas encore chargé)
 
@@ -1236,6 +1237,13 @@ function boxTableHtml(team, rows) {
   </div>`;
 }
 
+// Horloge de jeu en direct : temps restant dans le quart-temps (compte à rebours).
+function liveClockSeconds(m) {
+  let s = Number(m.clock_seconds ?? 0);
+  if (m.clock_running && m.clock_updated_at) s -= (Date.now() - Date.parse(m.clock_updated_at)) / 1000;
+  return Math.max(0, s);
+}
+function fmtClock(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 async function renderMatchDetail(id) {
   view.innerHTML = backBtnHtml() + loadingHtml();
   wireBack();
@@ -1274,14 +1282,16 @@ async function renderMatchDetail(id) {
   if (scheduled) {
     infoHtml = `<span class="md-kick">${CLOCK_ICO}<b>${esc(relativeDayLabel(m.scheduled_at))}</b>${fmtTime(m.scheduled_at) ? ' · ' + esc(fmtTime(m.scheduled_at)) : ''}</span>`;
   } else if (live) {
-    infoHtml = `<span class="pill live">Q${m.current_quarter || 1} · En direct</span>`;
+    infoHtml = '';
   } else {
     infoHtml = `<span class="pill done">Terminé</span><span class="md-when">${esc(fmtDate(m.scheduled_at))}</span>`;
   }
   const venueHtml = m.venue ? `<span class="mvenue">${PIN_ICO}${esc(m.venue)}</span>` : '';
 
   let html = backBtnHtml();
-  html += `<div class="md-board">
+  const liveBar = live ? `<div class="md-live"><span class="live-dot"></span><span class="ml-q">Q${m.current_quarter || 1}</span><span class="ml-clock" id="gameClock">${fmtClock(liveClockSeconds(m))}</span><span class="ml-tag">En direct</span></div>` : '';
+  html += `<div class="md-board${live ? ' is-live' : ''}">
+    ${liveBar}
     <div class="md-comp">${esc(compLine)}</div>
     <div class="md-teams">
       <a class="md-team" href="#team/${m.home_team_id}">${logoHtml(m.home_team, 'mlogo')}<span class="md-tn ${awayWin ? 'loser' : ''}">${esc(m.home_team?.name || '')}</span></a>
@@ -1325,7 +1335,13 @@ async function renderMatchDetail(id) {
   fillComments('match', m.id, '#commentsSlot');
 
   clearTimeout(detailTimer);
+  clearInterval(clockTimer);
   if (live) {
+    if (m.clock_running) clockTimer = setInterval(() => {
+      const el = document.getElementById('gameClock');
+      if (!el || location.hash.replace('#', '') !== 'match/' + id) { clearInterval(clockTimer); return; }
+      el.textContent = fmtClock(liveClockSeconds(m));
+    }, 1000);
     detailTimer = setTimeout(() => {
       if (location.hash.replace('#', '') === 'match/' + id) renderMatchDetail(id);
     }, 20000);
@@ -4283,6 +4299,7 @@ function setActiveTab(route) {
 function render(route) {
   clearTimeout(liveTimer);
   clearTimeout(detailTimer);
+  clearInterval(clockTimer);
   currentRoute = route;
   lastListRoute = route; // pour le bouton « Retour » d'une fiche match
   viewRendered = true;

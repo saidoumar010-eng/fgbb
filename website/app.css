@@ -2574,3 +2574,12 @@ a.cs-item:hover { border-color: var(--accent); }
 .prog-cat-head h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 21px; }
 .prog-cat-head .pc-count { font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 11px; }
 .prog-sub { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
+
+/* ------------------------------------------------- Match en direct (en-tête + horloge) */
+.md-board.is-live { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset, 0 10px 30px -18px var(--red); }
+.md-live { display: inline-flex; align-items: center; gap: 9px; padding: 6px 14px; margin: 0 auto 12px; border: 1px solid var(--red); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--red) 12%, transparent); }
+.md-live .live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); flex: none; animation: livePulse 1.6s ease-out infinite; }
+.md-live .ml-q { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 13px; color: var(--text); }
+.md-live .ml-clock { font-family: var(--font-display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; color: var(--accent); min-width: 48px; text-align: center; }
+.md-live .ml-tag { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; color: var(--red); }
+@keyframes livePulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); } 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
