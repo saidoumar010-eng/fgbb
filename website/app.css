@@ -2538,3 +2538,16 @@ a.cs-item:hover { border-color: var(--accent); }
 .club-card .cc-strip { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--tc, var(--teal)); }
 .club-card:hover { border-color: var(--tc, var(--border-strong)); }
 .club-card .cc-cat { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; color: var(--muted); }
+
+/* ------------------------------------------------- Équipes nationales (page Sélections) */
+.nat { display: flex; flex-direction: column; gap: 26px; }
+.nat-hero { position: relative; border-radius: var(--radius-xl); overflow: hidden; border: 1px solid var(--border); background: linear-gradient(120deg, var(--teal-deep), var(--bg-deep)); padding: 30px 32px; }
+.nat-hero::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(var(--flag-red) 0 33.3%, var(--flag-yellow) 33.3% 66.6%, var(--flag-green) 66.6% 100%); }
+.nat-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; color: var(--flag-yellow); }
+.nat-eyebrow svg { width: 14px; height: 14px; flex: none; }
+.nat-title { font-family: var(--font-display); font-size: clamp(28px, 5vw, 42px); text-transform: uppercase; letter-spacing: 0.01em; margin-top: 6px; }
+.nat-sub { color: #cfe3dd; margin-top: 8px; max-width: 620px; }
+.nat-cats { display: flex; flex-wrap: wrap; gap: 10px; }
+.nat-cat { display: inline-flex; align-items: center; gap: 9px; padding: 11px 16px 11px 13px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--cc, var(--accent)); border-radius: var(--radius); font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; font-size: 14px; }
+.nat-cat .nd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
+@media (max-width: 560px) { .nat-hero { padding: 22px 20px; } }

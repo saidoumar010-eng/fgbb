@@ -1438,6 +1438,55 @@ async function renderClubs() {
   }).join('')}</div>`;
 }
 
+// ------------------------------------------------------- équipes nationales (sélections)
+// Catégories visées (de seniors à juniors) — repère visuel, indépendant des données.
+const NAT_CATS = [
+  { label: 'Seniors Messieurs', color: 'var(--cat-n1m)' },
+  { label: 'Seniors Dames', color: 'var(--cat-n1d)' },
+  { label: 'U20', color: 'var(--cat-u20)' },
+  { label: 'U18', color: 'var(--cat-u18)' },
+  { label: 'U16', color: 'var(--cat-u16)' },
+  { label: 'U14', color: 'var(--cat-u14)' },
+];
+// Carte d'une sélection : logo + nom + catégorie, bandeau couleur, lien vers la fiche.
+function selectionCardHtml(t) {
+  const cat = [t.division, labelOf(TEAM_GENDERS, t.gender)].filter(Boolean).join(' · ');
+  return `<a class="club-card" href="#team/${t.id}" style="--tc:${t.color ? esc(t.color) : 'var(--teal)'}"><span class="cc-strip"></span>${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${cat ? `<span class="cc-cat">${esc(cat)}</span>` : ''}</a>`;
+}
+async function renderSelections() {
+  view.innerHTML = `<div class="nat">
+    <div class="nat-hero">
+      <span class="nat-eyebrow">${STAR_ICO}Équipes nationales</span>
+      <h1 class="nat-title">Les sélections de la Guinée</h1>
+      <p class="nat-sub">Le basket national, de seniors à juniors : effectifs, calendrier &amp; résultats, et palmarès — réunis sur une seule page.</p>
+    </div>
+    <div id="natBody">${loadingHtml()}</div>
+  </div>`;
+
+  const teams = await safe(listTeams(), null);
+  const el = $('#natBody');
+  if (teams === null) { el.innerHTML = errorHtml(); return; }
+  const nat = teams.filter((t) => t.is_national);
+
+  let html = '';
+  if (nat.length) {
+    const groups = { messieurs: [], dames: [], autre: [] };
+    nat.forEach((t) => (groups[t.gender] || groups.autre).push(t));
+    const section = (list, title) => list.length
+      ? `<div class="block"><div class="block-head"><h2>${title}</h2></div><div class="club-grid">${list.map(selectionCardHtml).join('')}</div></div>`
+      : '';
+    html += section(groups.messieurs, 'Messieurs') + section(groups.dames, 'Dames') + section(groups.autre, 'Autres');
+  } else {
+    html += emptyHtml('Sélections à venir', 'Les sélections publiées par la fédération apparaîtront ici — chaque sélection avec son effectif, son calendrier et ses résultats.', 'trophy');
+  }
+
+  // Repère des catégories (toujours visible) — identité FGBB + code couleur.
+  html += `<div class="block"><div class="block-head"><h2>Catégories</h2></div>
+    <div class="nat-cats">${NAT_CATS.map((c) => `<span class="nat-cat" style="--cc:${c.color}"><span class="nd-dot"></span>${esc(c.label)}</span>`).join('')}</div></div>`;
+
+  el.innerHTML = html;
+}
+
 // ------------------------------------------------------- fan zone (sondages)
 async function renderFanzone() {
   view.innerHTML = `<h1 class="view-title">Fan Zone</h1><p class="view-sub">Donnez votre avis aux sondages de la fédération.</p><div id="fzBody">${loadingHtml()}</div>`;
@@ -4053,6 +4102,7 @@ const RENDERERS = {
   classement: renderClassement,
   actus: renderActus,
   leaders: renderLeaders,
+  selections: renderSelections,
   plus: renderPlus,
   videos: renderVideos,
   clubs: renderClubs,
