@@ -1666,30 +1666,22 @@ async function pollCardEl(p, refresh) {
 
 // ------------------------------------------------------- hub « Plus »
 function renderPlus() {
-  const items = [
-    { r: 'programme', label: 'Programme', ic: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' },
-    { r: 'videos', label: 'Vidéos', ic: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>' },
-    { r: 'clubs', label: 'Clubs', ic: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
-    { r: 'playoffs', label: 'Playoffs', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/>' },
-    { r: 'fanzone', label: 'Fan Zone', ic: '<path d="M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.9 9 9z"/>' },
-    { r: 'recherche', label: 'Recherche', ic: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>' },
-    { r: 'favoris', label: 'Mes favoris', ic: '<path d="M12 21s-7-4.6-9.5-8.3C.9 10.4 1.4 7 4 5.7 6 4.7 8.3 5.3 9.6 7L12 9.8 14.4 7c1.3-1.7 3.6-2.3 5.6-1.3 2.6 1.3 3.1 4.7 1.5 7C19 16.4 12 21 12 21z"/>' },
-    { r: 'comparateur', label: 'Comparateur', ic: '<path d="M18 20V10M12 20V4M6 20v-6"/>' },
-    { r: 'supporters', label: 'Classement fans', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
-    { r: 'records', label: 'Records', ic: '<circle cx="12" cy="8" r="5"/><path d="M8.2 12.5L7 22l5-3 5 3-1.2-9.5"/>' },
-    { r: 'stats-equipes', label: 'Stats équipes', ic: '<path d="M18 20V10M12 20V4M6 20v-6"/>' },
-    { r: 'stats-avancees', label: 'Stats avancées', ic: '<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>' },
-    { r: 'quiz', label: 'Quiz', ic: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01"/>' },
-    { r: 'palmares', label: 'Palmarès', ic: '<circle cx="12" cy="8" r="5"/><path d="M8.2 12.5L7 22l5-3 5 3-1.2-9.5"/>' },
-    { r: 'medias', label: 'Médias', ic: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' },
-    { r: 'photos', label: 'Photos', ic: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>' },
-    { r: 'agenda', label: 'Agenda', ic: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
-    { r: 'arbitres', label: 'Arbitres', ic: '<path d="M6 9l6-6 6 6M6 9v11h12V9M9 13h6"/>' },
-    { r: 'discipline', label: 'Discipline', ic: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>' },
-    { r: 'apropos', label: 'La fédération', ic: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>' },
+  const SEARCH_IC = '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>';
+  const sections = [
+    { title: 'Matchs', ic: 'matchs', items: [['matchs', 'En direct'], ['programme', 'Programme'], ['agenda', 'Agenda'], ['playoffs', 'Playoffs']] },
+    { title: 'Statistiques', ic: 'leaders', items: [['leaders', 'Leaders'], ['records', 'Records'], ['stats-equipes', 'Stats équipes'], ['stats-avancees', 'Stats avancées'], ['comparateur', 'Comparateur']] },
+    { title: 'Médias', ic: 'actus', items: [['actus', 'Actualités'], ['videos', 'Vidéos'], ['photos', 'Photos'], ['medias', 'Médias']] },
+    { title: 'Communauté', ic: 'supporters', items: [['fanzone', 'Fan Zone'], ['quiz', 'Quiz'], ['supporters', 'Classement supporters'], ['favoris', 'Mes favoris']] },
+    { title: 'La fédération', ic: 'apropos', items: [['palmares', 'Palmarès'], ['arbitres', 'Arbitres'], ['discipline', 'Discipline'], ['apropos', 'La fédération']] },
+    { title: 'Explorer', ic: 'clubs', items: [['clubs', 'Clubs'], ['selections', 'Sélections'], ['classement', 'Classement'], ['recherche', 'Recherche']] },
   ];
-  view.innerHTML = `<h1 class="view-title">Plus</h1><p class="view-sub">Explorez tout le basket guinéen.</p>
-    <div class="plus-grid">${items.map((it) => `<a class="plus-card" href="#${it.r}"><span class="plus-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg></span><b>${it.label}</b></a>`).join('')}</div>`;
+  const ico = (r) => NAV_ICONS[r] || SEARCH_IC;
+  const svg = (inner) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  view.innerHTML = `<h1 class="view-title">Plus</h1><p class="view-sub">Tout le basket guinéen, organisé par thème.</p>
+    ${sections.map((s) => `<section class="block">
+      <div class="block-head"><h2><span class="bh-ic">${svg(ico(s.ic))}</span>${esc(s.title)}</h2></div>
+      <div class="plus-grid">${s.items.map(([r, label]) => `<a class="plus-card" href="#${r}"><span class="plus-ic">${svg(ico(r))}</span><b>${esc(label)}</b></a>`).join('')}</div>
+    </section>`).join('')}`;
 }
 
 // -- fan zone d'un match : pronostic + vote MVP (remplit #fanSlot)
@@ -4331,10 +4323,150 @@ function scheduleLiveRefresh(hasLive) {
 
 // --------------------------------------------------------------- routeur
 const ROUTES = Object.keys(RENDERERS);
-const PLUS_ROUTES = ['plus', 'videos', 'clubs', 'programme', 'playoffs', 'fanzone', 'recherche', 'favoris', 'apropos', 'comparateur', 'palmares', 'arbitres', 'discipline', 'medias', 'agenda', 'supporters', 'quiz', 'photos', 'records', 'stats-equipes', 'stats-avancees'];
+// --------------------------------------------------------------- navigation (façon NBA · thème FGBB)
+// Source UNIQUE : pilote la barre desktop (méga-menus) ET le tiroir mobile (accordéon).
+const NAV = [
+  { label: 'Accueil', route: 'accueil' },
+  { label: 'Matchs', route: 'matchs', sub: [['matchs', 'En direct', 'Scores & résultats du jour'], ['programme', 'Programme', 'Toutes les rencontres'], ['agenda', 'Agenda', 'Les prochains matchs'], ['playoffs', 'Playoffs', 'La phase finale']] },
+  { label: 'Classement', route: 'classement' },
+  { label: 'Clubs', route: 'clubs', clubs: true },
+  { label: 'Sélections', route: 'selections' },
+  { label: 'Stats', route: 'leaders', sub: [['leaders', 'Leaders', 'Marqueurs, passeurs, rebonds'], ['records', 'Records', 'Les sommets de la saison'], ['stats-equipes', 'Stats équipes', 'Les moyennes par club'], ['stats-avancees', 'Stats avancées', 'Indicateurs détaillés'], ['comparateur', 'Comparateur', 'Deux joueurs face à face']] },
+  { label: 'Actus', route: 'actus', sub: [['actus', 'Actualités', "L'info du basket guinéen"], ['videos', 'Vidéos', 'Résumés & temps forts'], ['photos', 'Photos', 'Les galeries des matchs'], ['medias', 'Médias', 'Communiqués & presse']] },
+  { label: 'Plus', route: 'plus', sub: [['fanzone', 'Fan Zone', "L'espace des supporters"], ['quiz', 'Quiz', 'Teste tes connaissances'], ['supporters', 'Supporters', 'Le classement des fans'], ['palmares', 'Palmarès', 'Tous les titres par club'], ['arbitres', 'Arbitres', 'Les officiels de la ligue'], ['discipline', 'Discipline', 'Sanctions & commission'], ['favoris', 'Favoris', 'Tes clubs & joueurs suivis'], ['apropos', 'À propos', 'La FGBB & le projet']] },
+];
+// route (et sous-routes) -> route de tête, pour surligner l'onglet actif.
+const ROUTE_GROUP = {};
+NAV.forEach((it) => { ROUTE_GROUP[it.route] = it.route; (it.sub || []).forEach(([r]) => (ROUTE_GROUP[r] = it.route)); });
+
+// Icônes par route (même style de traits que le reste de l'app) — finition des méga-menus & du tiroir.
+const NAV_ICONS = {
+  accueil: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',
+  matchs: '<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18"/>',
+  programme: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  agenda: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
+  playoffs: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h2a2 2 0 010 4h-1M7 5H5a2 2 0 000 4h1"/>',
+  classement: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',
+  clubs: '<path d="M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/>',
+  selections: '<path d="M5 22V3M5 4c3.5-2 7 2 10.5 0S20 2 20 2v10s-1 1-4.5 2S8 13 5 15"/>',
+  leaders: '<circle cx="12" cy="9" r="5"/><path d="M9 13l-2 8 5-3 5 3-2-8"/>',
+  records: '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.4l6.6-.9z"/>',
+  'stats-equipes': '<path d="M6 20v-6M12 20V4M18 20v-9"/><path d="M3 20h18"/>',
+  'stats-avancees': '<path d="M12 3a9 9 0 109 9h-9z"/><path d="M12 3v9"/>',
+  comparateur: '<path d="M12 3v18M5 7l-3 5h6zM19 7l-3 5h6z"/>',
+  actus: '<path d="M4 5h16v14H4zM4 9h16M9 5v14"/>',
+  videos: '<circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/>',
+  photos: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/>',
+  medias: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>',
+  plus: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  fanzone: '<path d="M21 11.5a8 8 0 01-8 8 9 9 0 01-4-1l-5 1 1-4a8 8 0 1116-4z"/>',
+  quiz: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 2-2.5 2-2.5 4M12 17h.01"/>',
+  supporters: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 7a3 3 0 010 6M21 20c0-2-1-3.5-3-4.5"/>',
+  palmares: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h2a2 2 0 010 4h-1M7 5H5a2 2 0 000 4h1"/>',
+  arbitres: '<rect x="5" y="3" width="9" height="13" rx="1"/><rect x="10" y="8" width="9" height="13" rx="1"/>',
+  discipline: '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  favoris: '<path d="M12 21C5 14 4 9 7 6c2-2 4-1 5 2 1-3 3-4 5-2 3 3 2 8-5 15z"/>',
+  apropos: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+};
+function navIcon(route) { return NAV_ICONS[route] ? `<span class="nav-ic">${icoSvg(NAV_ICONS[route])}</span>` : ''; }
+
+// Méga-menu Clubs : clubs groupés par genre, chaque club avec son logo (modèle « Teams » de NBA.com).
+function buildClubsMenuHtml(teams) {
+  const clubs = (teams || []).filter((t) => t && !t.is_national);
+  if (!clubs.length) return '<a class="mega-link" href="#clubs">Tous les clubs</a>';
+  const byGender = (g) => clubs.filter((t) => t.gender === g).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const col = (list, label, g) => list.length
+    ? `<div class="nav-clubs-col"><div class="nav-clubs-head"${g ? ` style="--gc:${genderDotColor(g)}"` : ''}>${label}</div>${list.map((t) => `<a class="nav-club" href="#team/${t.id}" style="--tc:${t.color ? esc(t.color) : 'var(--teal)'}">${logoHtml(t, 'nav-club-logo')}<span>${esc(t.name)}</span></a>`).join('')}</div>`
+    : '';
+  const other = clubs.filter((t) => t.gender !== 'messieurs' && t.gender !== 'dames');
+  const cols = col(byGender('messieurs'), 'Masculin', 'messieurs') + col(byGender('dames'), 'Féminin', 'dames') + col(other, 'Autres', '');
+  return `<div class="nav-clubs">${cols}</div><a class="mega-foot" href="#clubs">Tous les clubs →</a>`;
+}
+
+// Panneau méga-menu d'un item : Clubs (placeholder rempli après chargement) ou sous-liens simples.
+function navMegaHtml(it) {
+  if (it.clubs) return `<div class="mega mega-wide" data-mega="${it.route}" id="megaClubs">${loadingHtml()}</div>`;
+  if (!it.sub) return '';
+  return `<div class="mega${it.sub.length > 5 ? ' mega-grid' : ''}" data-mega="${it.route}">${it.sub.map(([r, l, d]) => `<a class="mega-link" href="#${r}">${navIcon(r)}<span class="mega-tx"><span class="mega-tt">${esc(l)}</span>${d ? `<span class="mega-ds">${esc(d)}</span>` : ''}</span></a>`).join('')}</div>`;
+}
+
+// Barre de navigation desktop.
+function renderNav() {
+  const list = $('#navList');
+  if (!list) return;
+  list.innerHTML = NAV.map((it) => {
+    const hasMega = !!(it.sub || it.clubs);
+    const caret = hasMega ? '<span class="nav-caret" aria-hidden="true"></span>' : '';
+    const cls = 'nav-item' + (hasMega ? ' has-mega' : '') + (it.clubs ? ' has-mega-wide' : '');
+    return `<li class="${cls}"><a class="nav-link" data-route="${it.route}" href="#${it.route}">${esc(it.label)}${caret}</a>${navMegaHtml(it)}</li>`;
+  }).join('');
+}
+
+// Tiroir de navigation mobile (accordéon).
+function renderDrawer() {
+  const d = $('#navDrawer');
+  if (!d) return;
+  const body = NAV.map((it) => {
+    if (it.sub || it.clubs) {
+      const inner = it.clubs
+        ? `<div id="drawerClubs">${loadingHtml()}</div>`
+        : it.sub.map(([r, l]) => `<a class="drawer-sub" href="#${r}">${navIcon(r)}<span>${esc(l)}</span></a>`).join('');
+      return `<div class="drawer-group" data-group="${it.route}">
+        <div class="drawer-top"><a class="drawer-top-link" data-route="${it.route}" href="#${it.route}">${navIcon(it.route)}<span>${esc(it.label)}</span></a><button class="drawer-chev" type="button" aria-expanded="false" aria-label="Déplier ${esc(it.label)}"></button></div>
+        <div class="drawer-panel"><div class="drawer-panel-inner">${inner}</div></div>
+      </div>`;
+    }
+    return `<div class="drawer-group"><a class="drawer-top-solo" data-route="${it.route}" href="#${it.route}">${navIcon(it.route)}<span>${esc(it.label)}</span></a></div>`;
+  }).join('');
+  d.innerHTML = `<div class="drawer-head"><span class="drawer-brand"><img src="assets/icon.png" alt="" /><span class="drawer-title">FGBB</span></span><button class="drawer-close" id="drawerClose" aria-label="Fermer le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><nav class="drawer-nav" aria-label="Navigation">${body}</nav><div class="drawer-foot">Fédération Guinéenne de Basket-Ball</div>`;
+}
+
+// Injecte le menu Clubs (desktop + tiroir) une fois les équipes chargées.
+async function fillClubsMenus() {
+  const map = await safe(fetchTeamsMap(), {});
+  const html = buildClubsMenuHtml(Object.values(map || {}));
+  const mc = $('#megaClubs'); if (mc) mc.innerHTML = html;
+  const dc = $('#drawerClubs'); if (dc) dc.innerHTML = html;
+}
+
+function openDrawer() {
+  const d = $('#navDrawer'); if (!d) return;
+  d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+  $('#navScrim')?.classList.add('open');
+  $('#navBurger')?.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('nav-open');
+}
+function closeDrawer() {
+  const d = $('#navDrawer'); if (!d) return;
+  d.classList.remove('open'); d.setAttribute('aria-hidden', 'true');
+  $('#navScrim')?.classList.remove('open');
+  $('#navBurger')?.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('nav-open');
+}
+
+function wireNav() {
+  renderNav();
+  renderDrawer();
+  const scrim = $('#navScrim'); if (scrim) scrim.hidden = false; // visibilité pilotée par .open (transition)
+  $('#navBurger')?.addEventListener('click', openDrawer);
+  $('#navScrim')?.addEventListener('click', closeDrawer);
+  $('#navDrawer')?.addEventListener('click', (e) => {
+    const chev = e.target.closest('.drawer-chev');
+    if (chev) { const g = chev.closest('.drawer-group'); const open = g.classList.toggle('open'); chev.setAttribute('aria-expanded', open ? 'true' : 'false'); return; }
+    if (e.target.closest('#drawerClose')) { closeDrawer(); return; }
+    if (e.target.closest('a[href^="#"]')) closeDrawer(); // un lien ferme le tiroir (la navigation se fait via le hash)
+  });
+  $('#navList')?.addEventListener('click', (e) => { const a = e.target.closest('a[href^="#"]'); if (a) a.blur(); }); // referme le méga-menu après clic
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+  window.addEventListener('hashchange', closeDrawer);
+  fillClubsMenus();
+}
+
+// Surligne l'onglet de tête correspondant à la route courante (barre + tiroir).
 function setActiveTab(route) {
-  const tabRoute = PLUS_ROUTES.includes(route) ? 'plus' : route;
-  document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.route === tabRoute));
+  const top = ROUTE_GROUP[route] || route;
+  document.querySelectorAll('.nav-link[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === top));
+  document.querySelectorAll('.nav-drawer [data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === top));
 }
 function render(route) {
   clearTimeout(liveTimer);
@@ -6411,10 +6543,8 @@ function toggleTheme() {
 function wireStaticEvents() {
   initTheme();
   $('#themeToggle')?.addEventListener('click', toggleTheme);
-  // onglets
-  document.querySelectorAll('.app-tab').forEach((t) =>
-    t.addEventListener('click', () => { location.hash = t.dataset.route; }),
-  );
+  // navigation façon NBA (barre desktop à méga-menus + tiroir mobile)
+  wireNav();
   // en-tête (boutons initiaux présents dans le HTML)
   $('#btnLoginHeader')?.addEventListener('click', () => openAuth('login'));
   $('#btnSignupHeader')?.addEventListener('click', () => openAuth('signup'));

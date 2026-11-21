@@ -36,39 +36,23 @@
     </div>
   </header>
 
-  <!-- ============================================== ONGLETS -->
-  <nav class="app-tabs" aria-label="Sections de l'application">
-    <div class="container app-tabs-row" id="tabs">
-      <button class="app-tab active" data-route="accueil">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
-        <span class="lbl">Accueil</span>
+  <!-- ============================================== NAVIGATION (façon NBA · thème FGBB) -->
+  <nav class="app-nav" aria-label="Navigation principale">
+    <div class="container nav-row">
+      <button class="nav-burger" id="navBurger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navDrawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
-      <button class="app-tab" data-route="matchs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18"/></svg>
-        <span class="lbl">Matchs</span>
-      </button>
-      <button class="app-tab" data-route="classement">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
-        <span class="lbl">Classement</span>
-      </button>
-      <button class="app-tab" data-route="selections">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22V3M5 4c3.5-2 7 2 10.5 0S20 2 20 2v10s-1 1-4.5 2S8 13 5 15"/></svg>
-        <span class="lbl">Sélections</span>
-      </button>
-      <button class="app-tab" data-route="actus">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v14H4zM4 9h16M9 5v14"/></svg>
-        <span class="lbl">Actus</span>
-      </button>
-      <button class="app-tab" data-route="leaders">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>
-        <span class="lbl">Leaders</span>
-      </button>
-      <button class="app-tab" data-route="plus">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
-        <span class="lbl">Plus</span>
-      </button>
+      <ul class="nav-list" id="navList"><!-- construit par app.js (liens + méga-menus) --></ul>
+      <a class="nav-search" id="navSearch" href="#recherche" aria-label="Rechercher">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="nav-search-label">Rechercher…</span>
+      </a>
     </div>
   </nav>
+
+  <!-- ============================================== TIROIR DE NAVIGATION (mobile) -->
+  <div class="nav-scrim" id="navScrim" hidden></div>
+  <aside class="nav-drawer" id="navDrawer" aria-label="Menu de navigation" aria-hidden="true"><!-- construit par app.js --></aside>
 
   <!-- ============================================== VUE -->
   <main class="container view" id="view" aria-live="polite">

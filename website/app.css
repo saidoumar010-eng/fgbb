@@ -2589,3 +2589,223 @@ a.cs-item:hover { border-color: var(--accent); }
 .admin-group-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding-left: 12px; border-left: 4px solid var(--gc, var(--accent)); }
 .admin-group-head h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 18px; }
 .admin-group-head .ag-count { font-family: var(--font-display); font-weight: 600; font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 2px 10px; }
+
+/* ===================================================================== */
+/* NAVIGATION façon NBA (barre desktop à méga-menus + tiroir mobile)       */
+/* Thème FGBB conservé : mêmes variables, aucune nouvelle couleur.         */
+/* ===================================================================== */
+.app-nav {
+  position: sticky;
+  top: 62px;
+  z-index: 30;
+  background: rgba(6, 32, 28, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-row { display: flex; align-items: center; gap: 6px; height: 48px; }
+.nav-list { display: flex; align-items: center; gap: 2px; list-style: none; margin: 0; padding: 0; flex: 1; }
+.nav-item { position: relative; }
+.nav-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 14px 12px; font-size: 15px; font-weight: 600;
+  color: var(--muted); border-bottom: 2px solid transparent;
+  white-space: nowrap; cursor: pointer;
+}
+.nav-link:hover, .nav-item:hover .nav-link { color: var(--text); }
+.nav-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+.nav-caret { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; opacity: 0.65; transition: transform 0.15s ease; }
+.nav-item.has-mega:hover .nav-caret { transform: rotate(180deg); }
+
+/* panneaux méga-menu */
+.mega {
+  position: absolute; top: 100%; left: 0; min-width: 232px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 14px; box-shadow: var(--shadow); padding: 8px;
+  opacity: 0; visibility: hidden; transform: translateY(9px) scale(0.985); transform-origin: top center;
+  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1); z-index: 50;
+}
+.nav-item.has-mega:hover > .mega, .nav-item.has-mega:focus-within > .mega { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+.nav-item:nth-last-child(-n + 3) > .mega { left: auto; right: 0; }
+.nav-item.has-mega-wide:nth-last-child(-n + 3) > .mega { left: 0; right: auto; }
+.mega-link { display: block; padding: 9px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; }
+.mega-link:hover { background: var(--surface-2); color: var(--accent); }
+.mega-wide { min-width: auto; }
+
+/* méga-menu Clubs (grille par genre, logos — modèle « Teams ») */
+.nav-clubs { display: flex; gap: 8px; }
+.nav-clubs-col { min-width: 186px; }
+.nav-clubs-head { display: flex; align-items: center; gap: 7px; padding: 6px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.nav-clubs-head::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--gc, var(--border-strong)); flex: none; }
+.nav-club { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: var(--text); }
+.nav-club:hover { background: var(--surface-2); }
+.nav-club-logo { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 5px; overflow: hidden; display: grid; place-items: center; font-size: 8px; font-weight: 800; color: #fff; }
+.nav-club-logo img { width: 100%; height: 100%; object-fit: cover; }
+.mega-foot { display: block; margin-top: 6px; padding: 10px 12px 6px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--accent); }
+.mega-foot:hover { text-decoration: underline; }
+
+/* bouton hamburger + recherche */
+.nav-burger { display: none; align-items: center; justify-content: center; width: 40px; height: 40px; background: none; border: 0; color: var(--text); cursor: pointer; border-radius: 9px; }
+.nav-burger svg { width: 22px; height: 22px; }
+.nav-burger:hover { background: var(--surface); }
+.nav-search { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-left: auto; color: var(--muted); border-radius: 9px; flex: 0 0 auto; }
+.nav-search:hover { color: var(--text); background: var(--surface); }
+.nav-search svg { width: 19px; height: 19px; }
+
+/* tiroir mobile */
+.nav-scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; visibility: hidden; transition: opacity 0.2s ease; z-index: 59; }
+.nav-scrim.open { opacity: 1; visibility: visible; }
+.nav-drawer {
+  position: fixed; top: 0; left: 0; height: 100%; width: min(86vw, 360px);
+  background: var(--bg-deep); border-right: 1px solid var(--border-strong);
+  transform: translateX(-100%); transition: transform 0.25s ease; z-index: 60;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column;
+}
+.nav-drawer.open { transform: translateX(0); box-shadow: var(--shadow); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-deep); z-index: 1; }
+.drawer-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.drawer-close { width: 38px; height: 38px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text); cursor: pointer; }
+.drawer-close svg { width: 20px; height: 20px; }
+.drawer-nav { padding: 6px 10px 34px; }
+.drawer-group { border-bottom: 1px solid var(--border); }
+.drawer-top { display: flex; align-items: center; }
+.drawer-top-link, .drawer-top-solo { display: block; flex: 1; padding: 15px 8px; font-size: 16.5px; font-weight: 600; color: var(--text); }
+.drawer-top-link.active, .drawer-top-solo.active { color: var(--accent); }
+.drawer-chev { width: 46px; height: 46px; flex: 0 0 46px; background: none; border: 0; color: var(--muted); cursor: pointer; position: relative; }
+.drawer-chev::before { content: ""; position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translate(-50%, -70%) rotate(45deg); transition: transform 0.18s ease; }
+.drawer-group.open .drawer-chev::before { transform: translate(-50%, -30%) rotate(-135deg); }
+.drawer-panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+.drawer-panel-inner { overflow: hidden; min-height: 0; padding: 0 0 10px 8px; }
+.drawer-group.open .drawer-panel { grid-template-rows: 1fr; }
+.drawer-sub { display: block; padding: 11px 10px; font-size: 14.5px; color: var(--muted); }
+.drawer-sub:hover, .drawer-sub:active { color: var(--text); }
+.nav-drawer .nav-clubs { flex-direction: column; gap: 4px; }
+.nav-drawer .nav-clubs-col { min-width: 0; }
+.nav-drawer .mega-foot { border-top: 0; padding-left: 10px; }
+body.nav-open { overflow: hidden; }
+
+/* thème clair */
+:root[data-theme="light"] .app-nav { background: rgba(255, 255, 255, 0.92); }
+:root[data-theme="light"] .nav-drawer, :root[data-theme="light"] .drawer-head { background: #ffffff; }
+
+/* desktop ≥ 861px : jamais de tiroir ; < 861px : hamburger à la place des liens */
+@media (min-width: 861px) { .nav-drawer, .nav-scrim { display: none; } }
+@media (max-width: 860px) {
+  .nav-list { display: none; }
+  .nav-burger { display: inline-flex; }
+  .nav-row { height: 46px; }
+}
+
+/* --------------------------------------------------------------------- */
+/* FINITION nav : typo Oswald, soulignement animé, icônes, couleurs club   */
+/* --------------------------------------------------------------------- */
+.nav-link { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; font-size: 14.5px; border-bottom: 0; }
+.nav-link::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 8px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transform: scaleX(0); transform-origin: left center; transition: transform 0.22s ease; }
+.nav-item:hover > .nav-link::after, .nav-link:focus-visible::after, .nav-link.active::after { transform: scaleX(1); }
+.nav-link.active { color: var(--accent); border-bottom-color: transparent; }
+.nav-caret { opacity: 0.55; }
+
+/* icônes des méga-menus */
+.mega { border-top: 2px solid var(--accent); padding-top: 9px; }
+.mega-link { display: flex; align-items: center; gap: 11px; }
+.nav-ic { width: 22px; height: 22px; flex: 0 0 22px; display: inline-grid; place-items: center; color: var(--muted); border-radius: 7px; background: var(--surface-2); transition: color 0.15s ease, background 0.15s ease; }
+.nav-ic svg { width: 15px; height: 15px; }
+.mega-link:hover .nav-ic { color: var(--accent); background: var(--accent-soft); }
+
+/* cartes club du méga-menu : accent aux couleurs de l'équipe */
+.nav-club { position: relative; border-radius: 9px; }
+.nav-club:hover { background: color-mix(in srgb, var(--tc) 14%, var(--surface-2)); box-shadow: inset 3px 0 0 var(--tc); }
+.nav-club-logo { box-shadow: 0 0 0 1px var(--border-strong); }
+.nav-clubs-head { font-family: var(--font-display); letter-spacing: 0.08em; }
+
+/* tiroir mobile : marque, titres Oswald, icônes, actif, pied */
+.drawer-brand { display: flex; align-items: center; gap: 10px; }
+.drawer-brand img { width: 30px; height: 30px; border-radius: 7px; }
+.drawer-title { font-family: var(--font-display); font-size: 21px; font-weight: 700; letter-spacing: 0.04em; }
+.drawer-top-link, .drawer-top-solo { display: flex; align-items: center; gap: 12px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 16px; border-radius: 0 9px 9px 0; }
+.drawer-sub { display: flex; align-items: center; gap: 11px; padding-left: 10px; }
+.drawer-top .nav-ic { width: 26px; height: 26px; flex-basis: 26px; }
+.drawer-top .nav-ic svg { width: 17px; height: 17px; }
+.drawer-sub .nav-ic { width: 22px; height: 22px; flex-basis: 22px; background: transparent; }
+.drawer-top-link.active, .drawer-top-solo.active { color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.drawer-top-link.active .nav-ic, .drawer-top-solo.active .nav-ic { color: var(--accent); background: var(--accent-soft); }
+.drawer-foot { padding: 16px 18px 22px; color: var(--dim); font-size: 12px; border-top: 1px solid var(--border); margin-top: auto; }
+
+/* ===================================================================== */
+/* FINITION 2 : cascade méga-menu, survol tactile, tiroir animé           */
+/* (toujours le thème FGBB — aucune couleur nouvelle)                     */
+/* ===================================================================== */
+
+/* liens de la barre : chip de survol discret + coins arrondis */
+.nav-link { border-radius: 9px; transition: color 0.15s ease, background 0.15s ease; }
+.nav-item:hover > .nav-link, .nav-link.active { background: color-mix(in srgb, var(--text) 7%, transparent); }
+
+/* recherche : passe à l'accent au survol */
+.nav-search:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* cascade d'entrée des liens de méga-menu (menus simples) */
+.mega-link { opacity: 0; transform: translateY(7px); transition: opacity 0.24s ease, transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, color 0.15s ease; }
+.nav-item:hover > .mega .mega-link, .nav-item:focus-within > .mega .mega-link { opacity: 1; transform: none; }
+.nav-item:hover > .mega .mega-link:nth-child(2), .nav-item:focus-within > .mega .mega-link:nth-child(2) { transition-delay: 0.03s; }
+.nav-item:hover > .mega .mega-link:nth-child(3), .nav-item:focus-within > .mega .mega-link:nth-child(3) { transition-delay: 0.06s; }
+.nav-item:hover > .mega .mega-link:nth-child(4), .nav-item:focus-within > .mega .mega-link:nth-child(4) { transition-delay: 0.09s; }
+.nav-item:hover > .mega .mega-link:nth-child(5), .nav-item:focus-within > .mega .mega-link:nth-child(5) { transition-delay: 0.12s; }
+.nav-item:hover > .mega .mega-link:nth-child(6), .nav-item:focus-within > .mega .mega-link:nth-child(6) { transition-delay: 0.15s; }
+.nav-item:hover > .mega .mega-link:nth-child(7), .nav-item:focus-within > .mega .mega-link:nth-child(7) { transition-delay: 0.18s; }
+.nav-item:hover > .mega .mega-link:nth-child(8), .nav-item:focus-within > .mega .mega-link:nth-child(8) { transition-delay: 0.21s; }
+
+/* logos des clubs : léger zoom au survol */
+.nav-club-logo { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.nav-club:hover .nav-club-logo { transform: scale(1.08); }
+
+/* tiroir mobile : survol tactile + chevron réactif */
+.drawer-top-link, .drawer-top-solo, .drawer-sub, .drawer-chev { transition: color 0.15s ease, background 0.15s ease; }
+.drawer-sub { border-radius: 8px; }
+.drawer-top-link:hover, .drawer-top-solo:hover, .drawer-sub:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
+.drawer-chev:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); border-radius: 8px; }
+
+/* tiroir : les groupes apparaissent en cascade à l'ouverture */
+.drawer-group { opacity: 0; transform: translateX(-10px); transition: opacity 0.3s ease, transform 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+.nav-drawer.open .drawer-group { opacity: 1; transform: none; }
+.nav-drawer.open .drawer-group:nth-child(2) { transition-delay: 0.03s; }
+.nav-drawer.open .drawer-group:nth-child(3) { transition-delay: 0.06s; }
+.nav-drawer.open .drawer-group:nth-child(4) { transition-delay: 0.09s; }
+.nav-drawer.open .drawer-group:nth-child(5) { transition-delay: 0.12s; }
+.nav-drawer.open .drawer-group:nth-child(6) { transition-delay: 0.15s; }
+.nav-drawer.open .drawer-group:nth-child(7) { transition-delay: 0.18s; }
+.nav-drawer.open .drawer-group:nth-child(8) { transition-delay: 0.21s; }
+
+/* respecte la préférence « mouvement réduit » */
+@media (prefers-reduced-motion: reduce) {
+  .mega, .mega-link, .drawer-panel, .drawer-group, .nav-drawer, .nav-club-logo { transition: none !important; }
+  .mega-link, .drawer-group { opacity: 1 !important; transform: none !important; }
+}
+
+/* méga-menus informatifs : titre + description sous chaque entrée (desktop) */
+.mega:not(.mega-wide) { min-width: 272px; }
+.mega:not(.mega-wide) .mega-link { align-items: center; padding: 8px 12px; }
+.mega-tx { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mega-tt { font-weight: 600; font-size: 14px; line-height: 1.2; }
+.mega-ds { font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.25; }
+.mega-link:hover .mega-tt { color: var(--accent); }
+.mega-link:hover .mega-ds { color: var(--dim); }
+
+/* recherche : pastille d'accès sur desktop, icône seule sur mobile */
+.nav-search { width: auto; gap: 8px; height: 36px; padding: 0 15px 0 12px; border: 1px solid var(--border-strong); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; font-weight: 600; }
+.nav-search-label { white-space: nowrap; }
+.nav-search:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+@media (max-width: 860px) {
+  .nav-search { width: 40px; height: 40px; padding: 0; border: 0; gap: 0; }
+  .nav-search-label { display: none; }
+}
+
+/* accessibilité clavier : anneau de focus visible sur tout le menu */
+.nav-link:focus-visible, .nav-search:focus-visible, .nav-burger:focus-visible,
+.mega-link:focus-visible, .mega-foot:focus-visible, .nav-club:focus-visible,
+.drawer-top-link:focus-visible, .drawer-top-solo:focus-visible, .drawer-sub:focus-visible,
+.drawer-chev:focus-visible, .drawer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* méga-menus longs (ex. « Plus », 8 entrées) : 2 colonnes pour tout afficher sans déborder */
+.mega.mega-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; min-width: 468px; }
+/* filet de sécurité : jamais plus haut que l'écran (sinon scroll dans le panneau) */
+.mega { max-height: min(74vh, 540px); overflow-y: auto; overscroll-behavior: contain; }
