@@ -1577,52 +1577,174 @@ async function renderClubs() {
 }
 
 // ------------------------------------------------------- équipes nationales (sélections)
-// Catégories visées (de seniors à juniors) — repère visuel, indépendant des données.
-const NAT_CATS = [
-  { label: 'Seniors Messieurs', color: 'var(--cat-n1m)' },
-  { label: 'Seniors Dames', color: 'var(--cat-n1d)' },
-  { label: 'U20', color: 'var(--cat-u20)' },
-  { label: 'U18', color: 'var(--cat-u18)' },
-  { label: 'U16', color: 'var(--cat-u16)' },
-  { label: 'U14', color: 'var(--cat-u14)' },
+// Hub national : annuaire des sélections (façon NBA, identité FGBB) posé AU-DESSUS
+// des fiches d'équipe (#team/:id). TOUT est catégorisé — un filtre Tous / Masculin /
+// Féminin parcourt la page, et le parcours est rangé par genre puis par âge. Dégrade
+// proprement : cases « à constituer », encarts sobres tant que la base est peu remplie.
+
+// Parcours : bandes par genre × échelle d'âge (de seniors à juniors).
+const NAT_GENDERS = [
+  { key: 'messieurs', label: 'Messieurs', short: 'M', badge: 'M', color: 'var(--cat-n1m)' },
+  { key: 'dames', label: 'Dames', short: 'F', badge: 'F', color: 'var(--cat-n1d)' },
 ];
-// Carte d'une sélection : logo + nom + catégorie, bandeau couleur, lien vers la fiche.
-function selectionCardHtml(t) {
-  const cat = [t.division, labelOf(TEAM_GENDERS, t.gender)].filter(Boolean).join(' · ');
-  return `<a class="club-card" href="#team/${t.id}" style="--tc:${t.color ? esc(t.color) : 'var(--teal)'}"><span class="cc-strip"></span>${logoHtml(t)}<span class="cc-name">${esc(t.name)}</span>${cat ? `<span class="cc-cat">${esc(cat)}</span>` : ''}</a>`;
+const NAT_AGES = [
+  { key: 'sen', label: 'Seniors', rx: null },
+  { key: 'u20', label: 'U20', rx: /u-?20/i },
+  { key: 'u18', label: 'U18', rx: /u-?18/i },
+  { key: 'u16', label: 'U16', rx: /u-?16/i },
+  { key: 'u14', label: 'U14', rx: /u-?14/i },
+];
+const AGE_COLOR = { u20: 'var(--cat-u20)', u18: 'var(--cat-u18)', u16: 'var(--cat-u16)', u14: 'var(--cat-u14)' };
+function natAgeOf(t) {
+  const s = `${t.division || ''} ${t.name || ''}`;
+  const hit = NAT_AGES.find((a) => a.rx && a.rx.test(s));
+  return hit ? hit.key : 'sen';
 }
+// Compétitions internationales visées (repère éditorial, indépendant des données).
+const NAT_COMPS = [
+  { name: 'AfroBasket', cats: 'Seniors M · Seniors F', desc: "Le championnat d'Afrique FIBA, tous les deux ans.", color: 'var(--cat-n1m)', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
+  { name: 'Coupe du Monde FIBA', cats: 'Seniors M', desc: 'Les qualifications de la zone Afrique.', color: 'var(--cat-n1d)', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>' },
+  { name: 'FIBA Zone II', cats: 'Toutes catégories', desc: "Le tournoi des nations de l'Afrique de l'Ouest.", color: 'var(--cat-u18)', ic: '<path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>' },
+  { name: 'Jeux Africains', cats: 'Seniors', desc: 'Le grand rendez-vous continental multisports.', color: 'var(--cat-u20)', ic: '<path d="M12 3c2 4 5 5 5 9a5 5 0 01-10 0c0-1.7.6-2.7 1.6-3.6C9 10 9 7 12 3z"/>' },
+];
+// Les piliers du programme fédéral (section « étoffée »).
+const NAT_PROG = [
+  { t: 'Détection des talents', d: 'Repérer les jeunes joueurs dans les clubs et centres de formation du pays.', ic: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>' },
+  { t: 'Encadrement technique', d: 'Un staff dédié par catégorie : préparation, tactique et suivi médical.', ic: '<path d="M12 3l9 4-9 4-9-4 9-4z"/><path d="M3 11l9 4 9-4"/>' },
+  { t: 'Calendrier international', d: 'Fenêtres FIBA, AfroBasket et tournois de zone, saison après saison.', ic: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/>' },
+];
+// Bilan ou prochain rendez-vous d'une sélection, d'après ses matchs internationaux.
+function natTeamLine(teamId, natMatches) {
+  const ms = natMatches.filter((m) => m.home_team_id === teamId || m.away_team_id === teamId);
+  const next = ms.find((m) => m.status === 'live' || m.status === 'scheduled');
+  if (next) {
+    const opp = next.home_team_id === teamId ? next.away_team : next.home_team;
+    return `Prochain : ${esc(opp?.short_name || opp?.name || 'à venir')} · ${esc(relativeDayLabel(next.scheduled_at))}`;
+  }
+  const fin = ms.filter((m) => m.status === 'finished');
+  if (fin.length) {
+    let w = 0, l = 0;
+    fin.forEach((m) => {
+      const home = m.home_team_id === teamId;
+      const my = (home ? m.home_score : m.away_score) || 0;
+      const op = (home ? m.away_score : m.home_score) || 0;
+      if (my > op) w++; else if (my < op) l++;
+    });
+    return `Bilan : ${w}V · ${l}D`;
+  }
+  return '';
+}
+// Carte d'une case du parcours : sélection réelle (→ fiche) ou « à constituer ».
+function natCatCardHtml(cat, team, line) {
+  if (!team) {
+    return `<div class="club-card soon" style="--tc:${cat.color}"><span class="cc-strip"></span><span class="mlogo">${esc(cat.badge)}</span><span class="cc-cat">${esc(cat.label)}</span><span class="cc-foot">À constituer</span></div>`;
+  }
+  const tc = team.color ? esc(team.color) : cat.color;
+  return `<a class="club-card" href="#team/${team.id}" style="--tc:${tc}"><span class="cc-strip"></span>${logoHtml(team)}<span class="cc-name">${esc(team.name)}</span><span class="cc-cat">${esc(cat.label)}</span>${line ? `<span class="cc-foot">${esc(line)}</span>` : ''}</a>`;
+}
+// Une bande du parcours : un genre, son échelle d'âge (cœurs + cases à venir).
+function natBandHtml(gender, mine, natMatches) {
+  const byAge = {};
+  mine.forEach((t) => { const k = natAgeOf(t); (byAge[k] = byAge[k] || []).push(t); });
+  const core = ['sen', 'u18', 'u16'];
+  const ages = NAT_AGES.filter((a) => core.includes(a.key) || (byAge[a.key] && byAge[a.key].length));
+  const cards = ages.map((a) => {
+    const team = (byAge[a.key] || [])[0] || null;
+    const color = a.key === 'sen' ? gender.color : (AGE_COLOR[a.key] || gender.color);
+    const label = a.key === 'sen' ? `Seniors ${gender.label}` : `${a.label} ${gender.short}`;
+    const badge = a.key === 'sen' ? gender.badge : a.label;
+    return natCatCardHtml({ label, badge, color }, team, team ? natTeamLine(team.id, natMatches) : '');
+  }).join('');
+  return `<div class="nat-band" data-filter-g="${gender.key}"><div class="nat-band-head"><span class="nat-band-dot" style="--cc:${gender.color}"></span>${esc(gender.label)}</div><div class="club-grid">${cards}</div></div>`;
+}
+
 async function renderSelections() {
   view.innerHTML = `<div class="nat">
     <div class="nat-hero">
-      <span class="nat-eyebrow">${STAR_ICO}Équipes nationales</span>
+      <span class="nat-eyebrow"><span class="nat-flag" aria-hidden="true"></span>Équipes nationales</span>
       <h1 class="nat-title">Les sélections de la Guinée</h1>
-      <p class="nat-sub">Le basket national, de seniors à juniors : effectifs, calendrier &amp; résultats, et palmarès — réunis sur une seule page.</p>
+      <p class="nat-sub">De seniors à juniors, messieurs et dames : le parcours complet, le calendrier international et le palmarès de la Guinée — réunis et filtrables par catégorie.</p>
     </div>
-    <div id="natBody">${loadingHtml()}</div>
+    <div id="natBody" class="nat-body g-all">${loadingHtml()}</div>
   </div>`;
 
-  const teams = await safe(listTeams(), null);
+  const [teams, matches] = await Promise.all([safe(listTeams(), null), safe(listMatches(), [])]);
   const el = $('#natBody');
+  if (!el) return;
   if (teams === null) { el.innerHTML = errorHtml(); return; }
   const nat = teams.filter((t) => t.is_national);
+  const natIds = new Set(nat.map((t) => t.id));
+  const natMatches = (matches || []).filter((m) => natIds.has(m.home_team_id) || natIds.has(m.away_team_id));
+
+  // Palmarès : agrège les distinctions des sélections, en gardant le genre (filtre).
+  const awards = nat.length
+    ? (await Promise.all(nat.map((t) => safe(listTeamAwards(t.id), []).then((rows) => rows.map((a) => ({ ...a, _g: t.gender })))))).flat()
+    : [];
+
+  // Répartition du parcours par genre, + d'éventuelles sélections hors genres connus.
+  const bands = NAT_GENDERS.map((g) => ({ g, mine: nat.filter((t) => t.gender === g.key) }));
+  const placed = new Set(bands.flatMap((b) => b.mine.map((t) => t.id)));
+  const others = nat.filter((t) => !placed.has(t.id));
+
+  const upNext = natMatches
+    .filter((m) => m.status === 'live' || m.status === 'scheduled')
+    .sort((a, b) => new Date(a.scheduled_at || 0) - new Date(b.scheduled_at || 0));
 
   let html = '';
+
+  // 1. Repères fédération (si des sélections existent).
   if (nat.length) {
-    const groups = { messieurs: [], dames: [], autre: [] };
-    nat.forEach((t) => (groups[t.gender] || groups.autre).push(t));
-    const section = (list, title) => list.length
-      ? `<div class="block"><div class="block-head"><h2>${title}</h2></div><div class="club-grid">${list.map(selectionCardHtml).join('')}</div></div>`
-      : '';
-    html += section(groups.messieurs, 'Messieurs') + section(groups.dames, 'Dames') + section(groups.autre, 'Autres');
-  } else {
-    html += emptyHtml('Sélections à venir', 'Les sélections publiées par la fédération apparaîtront ici — chaque sélection avec son effectif, son calendrier et ses résultats.', 'trophy');
+    html += `<div class="stat-grid nat-reperes">
+      <div class="stat-tile"><b>${nat.length}</b><span>Sélection${nat.length > 1 ? 's' : ''}</span></div>
+      <div class="stat-tile"><b>${upNext.length}</b><span>Rencontres à venir</span></div>
+      <div class="stat-tile"><b>${awards.length}</b><span>Distinction${awards.length > 1 ? 's' : ''}</span></div>
+    </div>`;
   }
 
-  // Repère des catégories (toujours visible) — identité FGBB + code couleur.
-  html += `<div class="block"><div class="block-head"><h2>Catégories</h2></div>
-    <div class="nat-cats">${NAT_CATS.map((c) => `<span class="nat-cat" style="--cc:${c.color}"><span class="nd-dot"></span>${esc(c.label)}</span>`).join('')}</div></div>`;
+  // 2. Filtre par catégorie (le fil conducteur) — réutilise le segment genre.
+  html += `<div class="nat-filter">${genderSegHtml('all')}</div>`;
+
+  // 3. Le parcours (cœur) — bandes Messieurs / Dames, rangées par âge.
+  const othersHtml = others.length
+    ? `<div class="nat-band" data-filter-g="autre"><div class="nat-band-head"><span class="nat-band-dot" style="--cc:var(--accent)"></span>Autres sélections</div><div class="club-grid">${others.map((t) => natCatCardHtml({ label: t.division || labelOf(TEAM_GENDERS, t.gender) || 'Sélection', badge: initials(t.name), color: 'var(--accent)' }, t, natTeamLine(t.id, natMatches))).join('')}</div></div>`
+    : '';
+  html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>')}Le parcours des sélections</h2></div>
+    <div class="nat-bands">${bands.map((b) => natBandHtml(b.g, b.mine, natMatches)).join('')}${othersHtml}</div></div>`;
+
+  // 4. Prochaines échéances internationales (filtrables) — réutilise la carte match.
+  const live = natMatches.filter((m) => m.status === 'live');
+  const sched = natMatches.filter((m) => m.status === 'scheduled');
+  const done = natMatches.filter((m) => m.status === 'finished');
+  const rail = [...live, ...sched.slice(0, 6), ...done.slice(-3).reverse()];
+  const matchG = (m) => (natIds.has(m.home_team_id) ? m.home_team : m.away_team)?.gender || 'autre';
+  html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/>')}Prochaines échéances</h2></div>`;
+  html += rail.length
+    ? rail.map((m) => `<div class="nat-match" data-filter-g="${esc(matchG(m))}">${matchCardHtml(m)}</div>`).join('')
+    : `<div class="nat-note">Les prochaines fenêtres internationales — FIBA, AfroBasket, Zone II — s'afficheront ici dès leur publication par la fédération.</div>`;
+  html += `</div>`;
+
+  // 5. À l'international (compétitions visées) — ce qui distingue la page des clubs.
+  html += `<div class="block"><div class="block-head"><h2>${bhIco('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>')}À l'international</h2></div>
+    <div class="nat-intl-grid">${NAT_COMPS.map((c) => `<div class="nat-intl" style="--tc:${c.color}"><span class="ni-ic">${icoSvg(c.ic)}</span><b>${esc(c.name)}</b><span class="ni-cats">${esc(c.cats)}</span><span class="ni-desc">${esc(c.desc)}</span></div>`).join('')}</div></div>`;
+
+  // 6. Palmarès de la Guinée (filtrable).
+  html += `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}Palmarès de la Guinée</h2></div>`;
+  html += awards.length
+    ? `<div class="roster">${awards.map((a) => `<div class="roster-row" data-filter-g="${esc(a._g || 'autre')}"><span class="award-ic">${icoSvg('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>')}</span><span class="rr-name"><b>${esc(a.label || AWARD_LABELS[a.kind] || 'Distinction')}</b>${a.player ? ` — ${esc(a.player.full_name)}` : ''}${a.note ? `<span class="rr-note">${esc(a.note)}</span>` : ''}</span><span class="rr-pos">${a.awarded_at ? esc(fmtDate(a.awarded_at)) : ''}</span></div>`).join('')}</div>`
+    : `<div class="nat-note">Médailles et meilleurs résultats des sélections — AfroBasket, Zone II, Jeux Africains — seront réunis ici.</div>`;
+  html += `</div>`;
+
+  // 7. Le programme national (étoffé) — les piliers du projet fédéral.
+  html += `<div class="block"><div class="block-head"><h2>${bhIco('<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18l-5.9 3 1.2-6.5L2.5 9.4l6.6-.9z"/>')}Le programme national</h2></div>
+    <div class="nat-prog-grid">${NAT_PROG.map((p) => `<div class="nat-prog-card"><span class="np-ic">${icoSvg(p.ic)}</span><b>${esc(p.t)}</b><p>${esc(p.d)}</p></div>`).join('')}</div></div>`;
 
   el.innerHTML = html;
+  // Filtre par catégorie (genre) : masque les éléments [data-filter-g] non concernés.
+  el.querySelectorAll('.gender-seg .seg').forEach((b) => b.addEventListener('click', () => {
+    el.querySelectorAll('.gender-seg .seg').forEach((x) => x.classList.toggle('active', x === b));
+    el.classList.remove('g-all', 'g-messieurs', 'g-dames');
+    el.classList.add('g-' + b.dataset.g);
+  }));
 }
 
 // ------------------------------------------------------- fan zone (sondages)

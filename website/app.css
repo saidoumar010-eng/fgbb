@@ -2550,6 +2550,42 @@ a.cs-item:hover { border-color: var(--accent); }
 .nat-cats { display: flex; flex-wrap: wrap; gap: 10px; }
 .nat-cat { display: inline-flex; align-items: center; gap: 9px; padding: 11px 16px 11px 13px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--cc, var(--accent)); border-radius: var(--radius); font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; font-size: 14px; }
 .nat-cat .nd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
+
+/* Hub des sélections — composants additionnels (filtre, parcours, international) */
+.nat-body { display: flex; flex-direction: column; gap: 32px; }
+.nat-body > .block { margin-bottom: 0; }
+.nat-flag { width: 16px; height: 16px; border-radius: 4px; display: inline-block; vertical-align: -3px; background: linear-gradient(90deg, var(--flag-red) 0 33.3%, var(--flag-yellow) 33.3% 66.6%, var(--flag-green) 66.6% 100%); }
+.nat-reperes { max-width: 520px; }
+.nat-filter { display: flex; }
+.nat-note { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.cc-foot { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.club-card.soon { border-style: dashed; cursor: default; }
+.club-card.soon:hover { transform: none; border-color: var(--border); }
+.club-card.soon .mlogo { background: var(--surface-2); color: var(--muted); }
+.club-card.soon .cc-foot { color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+/* Parcours en bandes par genre */
+.nat-bands { display: flex; flex-direction: column; gap: 22px; }
+.nat-band-head { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.nat-band-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
+/* Filtre par catégorie : masque les éléments non concernés */
+.nat-body.g-messieurs [data-filter-g="dames"], .nat-body.g-messieurs [data-filter-g="autre"],
+.nat-body.g-dames [data-filter-g="messieurs"], .nat-body.g-dames [data-filter-g="autre"] { display: none; }
+/* Compétitions internationales */
+.nat-intl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.nat-intl { display: flex; flex-direction: column; gap: 5px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--tc, var(--accent)); border-radius: var(--radius); padding: 16px 18px; }
+.nat-intl .ni-ic { width: 28px; height: 28px; color: var(--tc, var(--accent)); display: inline-flex; margin-bottom: 2px; }
+.nat-intl .ni-ic svg { width: 100%; height: 100%; }
+.nat-intl b { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 15.5px; }
+.nat-intl .ni-cats { color: var(--tc, var(--accent)); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.nat-intl .ni-desc { color: var(--muted); font-size: 13px; }
+/* Programme national (étoffé) */
+.nat-prog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.nat-prog-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.nat-prog-card .np-ic { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 11px; }
+.nat-prog-card .np-ic svg { width: 18px; height: 18px; }
+.nat-prog-card b { display: block; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: 15px; margin-bottom: 5px; }
+.nat-prog-card p { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0; }
+.rr-note { display: block; color: var(--dim); font-size: 12.5px; }
 @media (max-width: 560px) { .nat-hero { padding: 22px 20px; } }
 
 /* ------------------------------------------------- Filtre genre + clubs groupés (Masculin / Féminin) */
