@@ -3,111 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FGBB — L'application</title>
-  <meta name="description" content="Suivez le basket guinéen en direct : matchs, classements, leaders et actualités. Connectez-vous ou créez votre compte supporter." />
-  <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://fgbb.ink/app.html" />
-  <meta name="theme-color" content="#06201C" />
-  <link rel="icon" type="image/png" href="assets/favicon.png" />
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="app.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>FGBB — Redirection vers l'application</title>
+  <meta name="robots" content="noindex, follow" />
+  <link rel="canonical" href="https://fgbb.ink/" />
+  <meta http-equiv="refresh" content="0; url=/" />
+  <script>location.replace('/' + (location.hash || ''));</script>
 </head>
-<body class="app-body">
-
-  <!-- ============================================== EN-TÊTE -->
-  <header class="app-header">
-    <div class="container app-header-row">
-      <a class="brand" href="index.html" aria-label="Retour au site FGBB">
-        <img src="assets/icon.png" alt="Logo FGBB" />
-        <span class="brand-txt"><b>FGBB</b><small>Basket-Ball · Guinée</small></span>
-      </a>
-
-      <div class="header-right">
-        <button class="theme-toggle" id="themeToggle" aria-label="Changer de thème" title="Thème clair / sombre"></button>
-        <div class="app-auth" id="authArea">
-          <!-- rempli par app.js selon l'état de connexion -->
-          <button class="btn ghost sm" id="btnLoginHeader">Se connecter</button>
-          <button class="btn sm" id="btnSignupHeader">Créer un compte</button>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- ============================================== NAVIGATION (façon NBA · thème FGBB) -->
-  <nav class="app-nav" aria-label="Navigation principale">
-    <div class="container nav-row">
-      <button class="nav-burger" id="navBurger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navDrawer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <ul class="nav-list" id="navList"><!-- construit par app.js (liens + méga-menus) --></ul>
-      <a class="nav-search" id="navSearch" href="#recherche" aria-label="Rechercher">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <span class="nav-search-label">Rechercher…</span>
-      </a>
-    </div>
-  </nav>
-
-  <!-- ============================================== TIROIR DE NAVIGATION (mobile) -->
-  <div class="nav-scrim" id="navScrim" hidden></div>
-  <aside class="nav-drawer" id="navDrawer" aria-label="Menu de navigation" aria-hidden="true"><!-- construit par app.js --></aside>
-
-  <!-- ============================================== VUE -->
-  <main class="container view" id="view" aria-live="polite">
-    <div class="loading"><div class="spinner"></div>Chargement…</div>
-  </main>
-
-  <!-- ============================================== MODALE AUTH -->
-  <div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <div class="modal">
-      <div class="modal-top">
-        <span class="logo-mini">
-          <img src="assets/icon.png" alt="" />
-          <b id="authTitle">Bienvenue</b>
-        </span>
-        <button class="modal-close" id="authClose" aria-label="Fermer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" type="button">Se connecter</button>
-        <button class="auth-tab" id="tabSignup" type="button">Créer un compte</button>
-      </div>
-
-      <form class="auth-form" id="authForm" autocomplete="on">
-        <div class="auth-error" id="authError"></div>
-        <div class="auth-ok" id="authOk"></div>
-
-        <div class="field" id="nameField" style="display:none">
-          <label for="fullName">Nom / pseudo</label>
-          <input type="text" id="fullName" name="name" placeholder="Ex. Mamadou Diallo" autocomplete="name" />
-        </div>
-        <div class="field">
-          <label for="email">Adresse e-mail</label>
-          <input type="email" id="email" name="email" placeholder="vous@exemple.com" autocomplete="email" required />
-        </div>
-        <div class="field">
-          <label for="password">Mot de passe</label>
-          <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required minlength="6" />
-        </div>
-
-        <button class="btn" type="submit" id="authSubmit">Se connecter</button>
-
-        <p class="auth-hint" id="authHint">
-          En continuant, vous acceptez nos
-          <a href="cgu.html" target="_blank" rel="noopener">CGU</a> et notre
-          <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.
-        </p>
-      </form>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-  <script type="module" src="app.js"></script>
-  <script src="cookies.js" defer></script>
+<body>
+  <p>L'application FGBB est désormais à la racine du site. <a href="/">Ouvrir l'application</a>.</p>
 </body>
 </html>
