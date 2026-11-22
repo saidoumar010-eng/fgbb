@@ -2563,10 +2563,35 @@ a.cs-item:hover { border-color: var(--accent); }
 .club-card.soon:hover { transform: none; border-color: var(--border); }
 .club-card.soon .mlogo { background: var(--surface-2); color: var(--muted); }
 .club-card.soon .cc-foot { color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
-/* Parcours en bandes par genre */
-.nat-bands { display: flex; flex-direction: column; gap: 22px; }
-.nat-band-head { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+/* Parcours en bandes par genre : en-tête survolable, liste révélée au survol */
+.nat-bands { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px 26px; }
+.nat-band { flex: 1 1 300px; min-width: 0; }
+.nat-band-head {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 15px; color: var(--text);
+  padding: 13px 16px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); cursor: default;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
 .nat-band-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
+.nbh-count { color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0.02em; }
+.nat-band-chev { margin-left: auto; width: 18px; height: 18px; color: var(--muted); display: inline-flex; transition: transform 0.28s ease, color 0.18s ease; }
+.nat-band-chev svg { width: 100%; height: 100%; }
+.nat-band-list { margin-top: 12px; }
+@media (hover: none) { .nat-band-chev { display: none; } }
+@media (hover: hover) {
+  .nat-band-list {
+    max-height: 0; opacity: 0; overflow: hidden; margin-top: 0;
+    transition: max-height 0.32s ease, opacity 0.24s ease, margin-top 0.32s ease;
+  }
+  .nat-band:hover .nat-band-list,
+  .nat-band:focus-within .nat-band-list { max-height: 1200px; opacity: 1; margin-top: 12px; }
+  .nat-band:hover .nat-band-head,
+  .nat-band:focus-within .nat-band-head { border-color: var(--cc, var(--accent)); background: var(--surface-2); }
+  .nat-band:hover .nat-band-chev,
+  .nat-band:focus-within .nat-band-chev { transform: rotate(180deg); color: var(--cc, var(--accent)); }
+}
 /* Filtre par catégorie : masque les éléments non concernés */
 .nat-body.g-messieurs [data-filter-g="dames"], .nat-body.g-messieurs [data-filter-g="autre"],
 .nat-body.g-dames [data-filter-g="messieurs"], .nat-body.g-dames [data-filter-g="autre"] { display: none; }

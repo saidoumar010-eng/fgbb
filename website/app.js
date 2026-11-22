@@ -1026,8 +1026,8 @@ let matchFilter = 'all';
 // ---- Filtre par genre (Masculin / Féminin) partagé par plusieurs pages ----
 const GENDER_SEG = [['all', 'Tous'], ['messieurs', 'Masculin'], ['dames', 'Féminin']];
 function genderDotColor(g) { return g === 'dames' ? 'var(--cat-n1d)' : g === 'messieurs' ? 'var(--cat-n1m)' : 'var(--muted)'; }
-function genderSegHtml(current) {
-  return `<div class="segmented gender-seg">${GENDER_SEG.map(([k, l]) => `<button class="seg ${current === k ? 'active' : ''}" data-g="${k}"><span class="seg-dot" style="--cc:${genderDotColor(k)}"></span>${l}</button>`).join('')}</div>`;
+function genderSegHtml(current, labels) {
+  return `<div class="segmented gender-seg">${GENDER_SEG.map(([k, l]) => `<button class="seg ${current === k ? 'active' : ''}" data-g="${k}"><span class="seg-dot" style="--cc:${genderDotColor(k)}"></span>${labels && labels[k] ? labels[k] : l}</button>`).join('')}</div>`;
 }
 function wireGenderSeg(onPick) {
   view.querySelectorAll('.gender-seg .seg').forEach((b) => b.addEventListener('click', () => onPick(b.dataset.g)));
@@ -1584,7 +1584,7 @@ async function renderClubs() {
 
 // Parcours : bandes par genre × échelle d'âge (de seniors à juniors).
 const NAT_GENDERS = [
-  { key: 'messieurs', label: 'Messieurs', short: 'M', badge: 'M', color: 'var(--cat-n1m)' },
+  { key: 'messieurs', label: 'Homme', short: 'H', badge: 'H', color: 'var(--cat-n1m)' },
   { key: 'dames', label: 'Dames', short: 'F', badge: 'F', color: 'var(--cat-n1d)' },
 ];
 const NAT_AGES = [
@@ -1602,8 +1602,8 @@ function natAgeOf(t) {
 }
 // Compétitions internationales visées (repère éditorial, indépendant des données).
 const NAT_COMPS = [
-  { name: 'AfroBasket', cats: 'Seniors M · Seniors F', desc: "Le championnat d'Afrique FIBA, tous les deux ans.", color: 'var(--cat-n1m)', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
-  { name: 'Coupe du Monde FIBA', cats: 'Seniors M', desc: 'Les qualifications de la zone Afrique.', color: 'var(--cat-n1d)', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>' },
+  { name: 'AfroBasket', cats: 'Homme · Dames', desc: "Le championnat d'Afrique FIBA, tous les deux ans.", color: 'var(--cat-n1m)', ic: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/>' },
+  { name: 'Coupe du Monde FIBA', cats: 'Homme', desc: 'Les qualifications de la zone Afrique.', color: 'var(--cat-n1d)', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/>' },
   { name: 'FIBA Zone II', cats: 'Toutes catégories', desc: "Le tournoi des nations de l'Afrique de l'Ouest.", color: 'var(--cat-u18)', ic: '<path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>' },
   { name: 'Jeux Africains', cats: 'Seniors', desc: 'Le grand rendez-vous continental multisports.', color: 'var(--cat-u20)', ic: '<path d="M12 3c2 4 5 5 5 9a5 5 0 01-10 0c0-1.7.6-2.7 1.6-3.6C9 10 9 7 12 3z"/>' },
 ];
@@ -1648,14 +1648,21 @@ function natBandHtml(gender, mine, natMatches) {
   mine.forEach((t) => { const k = natAgeOf(t); (byAge[k] = byAge[k] || []).push(t); });
   const core = ['sen', 'u18', 'u16'];
   const ages = NAT_AGES.filter((a) => core.includes(a.key) || (byAge[a.key] && byAge[a.key].length));
+  const nTeams = mine.length;
   const cards = ages.map((a) => {
     const team = (byAge[a.key] || [])[0] || null;
     const color = a.key === 'sen' ? gender.color : (AGE_COLOR[a.key] || gender.color);
-    const label = a.key === 'sen' ? `Seniors ${gender.label}` : `${a.label} ${gender.short}`;
+    // Le genre est porté par l'en-tête de la bande : les cartes n'affichent que l'âge.
+    const label = a.key === 'sen' ? 'Seniors' : a.label;
     const badge = a.key === 'sen' ? gender.badge : a.label;
     return natCatCardHtml({ label, badge, color }, team, team ? natTeamLine(team.id, natMatches) : '');
   }).join('');
-  return `<div class="nat-band" data-filter-g="${gender.key}"><div class="nat-band-head"><span class="nat-band-dot" style="--cc:${gender.color}"></span>${esc(gender.label)}</div><div class="club-grid">${cards}</div></div>`;
+  const chev = icoSvg('<path d="M6 9l6 6 6-6"/>');
+  // En-tête = la zone de survol ; la liste des équipes se révèle au survol (desktop).
+  return `<div class="nat-band" data-filter-g="${gender.key}" style="--cc:${gender.color}">
+    <div class="nat-band-head"><span class="nat-band-dot"></span><span class="nbh-label">${esc(gender.label)}</span><span class="nbh-count">${nTeams} équipe${nTeams > 1 ? 's' : ''}</span><span class="nat-band-chev">${chev}</span></div>
+    <div class="nat-band-list"><div class="club-grid">${cards}</div></div>
+  </div>`;
 }
 
 async function renderSelections() {
@@ -1702,7 +1709,7 @@ async function renderSelections() {
   }
 
   // 2. Filtre par catégorie (le fil conducteur) — réutilise le segment genre.
-  html += `<div class="nat-filter">${genderSegHtml('all')}</div>`;
+  html += `<div class="nat-filter">${genderSegHtml('all', { messieurs: 'Homme', dames: 'Dames' })}</div>`;
 
   // 3. Le parcours (cœur) — bandes Messieurs / Dames, rangées par âge.
   const othersHtml = others.length
@@ -4749,7 +4756,7 @@ function renderAuthArea() {
           ${isAdmin() ? `<a class="mi" href="#admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Espace fédération</a>` : ''}
           ${(myClubsCache && myClubsCache.length) ? `<a class="mi" href="#mon-club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 2 4-2 4 3-3 3v10H7V9L4 6z"/></svg>Mon club</a>` : ''}
           <a class="mi" href="#inscription-club"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h8"/><path d="M9 12l2.5 2.5L21 5"/></svg>Inscrire mon club</a>
-          <a class="mi" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Site de la fédération</a>
+          <a class="mi" href="presentation.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Site de la fédération</a>
           <a class="mi" href="confidentialite.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Confidentialité</a>
           <a class="mi" href="cookies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r=".6" fill="currentColor"/><circle cx="14.5" cy="13.5" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/></svg>Cookies</a>
           <a class="mi" href="cgu.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>CGU &amp; CGV</a>
